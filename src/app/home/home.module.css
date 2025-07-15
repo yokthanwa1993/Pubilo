@@ -1,0 +1,27 @@
+/* Home Page CSS Module */
+
+.home-main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 1rem 0;
+  padding-top: 80px; /* Add space for fixed navbar */
+}
+
+.main-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (max-width: 768px) {
+  .home-main {
+    padding: 0.5rem 0;
+    padding-top: 70px; /* Smaller navbar on mobile */
+  }
+  
+  .main-container {
+    padding: 0 0.5rem;
+  }
+} 
