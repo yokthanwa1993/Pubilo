@@ -89,8 +89,9 @@ export default function LoginPage() {
                             router.push('/home');
                         }, 1000);
                     }
-                } catch (err: any) {
-                    setError(err.message.replace('Firebase: ', ''));
+                } catch (err: unknown) {
+                    const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+                    setError(errorMessage.replace('Firebase: ', ''));
                     setIsProcessing(false);
                     setIsButtonColorChanged(false);
                 }
@@ -122,8 +123,9 @@ export default function LoginPage() {
                             router.push('/home');
                         }, 1000);
                     }
-                } catch (err: any) {
-                    setError(err.message.replace('Firebase: ', ''));
+                } catch (err: unknown) {
+                    const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+                    setError(errorMessage.replace('Firebase: ', ''));
                     setIsProcessing(false);
                     setIsButtonColorChanged(false);
                 }
@@ -166,7 +168,7 @@ export default function LoginPage() {
                     router.push('/home');
                 }, 1000);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Google sign-in error:', error);
             setError('การเข้าสู่ระบบด้วย Google ล้มเหลว กรุณาลองใหม่อีกครั้ง');
             setIsGoogleProcessing(false);
