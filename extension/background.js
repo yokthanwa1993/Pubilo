@@ -39,14 +39,12 @@ function startPostcronOAuthBackground() {
   let oauthWindowId = null;
   let oauthTabId = null;
 
-  // Create small window at corner (will auto-click so user doesn't need to interact)
+  // Create small window (will auto-click so user doesn't need to interact)
   chrome.windows.create({
     url: POSTCRON_OAUTH_URL,
     type: 'popup',
-    width: 100,
-    height: 100,
-    left: 9999,
-    top: 9999,
+    width: 400,
+    height: 500,
     focused: false
   }, (window) => {
     if (!window || !window.tabs || !window.tabs[0]) {
