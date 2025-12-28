@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "FEWFEED Token Helper",
-  "version": "5.0.0",
+  "name": "Pubilo Token Helper",
+  "version": "6.0.0",
   "description": "ดึง Token จาก Facebook อัตโนมัติ - แค่เคย login Facebook ไว้ก็ใช้ได้เลย",
   "permissions": [
     "cookies",
@@ -15,6 +15,7 @@
     "https://adsmanager.facebook.com/*",
     "https://business.facebook.com/*",
     "http://localhost:3000/*",
+    "https://pubilo.vercel.app/*",
     "https://*.lazada.co.th/*",
     "https://api.lazada.co.th/*",
     "https://acs-m.lazada.co.th/*",
@@ -25,7 +26,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost:3000/*"],
+      "matches": ["http://localhost:3000/*", "https://pubilo.vercel.app/*"],
       "js": ["content.js"],
       "run_at": "document_end"
     },
@@ -45,6 +46,6 @@
       "16": "icon16.png",
       "48": "icon48.png"
     },
-    "default_title": "Open FEWFEED"
+    "default_title": "Open Pubilo"
   }
 }

@@ -69,8 +69,8 @@ openBtn.addEventListener("click", async () => {
     fewfeed_ready: true
   });
 
-  // Open FEWFEED
-  chrome.tabs.create({ url: "http://localhost:3000/" }, () => {
+  // Open Pubilo
+  chrome.tabs.create({ url: "https://pubilo.vercel.app/" }, () => {
     // Close popup
     window.close();
   });

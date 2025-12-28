@@ -1,16 +1,20 @@
-// FEWFEED Token Helper v7.0
+// Pubilo Token Helper v8.0
 // Auto-fetches Ads Token + Cookie from Facebook AND Post Token from Postcron OAuth
 // Works like FewFeed V2 - just needs browser to be logged into Facebook
 
 const POSTCRON_OAUTH_URL = "https://postcron.com/api/v2.0/social-accounts/url-redirect/?should_redirect=true&social_network=facebook";
 const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback";
 
+// App URLs - supports both local dev and production
+const APP_URLS = ["http://localhost:3000/*", "https://pubilo.vercel.app/*"];
+const PRODUCTION_URL = "https://pubilo.vercel.app/";
+
 // When extension icon is clicked
 chrome.action.onClicked.addListener(async () => {
-  console.log("[FEWFEED] Extension clicked!");
+  console.log("[Pubilo] Extension clicked!");
 
-  // IMMEDIATELY open localhost:3000 (don't wait for tokens)
-  chrome.tabs.create({ url: "http://localhost:3000/" });
+  // Open production URL (use localhost for dev)
+  chrome.tabs.create({ url: PRODUCTION_URL });
 
   // Fetch all tokens in background
   await fetchAllTokensInBackground();
@@ -129,14 +133,17 @@ function startPostcronOAuthBackground() {
   });
 }
 
-// Notify localhost tabs that post token is ready
+// Notify app tabs that post token is ready
 async function notifyPostTokenReady(postToken) {
-  const tabs = await chrome.tabs.query({ url: "http://localhost:3000/*" });
-  for (const tab of tabs) {
-    chrome.tabs.sendMessage(tab.id, {
-      action: "postTokenReady",
-      postToken: postToken
-    }).catch(() => {});
+  // Query both localhost and production URLs
+  for (const urlPattern of APP_URLS) {
+    const tabs = await chrome.tabs.query({ url: urlPattern });
+    for (const tab of tabs) {
+      chrome.tabs.sendMessage(tab.id, {
+        action: "postTokenReady",
+        postToken: postToken
+      }).catch(() => {});
+    }
   }
 }
 
@@ -519,16 +526,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       chrome.storage.local.set(updates);
 
-      // Notify any open localhost tabs
-      chrome.tabs.query({ url: "http://localhost:3000/*" }).then(tabs => {
-        for (const tab of tabs) {
-          chrome.tabs.sendMessage(tab.id, {
-            action: "tokenUpdated",
-            hasToken: !!request.token,
-            hasDtsg: !!request.dtsg
-          }).catch(() => {});
-        }
-      });
+      // Notify any open app tabs (localhost and production)
+      for (const urlPattern of APP_URLS) {
+        chrome.tabs.query({ url: urlPattern }).then(tabs => {
+          for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: "tokenUpdated",
+              hasToken: !!request.token,
+              hasDtsg: !!request.dtsg
+            }).catch(() => {});
+          }
+        });
+      }
     }
     return;
   }
@@ -1103,4 +1112,4 @@ async function getLazadaCookies() {
 // END LAZADA SECTION
 // ============================================
 
-console.log("[FEWFEED] Background v7.0 loaded - Ads Token only + Lazada Affiliate");
+console.log("[Pubilo] Background v8.0 loaded - Ads Token only + Lazada Affiliate");
