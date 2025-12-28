@@ -1,0 +1,15 @@
+{
+  "name": "fewfeed",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "@google/genai": "^1.34.0"
+  }
+}

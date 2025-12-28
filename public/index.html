@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FewFeed - Facebook One Card Link Image Post</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8f9fa;
+      color: #1a1a1a;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #7c3aed;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .logo span {
+      color: #a78bfa;
+      font-weight: 400;
+      font-size: 0.875rem;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-indicators {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.375rem 0.625rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #f3f4f6;
+    }
+
+    .status-indicator svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .status-indicator.valid {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-indicator.valid svg {
+      color: #22c55e;
+    }
+
+    .status-indicator.invalid {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-indicator.invalid svg {
+      color: #ef4444;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #7c3aed;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    /* Main Layout with Sidebar */
+    .app-layout {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: calc(100vh - 57px);
+      padding: 1.5rem;
+      gap: 1.5rem;
+      background: #f8f9fa;
+    }
+
+    /* Image Mode - larger preview */
+    .app-layout.image-mode .preview-panel {
+      --image-size: min(640px, calc(100vh - 140px));
+      width: var(--image-size);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-nav {
+      padding: 1rem;
+      flex: 1;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .nav-section {
+      padding: 0;
+      margin-bottom: 1.25rem;
+    }
+
+    .nav-section-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #4b5563;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background: #f3f4f6;
+      color: #1a1a1a;
+    }
+
+    .nav-item.active {
+      background: #f3e8ff;
+      color: #7c3aed;
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .nav-item .badge {
+      margin-left: auto;
+      background: #7c3aed;
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.125rem 0.5rem;
+      border-radius: 10px;
+    }
+
+    .sidebar-footer {
+      padding: 1rem;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .sidebar-user:hover {
+      background: #f3f4f6;
+    }
+
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .sidebar-user-info h4 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .sidebar-user-info p {
+      font-size: 0.6875rem;
+      color: #6b7280;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      gap: 1.5rem;
+    }
+
+    /* Preview Panel - Center */
+    /* คำนวณ: 100vh - header(57px) - padding(48px) - preview header(60px) - link info(100px) - gaps(32px) = ~100vh - 297px */
+    .preview-panel {
+      --image-size: min(520px, calc(100vh - 260px));
+      width: var(--image-size);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .preview-panel .card-preview {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: relative;
+    }
+
+    .preview-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #1877f2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .preview-avatar-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #e5e5e5;
+    }
+
+    .page-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .page-selector:hover {
+      background: #f3f4f6;
+    }
+
+    .page-selector-skeleton {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #f3f4f6;
+      border-radius: 8px;
+    }
+
+    .page-selector-skeleton .sk-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e5e5e5;
+    }
+
+    .page-selector-skeleton .sk-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .page-selector-skeleton .sk-line {
+      height: 12px;
+      background: #e5e5e5;
+      border-radius: 4px;
+    }
+
+    .page-selector-skeleton .sk-line:first-child {
+      width: 100px;
+    }
+
+    .page-selector-skeleton .sk-line:last-child {
+      width: 140px;
+    }
+
+    .page-dropdown-icon {
+      width: 16px;
+      height: 16px;
+      color: #6b7280;
+      margin-left: 0.25rem;
+    }
+
+    .page-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      min-width: 280px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      margin-top: 4px;
+    }
+
+    .page-dropdown.visible {
+      display: block;
+    }
+
+    .page-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .page-dropdown-item:hover {
+      background: #f3f4f6;
+    }
+
+    .page-dropdown-item.selected {
+      background: #f3e8ff;
+    }
+
+    .page-dropdown-item img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .page-dropdown-item-info h4 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .page-dropdown-item-info p {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .preview-page-info h3 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .preview-page-info p {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .btn-publish {
+      margin-left: auto;
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 0.625rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-publish:hover {
+      background: #059669;
+    }
+
+    .btn-publish:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .btn-publish.published {
+      background: #10b981;
+      cursor: pointer;
+    }
+
+    .btn-publish.published:hover {
+      background: #059669;
+    }
+
+    /* Card Preview */
+    .card-preview {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card-image-area {
+      aspect-ratio: 1 / 1;
+      background: #1a1a1a;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      max-height: var(--image-size, 520px);
+    }
+
+    .upload-prompt {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      gap: 0.5rem;
+    }
+
+    .upload-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .upload-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem 2rem;
+      border: 2px dashed #4b5563;
+      border-radius: 12px;
+      background: rgba(75, 85, 99, 0.1);
+      color: #9ca3af;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.1);
+      color: #8b5cf6;
+    }
+
+    .upload-btn svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .upload-btn span {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .upload-from-gemini:hover {
+      border-color: #f97316;
+      background: rgba(249, 115, 22, 0.1);
+      color: #f97316;
+    }
+
+    .upload-prompt svg {
+      width: 48px;
+      height: 48px;
+      color: #4b5563;
+    }
+
+    .upload-prompt span {
+      font-size: 0.875rem;
+    }
+
+    .generate-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .btn-generate {
+      background: #f97316;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-generate:hover {
+      background: #ea580c;
+    }
+
+    .btn-generate:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .ref-thumbs-row {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.8);
+      padding: 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+    }
+
+    .ref-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 2px solid transparent;
+      flex-shrink: 0;
+    }
+
+    .ref-thumb:last-child {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.1);
+      border: 2px dashed #6b7280;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    .generated-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      background: #1a1a1a;
+      position: relative;
+    }
+
+    .btn-regenerate {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(249, 115, 22, 0.9);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 10;
+    }
+
+    .btn-regenerate:hover {
+      background: #ea580c;
+    }
+
+    .generated-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 3px solid transparent;
+    }
+
+    .generated-item:hover {
+      border-color: #7c3aed;
+    }
+
+    .generated-item.selected {
+      border-color: #10b981;
+    }
+
+    .generated-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .generated-item .item-number {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      background: #1a1a1a;
+    }
+
+    .skeleton-card {
+      background: #2a2a2a;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skeleton-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+
+    @keyframes skeleton-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .card-link-info {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      gap: 1rem;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    .card-link-details {
+      flex: 1;
+    }
+
+    .card-link-caption {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .card-link-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 0.25rem;
+    }
+
+    .card-link-description {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+
+    .btn-learn-more {
+      background: #f3f4f6;
+      border: 1px solid #e5e5e5;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Full Image View */
+    .full-image-view {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .full-image-view img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .back-to-grid {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .back-to-grid:hover {
+      background: rgba(0,0,0,0.9);
+    }
+
+    /* Right Panel - Form */
+    .form-panel {
+      flex: 1;
+      min-width: 360px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-select, .form-input, .form-textarea {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: #fff;
+      color: #1a1a1a;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-select:focus, .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1rem;
+      padding-right: 2.5rem;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+
+    .checkbox-item input {
+      width: 18px;
+      height: 18px;
+      accent-color: #7c3aed;
+    }
+
+    .checkbox-item label {
+      font-size: 0.875rem;
+      color: #374151;
+      cursor: pointer;
+    }
+
+    .schedule-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .schedule-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #e5e5e5;
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: #f97316;
+    }
+
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .sidebar {
+        width: 280px;
+      }
+      .form-panel {
+        min-width: 320px;
+      }
+      .preview-panel {
+        --image-size: min(420px, calc(100vh - 297px));
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .app-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+      .sidebar {
+        width: 100%;
+        max-width: 460px;
+      }
+      .main-content {
+        flex-direction: column;
+        align-items: center;
+      }
+      .preview-panel {
+        --image-size: min(460px, 90vw);
+        width: var(--image-size);
+        max-width: 460px;
+      }
+      .form-panel {
+        width: 100%;
+        max-width: 460px;
+      }
+      .pending-panel {
+        width: 100%;
+      }
+    }
+
+    /* Settings Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .modal-header h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6b7280;
+      line-height: 1;
+    }
+    .modal-body {
+      padding: 1.25rem;
+    }
+    .modal-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid #e5e5e5;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .setting-group {
+      margin-bottom: 1rem;
+    }
+    .setting-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .setting-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #7c3aed;
+    }
+    .setting-desc {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+      margin-left: 1.625rem;
+    }
+    .next-schedule-display {
+      background: #f3e8ff;
+      color: #7c3aed;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .btn-save {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-save:hover {
+      background: #6d28d9;
+    }
+
+    /* Pending list */
+    .pending-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .pending-item-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #e5e5e5;
+    }
+    .pending-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .pending-item-title {
+      font-weight: 500;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pending-item-time {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .pending-item-delete {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+    .pending-empty {
+      text-align: center;
+      color: #6b7280;
+      padding: 2rem;
+    }
+
+    /* Pending Panel (replaces preview + form) */
+    .pending-panel {
+      flex: 1;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .pending-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .pending-panel-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .pending-table-container {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .pending-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pending-table th,
+    .pending-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .pending-table th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      background: #f9fafb;
+    }
+    .pending-table-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #e5e5e5;
+    }
+    .pending-table-title {
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+    .pending-table-url {
+      font-size: 0.75rem;
+      color: #6b7280;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pending-table-time {
+      font-size: 0.875rem;
+      color: #7c3aed;
+      font-weight: 500;
+    }
+    .pending-table-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .pending-table-delete {
+      background: #fee2e2;
+      border: none;
+      color: #ef4444;
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .pending-table-delete:hover {
+      background: #fecaca;
+    }
+
+    /* Token Info Popup Modal */
+    .token-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .token-modal-overlay.show {
+      display: flex;
+    }
+    .token-modal {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .token-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .token-modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .token-modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      color: #6b7280;
+    }
+    .token-modal-close:hover {
+      color: #111827;
+    }
+    .token-item {
+      margin-bottom: 1rem;
+    }
+    .token-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+    .token-status {
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .token-status.valid {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .token-status.invalid {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .token-value {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      word-break: break-all;
+      color: #374151;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .token-value.empty {
+      color: #9ca3af;
+      font-style: italic;
+    }
+    .token-copy-btn {
+      margin-top: 0.5rem;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #374151;
+    }
+    .token-copy-btn:hover {
+      background: #e5e7eb;
+    }
+    .status-indicator {
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .status-indicator:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      Fewfeed<span>v2</span>
+    </div>
+    <div class="header-right">
+      <div class="status-indicators" id="statusIndicators">
+        <div class="status-indicator invalid" id="tokenIndicator" title="Token">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
+          <span>Token</span>
+        </div>
+        <div class="status-indicator invalid" id="cookieIndicator" title="Cookie">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="8" r="1" fill="currentColor"/>
+            <circle cx="10" cy="14" r="1" fill="currentColor"/>
+            <circle cx="16" cy="13" r="1.5" fill="currentColor"/>
+            <circle cx="13" cy="17" r="1" fill="currentColor"/>
+          </svg>
+          <span>Cookie</span>
+        </div>
+        <div class="status-indicator invalid" id="postTokenIndicator" title="Post Token">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>Post</span>
+        </div>
+      </div>
+      <div class="user-avatar">US</div>
+    </div>
+  </header>
+
+  <!-- Token Info Modal -->
+  <div class="token-modal-overlay" id="tokenModal">
+    <div class="token-modal">
+      <div class="token-modal-header">
+        <div class="token-modal-title" id="tokenModalTitle">Token</div>
+        <button class="token-modal-close" onclick="closeTokenModal()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="token-item" id="modalAdsItem">
+        <div class="token-label">
+          Ads Token (EAABsbCS...)
+          <span class="token-status" id="modalAdsTokenStatus">-</span>
+        </div>
+        <div class="token-value" id="modalAdsTokenValue">-</div>
+        <button class="token-copy-btn" onclick="copyToken('ads')">Copy</button>
+      </div>
+      <div class="token-item" id="modalCookieItem">
+        <div class="token-label">
+          Cookie
+          <span class="token-status" id="modalCookieStatus">-</span>
+        </div>
+        <div class="token-value" id="modalCookieValue">-</div>
+        <button class="token-copy-btn" onclick="copyToken('cookie')">Copy</button>
+      </div>
+      <div class="token-item" id="modalPostItem">
+        <div class="token-label">
+          Post Token (EAAChZC...)
+          <span class="token-status" id="modalPostTokenStatus">-</span>
+        </div>
+        <div class="token-value" id="modalPostTokenValue">-</div>
+        <button class="token-copy-btn" onclick="copyToken('post')">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <a href="#" class="nav-item active" id="dashboardNavItem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            Link
+          </a>
+          <a href="#" class="nav-item" id="imageNavItem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Image
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Queue</div>
+          <a href="#" class="nav-item" id="pendingNavItem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Pending
+            <span class="badge" id="pendingBadge" style="display: none;">0</span>
+          </a>
+          <a href="#" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            Published
+          </a>
+          <a href="#" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            Failed
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Tools</div>
+          <a href="#" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            AI Image Gen
+          </a>
+          <a href="#" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Templates
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Settings</div>
+          <a href="#" class="nav-item" id="openSettingsBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Settings
+          </a>
+          <a href="#" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            Notifications
+          </a>
+        </div>
+      </nav>
+
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Preview Panel - Center -->
+      <div class="preview-panel">
+        <div class="preview-header">
+          <div class="page-selector-skeleton" id="pageSelectorSkeleton">
+            <div class="sk-avatar"></div>
+            <div class="sk-lines">
+              <div class="sk-line"></div>
+              <div class="sk-line"></div>
+            </div>
+          </div>
+          <div class="page-selector" id="pageSelector" style="display:none;">
+            <img class="preview-avatar-img" id="previewAvatarImg" src="" alt="">
+            <div class="preview-page-info">
+              <h3 id="previewPageName">Select Page</h3>
+              <p id="previewPageId">-</p>
+            </div>
+            <svg class="page-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+          <div class="page-dropdown" id="pageDropdown"></div>
+          <button class="btn-publish" id="publishBtn">PUBLISH</button>
+        </div>
+
+        <!-- Card Preview -->
+        <div class="card-preview">
+          <div class="card-image-area" id="cardImageArea">
+            <div class="upload-prompt" id="uploadPrompt">
+              <div class="upload-buttons">
+                <button class="upload-btn upload-from-device" id="uploadFromDevice">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <span>อัพโหลดจากเครื่อง</span>
+                </button>
+                <button class="upload-btn upload-from-gemini" id="uploadFromGemini">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                  <span>เจนจาก Gemini</span>
+                </button>
+              </div>
+            </div>
+            <div class="generate-overlay" id="generateOverlay" style="display: none;">
+              <button class="btn-generate" id="generateBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                Generate 4 Variations
+              </button>
+            </div>
+            <div class="ref-thumbs-row" id="refThumbsRow" style="display: none;"></div>
+            <div class="generated-grid" id="generatedGrid" style="display: none;"></div>
+            <div class="skeleton-grid" id="skeletonGrid" style="display: none;">
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+            </div>
+            <div class="full-image-view" id="fullImageView" style="display: none;"></div>
+          </div>
+          <div class="card-link-info" id="cardLinkInfo">
+            <div class="card-link-details">
+              <div class="card-link-caption editable-text" id="previewCaption">LAZADA.CO.TH</div>
+              <div class="card-link-title editable-text" id="previewLinkName">Hello Fewfeed</div>
+              <div class="card-link-description editable-text" id="previewDescription">Click to learn more</div>
+            </div>
+            <button class="btn-learn-more">Learn More</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Panel - Form -->
+      <div class="form-panel">
+        <!-- Hidden values from server config -->
+        <input type="hidden" id="pageSelect" value="">
+        <input type="hidden" id="adAccountSelect" value="">
+
+        <!-- Post Content -->
+        <div class="card">
+          <div class="card-title">Post Content</div>
+          <!-- Link-only fields (hidden in Image mode) -->
+          <div id="linkOnlyFields">
+            <div class="form-group">
+              <label class="form-label">Link URL</label>
+              <input type="text" class="form-input" id="linkUrl" placeholder="">
+              <small id="lazadaStatus" style="color: #888; margin-top: 4px; display: block;"></small>
+            </div>
+            <!-- Hidden inputs for Link Name, Caption, Description (editable via double-click in preview) -->
+            <input type="hidden" id="linkName" value="Hello Fewfeed">
+            <input type="hidden" id="caption" value="LAZADA.CO.TH">
+            <input type="hidden" id="description" value="Click to learn more">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Text</label>
+            <textarea class="form-textarea" id="primaryText" placeholder="Write something about your post..."></textarea>
+          </div>
+          <!-- Link-only: Card Button (hidden in Image mode) -->
+          <div id="cardButtonGroup" class="form-group">
+            <label class="form-label">Card Button</label>
+            <select class="form-select" id="cardButton">
+              <option value="LEARN_MORE">Learn More</option>
+              <option value="SHOP_NOW">Shop Now</option>
+              <option value="SIGN_UP">Sign Up</option>
+              <option value="BOOK_NOW">Book Now</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pending Panel (replaces preview + form) -->
+      <div class="pending-panel" id="pendingPanel" style="display: none;">
+        <div class="pending-panel-header">
+          <h2>Pending Posts</h2>
+        </div>
+        <div class="pending-table-container" id="pendingTableContainer">
+          <div class="pending-empty">No pending posts</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="modal-close" id="closeSettingsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label class="setting-label">
+            <input type="checkbox" id="autoScheduleEnabled">
+            <span>Auto Schedule Posts</span>
+          </label>
+          <p class="setting-desc">โพสต์จะถูกตั้งเวลาอัตโนมัติทุกๆ X นาที</p>
+        </div>
+        <div class="setting-group" id="scheduleIntervalGroup" style="display: none;">
+          <label class="form-label">Interval (นาที)</label>
+          <input type="number" class="form-input" id="scheduleInterval" value="30" min="5" max="1440">
+          <p class="setting-desc">ระยะห่างระหว่างโพสต์แต่ละอัน (5-1440 นาที)</p>
+        </div>
+        <div class="setting-group" id="nextScheduleInfo" style="display: none;">
+          <label class="form-label">Next Scheduled Time</label>
+          <div class="next-schedule-display" id="nextScheduleDisplay">-</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const cardImageArea = document.getElementById('cardImageArea');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const generateOverlay = document.getElementById('generateOverlay');
+    const generateBtn = document.getElementById('generateBtn');
+    const refThumbsRow = document.getElementById('refThumbsRow');
+    const generatedGrid = document.getElementById('generatedGrid');
+    const fullImageView = document.getElementById('fullImageView');
+    const publishBtn = document.getElementById('publishBtn');
+
+    // Form elements
+    const linkName = document.getElementById('linkName');
+    const caption = document.getElementById('caption');
+    const description = document.getElementById('description');
+    const linkUrl = document.getElementById('linkUrl');
+
+    // Settings elements
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const autoScheduleEnabled = document.getElementById('autoScheduleEnabled');
+    const scheduleInterval = document.getElementById('scheduleInterval');
+    const scheduleIntervalGroup = document.getElementById('scheduleIntervalGroup');
+    const nextScheduleInfo = document.getElementById('nextScheduleInfo');
+    const nextScheduleDisplay = document.getElementById('nextScheduleDisplay');
+
+    // Schedule state
+    let lastScheduledTime = localStorage.getItem('fewfeed_lastScheduledTime') ? new Date(localStorage.getItem('fewfeed_lastScheduledTime')) : null;
+
+    // Load settings from localStorage
+    function loadSettings() {
+      const enabled = localStorage.getItem('fewfeed_autoSchedule') === 'true';
+      const interval = parseInt(localStorage.getItem('fewfeed_scheduleInterval')) || 30;
+      autoScheduleEnabled.checked = enabled;
+      scheduleInterval.value = interval;
+      scheduleIntervalGroup.style.display = enabled ? 'block' : 'none';
+      nextScheduleInfo.style.display = enabled ? 'block' : 'none';
+      updateNextScheduleDisplay();
+      updatePublishButton();
+    }
+
+    // Update publish button text
+    function updatePublishButton() {
+      if (autoScheduleEnabled.checked && !publishBtn.classList.contains('published')) {
+        publishBtn.textContent = 'SCHEDULE';
+      } else if (!publishBtn.classList.contains('published')) {
+        publishBtn.textContent = 'PUBLISH';
+      }
+    }
+
+    // Calculate next schedule time
+    function getNextScheduleTime() {
+      const interval = parseInt(scheduleInterval.value) || 30;
+      let nextTime;
+      if (lastScheduledTime) {
+        nextTime = new Date(lastScheduledTime.getTime() + interval * 60 * 1000);
+        // If next time is in the past, calculate from now
+        if (nextTime < new Date()) {
+          nextTime = new Date(Date.now() + 60 * 1000); // At least 1 minute from now
+        }
+      } else {
+        nextTime = new Date(Date.now() + 60 * 1000); // 1 minute from now for first post
+      }
+      return nextTime;
+    }
+
+    // Update next schedule display
+    function updateNextScheduleDisplay() {
+      if (autoScheduleEnabled.checked) {
+        const nextTime = getNextScheduleTime();
+        nextScheduleDisplay.textContent = nextTime.toLocaleString('th-TH');
+      } else {
+        nextScheduleDisplay.textContent = '-';
+      }
+    }
+
+    // Settings modal handlers
+    openSettingsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      settingsModal.style.display = 'flex';
+      loadSettings();
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+    });
+
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+      }
+    });
+
+    autoScheduleEnabled.addEventListener('change', () => {
+      scheduleIntervalGroup.style.display = autoScheduleEnabled.checked ? 'block' : 'none';
+      nextScheduleInfo.style.display = autoScheduleEnabled.checked ? 'block' : 'none';
+      updateNextScheduleDisplay();
+    });
+
+    scheduleInterval.addEventListener('input', updateNextScheduleDisplay);
+
+    saveSettingsBtn.addEventListener('click', () => {
+      localStorage.setItem('fewfeed_autoSchedule', autoScheduleEnabled.checked);
+      localStorage.setItem('fewfeed_scheduleInterval', scheduleInterval.value);
+      settingsModal.style.display = 'none';
+      updatePublishButton();
+    });
+
+    // Load settings on page load
+    loadSettings();
+
+    // Nav elements
+    const dashboardNavItem = document.getElementById('dashboardNavItem');
+    const imageNavItem = document.getElementById('imageNavItem');
+    const pendingNavItem = document.getElementById('pendingNavItem');
+    const pendingBadge = document.getElementById('pendingBadge');
+    const pendingPanel = document.getElementById('pendingPanel');
+    const pendingTableContainer = document.getElementById('pendingTableContainer');
+    const previewPanel = document.querySelector('.preview-panel');
+    const formPanel = document.querySelector('.form-panel');
+    const appLayout = document.querySelector('.app-layout');
+
+    // Link-only elements (hidden in Image mode)
+    const linkOnlyFields = document.getElementById('linkOnlyFields');
+    const cardButtonGroup = document.getElementById('cardButtonGroup');
+    const cardLinkInfo = document.getElementById('cardLinkInfo');
+
+    // Current post mode: 'link' or 'image'
+    let postMode = 'link';
+
+    // Update pending count from API
+    async function updatePendingCount() {
+      try {
+        const response = await fetch('/api/queue');
+        const data = await response.json();
+        const pendingItems = data.items.filter(i => i.status === 'pending');
+        const count = pendingItems.length;
+        pendingBadge.textContent = count;
+        pendingBadge.style.display = count > 0 ? 'inline' : 'none';
+      } catch (err) {
+        console.error('Failed to fetch pending count:', err);
+      }
+    }
+
+    // Show pending panel (replaces both preview + form panels)
+    async function showPendingPanel() {
+      // Hide both panels
+      previewPanel.style.display = 'none';
+      formPanel.style.display = 'none';
+      // Show pending panel (full width)
+      pendingPanel.style.display = 'flex';
+
+      try {
+        const response = await fetch('/api/queue');
+        const data = await response.json();
+        const pendingItems = data.items.filter(i => i.status === 'pending');
+
+        if (pendingItems.length === 0) {
+          pendingTableContainer.innerHTML = '<div class="pending-empty">No pending posts</div>';
+        } else {
+          pendingTableContainer.innerHTML = `
+            <table class="pending-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Title</th>
+                  <th>Link URL</th>
+                  <th>Scheduled</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pendingItems.map(item => {
+                  const scheduledDate = item.scheduledTime
+                    ? new Date(item.scheduledTime * 1000).toLocaleString('th-TH')
+                    : '-';
+                  return `
+                    <tr data-id="${item.id}">
+                      <td><img class="pending-table-thumb" src="${item.imageUrl}" alt=""></td>
+                      <td><div class="pending-table-title">${item.linkName}</div></td>
+                      <td><div class="pending-table-url">${item.linkUrl}</div></td>
+                      <td><span class="pending-table-time">${scheduledDate}</span></td>
+                      <td><span class="pending-table-status">Pending</span></td>
+                      <td>
+                        <button class="pending-table-delete" onclick="deletePendingItem('${item.id}')">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending list:', err);
+        pendingTableContainer.innerHTML = '<div class="pending-empty">Failed to load</div>';
+      }
+    }
+
+    // Show dashboard (hide pending panel, show both panels)
+    function showDashboard() {
+      pendingPanel.style.display = 'none';
+      previewPanel.style.display = '';
+      formPanel.style.display = '';
+    }
+
+    // Delete pending item
+    window.deletePendingItem = async function(id) {
+      try {
+        await fetch(`/api/queue/${id}`, { method: 'DELETE' });
+        showPendingPanel(); // Refresh the table
+        updatePendingCount();
+      } catch (err) {
+        console.error('Failed to delete pending item:', err);
+      }
+    };
+
+    // Pending nav item click
+    pendingNavItem.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Update active state
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      pendingNavItem.classList.add('active');
+      showPendingPanel();
+    });
+
+    // Link nav item click (Dashboard renamed to Link)
+    dashboardNavItem.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Update active state
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      dashboardNavItem.classList.add('active');
+      setPostMode('link');
+      showDashboard();
+    });
+
+    // Image nav item click
+    imageNavItem.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Update active state
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      imageNavItem.classList.add('active');
+      setPostMode('image');
+      showDashboard();
+    });
+
+    // Set post mode (link or image)
+    function setPostMode(mode) {
+      postMode = mode;
+      if (mode === 'image') {
+        // Image mode: larger preview, hide link elements
+        appLayout.classList.add('image-mode');
+        linkOnlyFields.style.display = 'none';
+        cardButtonGroup.style.display = 'none';
+        cardLinkInfo.style.display = 'none';
+      } else {
+        // Link mode: normal size
+        appLayout.classList.remove('image-mode');
+        linkOnlyFields.style.display = '';
+        cardButtonGroup.style.display = '';
+        cardLinkInfo.style.display = '';
+      }
+    }
+
+    // Update pending count on load
+    updatePendingCount();
+    // Refresh pending count every 30 seconds
+    setInterval(updatePendingCount, 30000);
+
+    // Preview elements
+    const previewLinkName = document.getElementById('previewLinkName');
+    const previewCaption = document.getElementById('previewCaption');
+    const previewDescription = document.getElementById('previewDescription');
+
+    // State
+    let referenceImages = [];
+    let generatedImages = [];
+    let selectedImage = null;
+    let currentView = 'upload'; // upload, refs, grid, full
+
+    // ============================================
+    // LAZADA AFFILIATE LINK CONVERSION (Auto-convert)
+    // ============================================
+    const lazadaStatus = document.getElementById('lazadaStatus');
+    let isConverting = false;
+
+    // Check if URL is a Lazada product URL
+    function isLazadaUrl(url) {
+      return url && (url.includes('lazada.co.th/products/') || url.includes('lazada.co.th/products/-'));
+    }
+
+    // Convert Lazada URL to affiliate link
+    async function convertLazadaLink() {
+      if (isConverting) return;
+
+      const url = linkUrl.value.trim();
+
+      if (!url || !isLazadaUrl(url)) {
+        return;
+      }
+
+      // Show loading state
+      isConverting = true;
+      lazadaStatus.textContent = 'Converting...';
+      lazadaStatus.style.color = '#888';
+
+      // Send message to extension
+      window.postMessage({
+        type: 'FEWFEED_CONVERT_LAZADA_LINK',
+        productUrl: url
+      }, '*');
+    }
+
+    // Listen for Lazada conversion response
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'FEWFEED_LAZADA_LINK_RESPONSE') {
+        const response = event.data.data;
+        isConverting = false;
+
+        if (response.success && response.affiliateLink) {
+          // Update the link URL field with affiliate link
+          linkUrl.value = response.affiliateLink;
+          lazadaStatus.textContent = '';
+        } else {
+          lazadaStatus.textContent = '❌ ' + (response.error || 'Conversion failed');
+          lazadaStatus.style.color = '#ef4444';
+        }
+      }
+    });
+
+    // Clean Lazada URL - remove query params after .html
+    function cleanLazadaUrl(url) {
+      if (url.includes('lazada.co.th/products/') && url.includes('.html')) {
+        return url.split('.html')[0] + '.html';
+      }
+      return url;
+    }
+
+    // Auto-convert Lazada URL on paste
+    linkUrl.addEventListener('paste', (e) => {
+      // Wait for the paste to complete
+      setTimeout(() => {
+        let url = linkUrl.value.trim();
+        // Clean up Lazada URL first
+        url = cleanLazadaUrl(url);
+        linkUrl.value = url;
+
+        if (isLazadaUrl(url) && !url.includes('s.lazada.co.th')) {
+          // Auto-convert!
+          convertLazadaLink();
+        }
+      }, 100);
+    });
+
+    // ============================================
+
+    // Track which upload mode was clicked
+    let uploadMode = 'gemini'; // 'device' or 'gemini'
+
+    // Upload from device button - just show image directly
+    document.getElementById('uploadFromDevice').addEventListener('click', (e) => {
+      e.stopPropagation();
+      uploadMode = 'device';
+      fileInput.click();
+    });
+
+    // Upload from Gemini button - generate variations
+    document.getElementById('uploadFromGemini').addEventListener('click', (e) => {
+      e.stopPropagation();
+      uploadMode = 'gemini';
+      fileInput.click();
+    });
+
+    // Click on card image area (for other areas)
+    cardImageArea.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-generate') || e.target.closest('.generated-item') || e.target.closest('.back-to-grid') || e.target.closest('.upload-btn')) {
+        return;
+      }
+      if (currentView === 'upload' || currentView === 'refs') {
+        uploadMode = 'gemini';
+        fileInput.click();
+      }
+    });
+
+    // File input change - handle both device upload and gemini generation
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+
+      if (uploadMode === 'device') {
+        // Direct upload - just show the image
+        const file = files[0]; // Use first file only
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          selectedImage = ev.target.result;
+
+          // Show image in full view
+          currentView = 'full';
+          uploadPrompt.style.display = 'none';
+          refThumbsRow.style.display = 'none';
+          generateOverlay.style.display = 'none';
+          generatedGrid.style.display = 'none';
+          document.getElementById('skeletonGrid').style.display = 'none';
+
+          fullImageView.style.display = 'block';
+          fullImageView.innerHTML = `
+            <img src="${selectedImage}" style="width: 100%; height: 100%; object-fit: contain;">
+            <button class="back-to-upload" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); border: none; border-radius: 8px; padding: 8px; cursor: pointer; color: white;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+          `;
+
+          // Add click handler for back button
+          fullImageView.querySelector('.back-to-upload').addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedImage = null;
+            currentView = 'upload';
+            fullImageView.style.display = 'none';
+            uploadPrompt.style.display = 'flex';
+          });
+
+          // Update preview
+          publishBtn.classList.remove('published');
+          lastPublishedUrl = null;
+        };
+        reader.readAsDataURL(file);
+        fileInput.value = '';
+        return;
+      }
+
+      // Gemini mode - generate variations
+      // Show skeleton grid immediately
+      currentView = 'generating';
+      uploadPrompt.style.display = 'none';
+      refThumbsRow.style.display = 'none';
+      generateOverlay.style.display = 'none';
+      generatedGrid.style.display = 'none';
+      document.getElementById('skeletonGrid').style.display = 'grid';
+
+      // Read all files first
+      referenceImages = [];
+      const readPromises = files.map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            resolve({
+              data: ev.target.result.split(',')[1],
+              mimeType: file.type
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      referenceImages = await Promise.all(readPromises);
+      fileInput.value = '';
+
+      // Generate immediately
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referenceImages })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        generatedImages = data.images;
+        showGeneratedGrid();
+      } catch (err) {
+        alert('Generation failed: ' + err.message);
+        // Reset to upload state
+        currentView = 'upload';
+        uploadPrompt.style.display = 'flex';
+        generateOverlay.style.display = 'none';
+        document.getElementById('skeletonGrid').style.display = 'none';
+      }
+    });
+
+    // Update reference thumbnails
+    function updateRefThumbs() {
+      refThumbsRow.innerHTML = '';
+      referenceImages.forEach((img, i) => {
+        const thumb = document.createElement('img');
+        thumb.className = 'ref-thumb';
+        thumb.src = `data:${img.mimeType};base64,${img.data}`;
+        refThumbsRow.appendChild(thumb);
+      });
+
+      // Add plus button
+      const plus = document.createElement('div');
+      plus.className = 'ref-thumb';
+      plus.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+      plus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+      });
+      refThumbsRow.appendChild(plus);
+
+      uploadPrompt.style.display = 'none';
+      refThumbsRow.style.display = 'flex';
+      generateOverlay.style.display = 'flex';
+    }
+
+    // Generate button
+    generateBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (referenceImages.length === 0) return;
+
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="loading"></span> Generating...';
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referenceImages })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        generatedImages = data.images;
+        showGeneratedGrid();
+      } catch (err) {
+        alert('Generation failed: ' + err.message);
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate 4 Variations';
+      }
+    });
+
+    // Show generated grid
+    function showGeneratedGrid() {
+      currentView = 'grid';
+      uploadPrompt.style.display = 'none';
+      generateOverlay.style.display = 'none';
+      refThumbsRow.style.display = 'none';
+      document.getElementById('skeletonGrid').style.display = 'none';
+      generatedGrid.style.display = 'grid';
+      fullImageView.style.display = 'none';
+
+      generatedGrid.innerHTML = '';
+
+      // Add regenerate button
+      const regenBtn = document.createElement('button');
+      regenBtn.className = 'btn-regenerate';
+      regenBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> เจนใหม่';
+      regenBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        regenerateImages();
+      });
+      generatedGrid.appendChild(regenBtn);
+
+      generatedImages.forEach((img, i) => {
+        const item = document.createElement('div');
+        item.className = 'generated-item';
+        item.innerHTML = `
+          <span class="item-number">${i + 1}</span>
+          <img src="${img}" alt="Generated ${i + 1}">
+        `;
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectImage(img, item);
+        });
+        generatedGrid.appendChild(item);
+      });
+    }
+
+    // Regenerate images
+    async function regenerateImages() {
+      if (referenceImages.length === 0) {
+        fileInput.click();
+        return;
+      }
+
+      currentView = 'generating';
+      generatedGrid.style.display = 'none';
+      generateOverlay.style.display = 'none';
+      document.getElementById('skeletonGrid').style.display = 'grid';
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referenceImages })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        generatedImages = data.images;
+        showGeneratedGrid();
+      } catch (err) {
+        alert('Generation failed: ' + err.message);
+        showGeneratedGrid(); // Show previous results
+      }
+    }
+
+    // Select an image
+    function selectImage(imgSrc, element) {
+      document.querySelectorAll('.generated-item').forEach(el => el.classList.remove('selected'));
+      if (element) element.classList.add('selected');
+      selectedImage = imgSrc;
+      showFullImage(imgSrc);
+    }
+
+    // Show full image
+    function showFullImage(imgSrc) {
+      currentView = 'full';
+      uploadPrompt.style.display = 'none';
+      generateOverlay.style.display = 'none';
+      refThumbsRow.style.display = 'none';
+      generatedGrid.style.display = 'none';
+      fullImageView.style.display = 'flex';
+
+      fullImageView.innerHTML = `
+        <button class="back-to-grid" onclick="event.stopPropagation(); showGeneratedGrid();">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back to grid
+        </button>
+        <img src="${imgSrc}" alt="Selected">
+      `;
+    }
+
+    // Update preview on input change
+    linkName.addEventListener('input', () => previewLinkName.textContent = linkName.value);
+    caption.addEventListener('input', () => previewCaption.textContent = caption.value);
+    description.addEventListener('input', () => previewDescription.textContent = description.value);
+
+    // Double-click to edit preview text
+    function setupEditableText(previewEl, inputEl) {
+      previewEl.addEventListener('dblclick', () => {
+        previewEl.contentEditable = 'true';
+        previewEl.classList.add('editing');
+        previewEl.focus();
+        // Select all text
+        const range = document.createRange();
+        range.selectNodeContents(previewEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+
+      previewEl.addEventListener('blur', () => {
+        previewEl.contentEditable = 'false';
+        previewEl.classList.remove('editing');
+        inputEl.value = previewEl.textContent;
+      });
+
+      previewEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          previewEl.blur();
+        }
+        if (e.key === 'Escape') {
+          previewEl.textContent = inputEl.value;
+          previewEl.blur();
+        }
+      });
+    }
+
+    setupEditableText(previewCaption, caption);
+    setupEditableText(previewLinkName, linkName);
+    setupEditableText(previewDescription, description);
+
+    // Publish
+    let lastPublishedUrl = null;
+
+    publishBtn.addEventListener('click', async () => {
+      // If already published, open the URL
+      if (lastPublishedUrl && publishBtn.classList.contains('published')) {
+        window.open(lastPublishedUrl, '_blank');
+        return;
+      }
+
+      if (!selectedImage) {
+        alert('Please select an image first');
+        return;
+      }
+
+      publishBtn.disabled = true;
+      publishBtn.innerHTML = '<span class="loading"></span>';
+      publishBtn.classList.remove('published');
+      lastPublishedUrl = null;
+
+      try {
+        // Get credentials - Only Ads Token + Cookie needed
+        // Server fetches Page Token directly from Ads Token (no Postcron needed)
+        const adsToken = fbToken || localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
+        const cookie = fbCookie || localStorage.getItem("fewfeed_cookie");
+        const pageId = document.getElementById('pageSelect').value;
+        const adAccountId = document.getElementById('adAccountSelect').value;
+
+        if (!adsToken) {
+          throw new Error('ไม่มี Ads Token กรุณาคลิก icon extension เพื่อ login');
+        }
+
+        if (!cookie) {
+          throw new Error('ไม่มี Cookie กรุณาคลิก icon extension เพื่อ login');
+        }
+
+        if (!pageId) {
+          throw new Error('กรุณาเลือก Page');
+        }
+
+        console.log("[FEWFEED] Publishing with Ads Token only (server fetches Page Token)");
+
+        // Check if auto-schedule is enabled
+        const isAutoSchedule = localStorage.getItem('fewfeed_autoSchedule') === 'true';
+        let scheduledTime = null;
+        if (isAutoSchedule) {
+          scheduledTime = getNextScheduleTime();
+          console.log("[FEWFEED] Scheduling for:", scheduledTime.toISOString());
+        }
+
+        const response = await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl: selectedImage,
+            linkUrl: linkUrl.value,
+            linkName: linkName.value,
+            caption: caption.value,
+            description: description.value,
+            accessToken: adsToken,   // Ads Token (server fetches Page Token from this)
+            cookieData: cookie,
+            pageId: pageId,
+            adAccountId: adAccountId,
+            scheduledTime: scheduledTime ? Math.floor(scheduledTime.getTime() / 1000) : null // Unix timestamp
+          })
+        });
+
+        // All responses are now streaming (both immediate and scheduled)
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullLog = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          fullLog += text;
+          console.log(text);
+        }
+
+        // Parse result from log - simple check for success
+        const urlMatch = fullLog.match(/"url":"([^"]+)"/);
+        const scheduledMatch = fullLog.match(/"scheduled":true/);
+
+        if (urlMatch) {
+          lastPublishedUrl = urlMatch[1];
+
+          if (scheduledMatch) {
+            // Scheduled successfully via REST API
+            publishBtn.textContent = 'SCHEDULED ✓';
+            publishBtn.classList.add('published');
+            publishBtn.disabled = false;
+            console.log('[FEWFEED] Post scheduled:', lastPublishedUrl);
+
+            // Update last scheduled time
+            if (scheduledTime) {
+              lastScheduledTime = scheduledTime;
+              localStorage.setItem('fewfeed_lastScheduledTime', scheduledTime.toISOString());
+              updateNextScheduleDisplay();
+            }
+
+            // Reset button after 2 seconds
+            setTimeout(() => {
+              publishBtn.textContent = 'SCHEDULE';
+              publishBtn.classList.remove('published');
+            }, 2000);
+          } else {
+            // Immediate publish success
+            publishBtn.textContent = '';
+            const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            checkSvg.setAttribute('width', '20');
+            checkSvg.setAttribute('height', '20');
+            checkSvg.setAttribute('viewBox', '0 0 24 24');
+            checkSvg.setAttribute('fill', 'none');
+            checkSvg.setAttribute('stroke', 'currentColor');
+            checkSvg.setAttribute('stroke-width', '3');
+            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline.setAttribute('points', '20 6 9 17 4 12');
+            checkSvg.appendChild(polyline);
+            publishBtn.appendChild(checkSvg);
+            publishBtn.classList.add('published');
+            publishBtn.disabled = false;
+            console.log('[FEWFEED] Published successfully:', lastPublishedUrl);
+          }
+        } else if (fullLog.includes('"success":false')) {
+          // Extract error message from response - show the actual error
+          const errorMatch = fullLog.match(/"error":"([^"]+)"/);
+          const errorMsg = errorMatch ? errorMatch[1] : 'Unknown error';
+          console.error('[FEWFEED] Full error log:', fullLog);
+          throw new Error(errorMsg);
+        } else {
+          // No success or error found - unexpected response
+          console.error('[FEWFEED] Unexpected response:', fullLog);
+          throw new Error('Unexpected response from server');
+        }
+      } catch (err) {
+        console.error('[FEWFEED] Error:', err.message);
+        alert('Publish failed: ' + err.message);
+        publishBtn.innerHTML = 'PUBLISH';
+        publishBtn.disabled = false;
+      }
+    });
+
+    // Load config
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        if (config.defaults) {
+          // linkUrl stays empty - user will paste
+          if (config.defaults.caption) {
+            caption.value = config.defaults.caption;
+            previewCaption.textContent = config.defaults.caption;
+          }
+          if (config.defaults.description) {
+            description.value = config.defaults.description;
+            previewDescription.textContent = config.defaults.description;
+          }
+        }
+        // Set page and ad account from server config
+        if (config.pageId) {
+          document.getElementById('pageSelect').value = config.pageId;
+          document.getElementById('previewPageId').textContent = config.pageId;
+        }
+        if (config.adAccountId) {
+          document.getElementById('adAccountSelect').value = config.adAccountId;
+        }
+      })
+      .catch(() => {});
+
+    // ===== FEWFEED Extension Integration =====
+    let fbCookie = null;
+    let fbToken = null;      // Ads Token (for creating ad creatives)
+    let fbPostToken = null;  // Post Token from Postcron (for fetching pages)
+    let allPages = [];
+    let selectedPageIndex = 0;
+
+    // Page selector elements
+    const pageSelector = document.getElementById('pageSelector');
+    const pageDropdown = document.getElementById('pageDropdown');
+
+    // Toggle dropdown
+    pageSelector.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pageDropdown.classList.toggle('visible');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      pageDropdown.classList.remove('visible');
+    });
+
+    // Select a page
+    function selectPage(index) {
+      selectedPageIndex = index;
+      const page = allPages[index];
+      if (!page) return;
+
+      // Note: Page Token no longer needed here - server fetches it directly from Ads Token
+      console.log("[FEWFEED] Selected page:", page.name, "id:", page.id);
+
+      // Hide skeleton, show real selector
+      const skeleton = document.getElementById('pageSelectorSkeleton');
+      const pageSelector = document.getElementById('pageSelector');
+      if (skeleton) skeleton.style.display = 'none';
+      pageSelector.style.display = 'flex';
+
+      // Update content
+      document.getElementById('previewPageName').textContent = page.name || 'Page';
+      document.getElementById('previewPageId').textContent = page.id;
+      document.getElementById('pageSelect').value = page.id;
+
+      const imgUrl = page.picture?.data?.url || `https://graph.facebook.com/${page.id}/picture?type=small`;
+      document.getElementById('previewAvatarImg').src = imgUrl;
+
+      // Update dropdown selection
+      document.querySelectorAll('.page-dropdown-item').forEach((item, i) => {
+        item.classList.toggle('selected', i === index);
+      });
+
+      pageDropdown.classList.remove('visible');
+    }
+
+    // Render pages dropdown
+    function renderPagesDropdown(pages) {
+      allPages = pages;
+      pageDropdown.textContent = '';
+
+      pages.forEach((page, i) => {
+        const item = document.createElement('div');
+        item.className = 'page-dropdown-item' + (i === selectedPageIndex ? ' selected' : '');
+
+        const img = document.createElement('img');
+        img.src = page.picture?.data?.url || `https://graph.facebook.com/${page.id}/picture?type=small`;
+        img.alt = page.name;
+
+        const info = document.createElement('div');
+        info.className = 'page-dropdown-item-info';
+
+        const name = document.createElement('h4');
+        name.textContent = page.name || 'Page';
+
+        const id = document.createElement('p');
+        id.textContent = page.id;
+
+        info.appendChild(name);
+        info.appendChild(id);
+        item.appendChild(img);
+        item.appendChild(info);
+
+        item.addEventListener('click', () => selectPage(i));
+        pageDropdown.appendChild(item);
+      });
+
+      // Auto-select first page
+      if (pages.length > 0) {
+        selectPage(0);
+      }
+    }
+
+    // Listen for data injection from extension
+    window.addEventListener("message", (event) => {
+      if (event.source !== window) return;
+
+      // Extension ready
+      if (event.data.type === "FEWFEED_EXTENSION_READY") {
+        console.log("[FEWFEED] Extension detected!");
+        document.body.setAttribute("data-extension-ready", "true");
+      }
+
+      // Cookie + Tokens injected from extension
+      if (event.data.type === "FEWFEED_COOKIE_INJECTED") {
+        fbCookie = event.data.cookie;
+        fbToken = event.data.token;
+        fbPostToken = event.data.postToken;
+        const userId = event.data.userId;
+        const userName = event.data.userName;
+
+        console.log("[FEWFEED] Data received:", {
+          userId: userId,
+          userName: userName,
+          hasAdsToken: !!fbToken,
+          hasPostToken: !!fbPostToken,
+          hasCookie: !!fbCookie
+        });
+
+        // Show status with token/cookie indicators
+        showCookieStatus(true, userId, userName, !!fbToken, !!fbCookie, !!fbPostToken);
+
+        // Fetch pages - prefer Post Token (works better for me/accounts), fallback to Ads Token
+        if (fbPostToken || fbToken) {
+          fetchPages(fbPostToken || fbToken);
+        }
+      }
+
+      // Pages response from extension
+      if (event.data.type === "FEWFEED_PAGES_RESPONSE") {
+        const response = event.data.data;
+        if (response.success && response.pages && response.pages.length > 0) {
+          renderPagesDropdown(response.pages);
+          console.log("[FEWFEED] Pages loaded:", response.pages.length);
+        }
+      }
+
+      // Post token arrived from Postcron OAuth
+      if (event.data.type === "FEWFEED_POST_TOKEN_READY") {
+        fbPostToken = event.data.postToken;
+        console.log("[FEWFEED] Post token received!");
+        localStorage.setItem("fewfeed_postToken", fbPostToken);
+
+        // Update UI status
+        const userName = localStorage.getItem("fewfeed_userName");
+        const userId = localStorage.getItem("fewfeed_userId");
+        showCookieStatus(true, userId, userName, !!fbToken, !!fbCookie, !!fbPostToken);
+
+        // If we don't have pages yet, fetch them with the new post token
+        if (allPages.length === 0 && fbPostToken) {
+          fetchPages(fbPostToken);
+        }
+      }
+    });
+
+    // Fetch pages from Facebook API via extension or direct call
+    function fetchPages(accessToken) {
+      // Determine if this is Post Token (starts with EAAChZC from Postcron) or Ads Token (starts with EAABsbCS)
+      const tokenType = accessToken?.startsWith('EAAChZC') ? 'POST_TOKEN' :
+                        accessToken?.startsWith('EAABsbCS') ? 'ADS_TOKEN' : 'UNKNOWN';
+      console.log("[FEWFEED] fetchPages called with:", tokenType, "token starts with:", accessToken?.substring(0, 10) + "...");
+
+      // Try extension first
+      window.postMessage({
+        type: "FEWFEED_FETCH_PAGES",
+        accessToken: accessToken
+      }, "*");
+
+      // Also try direct API call as fallback (must include access_token field to get Page Tokens)
+      fetch(`https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}&fields=access_token,id,name,picture,is_published&limit=100`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.data && data.data.length > 0) {
+            renderPagesDropdown(data.data);
+            console.log("[FEWFEED] Pages loaded (direct):", data.data.length);
+          }
+        })
+        .catch(err => console.log("[FEWFEED] Direct API failed:", err.message));
+    }
+
+    // Helper: Show cookie status with Token/Cookie/PostToken indicators in header
+    function showCookieStatus(connected, userId, userName, hasToken, hasCookie, hasPostToken = false) {
+      const tokenIndicator = document.getElementById("tokenIndicator");
+      const cookieIndicator = document.getElementById("cookieIndicator");
+      const postTokenIndicator = document.getElementById("postTokenIndicator");
+
+      // Update token indicator (Ads Token)
+      if (tokenIndicator) {
+        tokenIndicator.classList.remove('valid', 'invalid');
+        tokenIndicator.classList.add(hasToken ? 'valid' : 'invalid');
+      }
+
+      // Update cookie indicator
+      if (cookieIndicator) {
+        cookieIndicator.classList.remove('valid', 'invalid');
+        cookieIndicator.classList.add(hasCookie ? 'valid' : 'invalid');
+      }
+
+      // Update post token indicator
+      if (postTokenIndicator) {
+        postTokenIndicator.classList.remove('valid', 'invalid');
+        postTokenIndicator.classList.add(hasPostToken ? 'valid' : 'invalid');
+      }
+
+      // Update header avatar with user initial
+      if (connected && userName) {
+        const userAvatar = document.querySelector('.user-avatar');
+        if (userAvatar) userAvatar.textContent = (userName || "U").charAt(0).toUpperCase();
+      }
+
+      console.log("[FEWFEED] Status updated - AdsToken:", hasToken ? "valid" : "invalid", "Cookie:", hasCookie ? "valid" : "invalid", "PostToken:", hasPostToken ? "valid" : "invalid");
+    }
+
+    // Token Modal Functions
+    function openTokenModal(type) {
+      const modal = document.getElementById('tokenModal');
+      const adsToken = localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token") || "";
+      const cookie = localStorage.getItem("fewfeed_cookie") || "";
+      const postToken = localStorage.getItem("fewfeed_postToken") || "";
+
+      // Get all token items
+      const adsItem = document.getElementById('modalAdsItem');
+      const cookieItem = document.getElementById('modalCookieItem');
+      const postItem = document.getElementById('modalPostItem');
+
+      // Hide all first
+      if (adsItem) adsItem.style.display = 'none';
+      if (cookieItem) cookieItem.style.display = 'none';
+      if (postItem) postItem.style.display = 'none';
+
+      // Show only the requested type
+      if (type === 'ads' && adsItem) {
+        adsItem.style.display = 'block';
+        const adsStatus = document.getElementById('modalAdsTokenStatus');
+        const adsValue = document.getElementById('modalAdsTokenValue');
+        adsStatus.textContent = adsToken ? 'Valid' : 'Invalid';
+        adsStatus.className = 'token-status ' + (adsToken ? 'valid' : 'invalid');
+        adsValue.textContent = adsToken || '(No Ads Token)';
+        adsValue.className = 'token-value' + (adsToken ? '' : ' empty');
+        document.getElementById('tokenModalTitle').textContent = 'Ads Token';
+      } else if (type === 'cookie' && cookieItem) {
+        cookieItem.style.display = 'block';
+        const cookieStatus = document.getElementById('modalCookieStatus');
+        const cookieValue = document.getElementById('modalCookieValue');
+        cookieStatus.textContent = cookie ? 'Valid' : 'Invalid';
+        cookieStatus.className = 'token-status ' + (cookie ? 'valid' : 'invalid');
+        cookieValue.textContent = cookie || '(No Cookie)';
+        cookieValue.className = 'token-value' + (cookie ? '' : ' empty');
+        document.getElementById('tokenModalTitle').textContent = 'Cookie';
+      } else if (type === 'post' && postItem) {
+        postItem.style.display = 'block';
+        const postStatus = document.getElementById('modalPostTokenStatus');
+        const postValue = document.getElementById('modalPostTokenValue');
+        postStatus.textContent = postToken ? 'Valid' : 'Invalid';
+        postStatus.className = 'token-status ' + (postToken ? 'valid' : 'invalid');
+        postValue.textContent = postToken || '(No Post Token)';
+        postValue.className = 'token-value' + (postToken ? '' : ' empty');
+        document.getElementById('tokenModalTitle').textContent = 'Post Token';
+      }
+
+      modal.classList.add('show');
+    }
+
+    function closeTokenModal() {
+      const modal = document.getElementById('tokenModal');
+      modal.classList.remove('show');
+    }
+
+    function copyToken(type) {
+      let value = '';
+      let name = '';
+      if (type === 'ads') {
+        value = localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token") || "";
+        name = 'Ads Token';
+      } else if (type === 'cookie') {
+        value = localStorage.getItem("fewfeed_cookie") || "";
+        name = 'Cookie';
+      } else if (type === 'post') {
+        value = localStorage.getItem("fewfeed_postToken") || "";
+        name = 'Post Token';
+      }
+
+      if (value) {
+        navigator.clipboard.writeText(value).then(() => {
+          alert(name + ' copied!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = value;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          alert(name + ' copied!');
+        });
+      } else {
+        alert('No ' + name + ' available');
+      }
+    }
+
+    // Setup click handlers for status indicators
+    function setupTokenModalHandlers() {
+      const tokenIndicator = document.getElementById('tokenIndicator');
+      const cookieIndicator = document.getElementById('cookieIndicator');
+      const postTokenIndicator = document.getElementById('postTokenIndicator');
+      const modalOverlay = document.getElementById('tokenModal');
+
+      if (tokenIndicator) tokenIndicator.addEventListener('click', () => openTokenModal('ads'));
+      if (cookieIndicator) cookieIndicator.addEventListener('click', () => openTokenModal('cookie'));
+      if (postTokenIndicator) postTokenIndicator.addEventListener('click', () => openTokenModal('post'));
+
+      // Close modal when clicking outside
+      if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) closeTokenModal();
+        });
+      }
+
+      // Close modal with Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeTokenModal();
+      });
+    }
+
+    // Initialize modal handlers when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupTokenModalHandlers);
+    } else {
+      setupTokenModalHandlers();
+    }
+
+    // Load saved data from localStorage on page load
+    function loadSavedData() {
+      const accessToken = localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
+      const postToken = localStorage.getItem("fewfeed_postToken");
+      const cookie = localStorage.getItem("fewfeed_cookie");
+      const userId = localStorage.getItem("fewfeed_userId");
+      const userName = localStorage.getItem("fewfeed_userName");
+
+      if (userId) {
+        console.log("[FEWFEED] Loaded saved data from localStorage");
+        fbToken = accessToken;
+        fbPostToken = postToken;
+        fbCookie = cookie;
+        showCookieStatus(true, userId, userName, !!accessToken, !!cookie, !!postToken);
+
+        // Fetch pages - prefer Post Token, fallback to Ads Token
+        if (postToken || accessToken) {
+          fetchPages(postToken || accessToken);
+        }
+      }
+    }
+
+    // Load on startup
+    loadSavedData();
+  </script>
+</body>
+</html>
