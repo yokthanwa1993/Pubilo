@@ -1,11 +1,6 @@
 {
   "buildCommand": "echo 'No build needed'",
   "outputDirectory": "public",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
