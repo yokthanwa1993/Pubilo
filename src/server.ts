@@ -39,6 +39,10 @@ const stats = {
 async function uploadToFreeImage(file: File, log: (msg: string) => void): Promise<string> {
   log("Uploading to freeimage.host...");
 
+  if (!FREEIMAGE_API_KEY) {
+    throw new Error("FREEIMAGE_API_KEY not configured in .env.local - get free key at https://freeimage.host/page/api");
+  }
+
   const formData = new FormData();
   formData.append("key", FREEIMAGE_API_KEY);
   formData.append("action", "upload");
@@ -50,10 +54,17 @@ async function uploadToFreeImage(file: File, log: (msg: string) => void): Promis
     body: formData,
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    log(`   Error response: ${text.substring(0, 200)}`);
+    throw new Error("freeimage.host returned invalid response - check API key");
+  }
 
   if (data.status_code !== 200 || !data.image?.url) {
-    throw new Error("Failed to upload image");
+    throw new Error(`Failed to upload image: ${data.error?.message || "Unknown error"}`);
   }
 
   log(`   URL: ${data.image.url}`);
@@ -114,37 +125,46 @@ async function handlePublish(req: Request): Promise<Response> {
   const pageTokenType = pageToken?.startsWith("EAAChZC") ? "FROM_POSTCRON" :
                         pageToken?.startsWith("EAABsbCS") ? "FROM_ADS" :
                         pageToken ? "UNKNOWN" : "NULL";
-  console.log("[FEWFEED Server] Received tokens:", {
+  console.log("[Pubilo] Received tokens:", {
     adsTokenType,
     pageTokenType,
     hasPageToken: !!pageToken,
     hasFbDtsg: !!fbDtsg,
     adsTokenPrefix: accessToken?.substring(0, 10),
-    pageTokenPrefix: pageToken?.substring(0, 10)
+    pageTokenPrefix: pageToken?.substring(0, 10),
+    adAccountId: adAccountId || "(empty)",
+    pageId: pageId || "(empty)",
+    envAdAccountId: defaultConfig.adAccountId || "(not set)"
   });
 
   if (!imageUrl) {
-    return Response.json({ error: "No image provided" }, { status: 400 });
+    console.log("[Pubilo] Validation failed: No image provided");
+    return Response.json({ success: false, error: "No image provided" }, { status: 400 });
   }
 
   if (!linkUrl || !linkName) {
-    return Response.json({ error: "Missing linkUrl or linkName" }, { status: 400 });
+    console.log("[Pubilo] Validation failed: Missing linkUrl or linkName", { linkUrl, linkName });
+    return Response.json({ success: false, error: "Missing linkUrl or linkName" }, { status: 400 });
   }
 
   if (!accessToken) {
-    return Response.json({ error: "No access token. Please login via extension first." }, { status: 400 });
+    console.log("[Pubilo] Validation failed: No access token");
+    return Response.json({ success: false, error: "No access token. Please login via extension first." }, { status: 400 });
   }
 
   if (!cookie) {
-    return Response.json({ error: "No cookie. Please login via extension first." }, { status: 400 });
+    console.log("[Pubilo] Validation failed: No cookie");
+    return Response.json({ success: false, error: "No cookie. Please login via extension first." }, { status: 400 });
   }
 
   if (!adAccountId) {
-    return Response.json({ error: "No ad account selected" }, { status: 400 });
+    console.log("[Pubilo] Validation failed: No ad account selected");
+    return Response.json({ success: false, error: "No ad account selected" }, { status: 400 });
   }
 
   if (!pageId) {
-    return Response.json({ error: "No page selected" }, { status: 400 });
+    console.log("[Pubilo] Validation failed: No page selected");
+    return Response.json({ success: false, error: "No page selected" }, { status: 400 });
   }
 
   // Use streaming response for both immediate and scheduled posts
@@ -157,6 +177,9 @@ async function handlePublish(req: Request): Promise<Response> {
       };
 
       try {
+        log("Starting publish process...");
+        log(`Image URL type: ${imageUrl?.substring(0, 30)}...`);
+
         // Convert base64 data URL to File and upload to freeimage
         let finalImageUrl = imageUrl;
         if (imageUrl.startsWith("data:")) {
@@ -175,6 +198,7 @@ async function handlePublish(req: Request): Promise<Response> {
           cookie,
           adAccountId: adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`,
           pageId,
+          fbDtsg: fbDtsg || undefined,  // Required for GraphQL scheduling
           defaults: defaultConfig.defaults,
         };
 
@@ -190,11 +214,12 @@ async function handlePublish(req: Request): Promise<Response> {
           scheduledTime: scheduledTime || undefined,
         });
 
-        // Both immediate and scheduled posts are handled by REST API now
         stats.published++;
-        if (scheduledTime) {
-          log(`\n{"success":true,"scheduled":true,"url":"${result.url}"}`);
+        if (result.needsScheduling) {
+          // Post created but needs scheduling via extension GraphQL
+          log(`\n{"success":true,"needsScheduling":true,"postId":"${result.postId}","url":"${result.url}","scheduledTime":${result.scheduledTime}}`);
         } else {
+          // Immediate publish completed
           log(`\n{"success":true,"url":"${result.url}"}`);
         }
       } catch (error) {
@@ -311,7 +336,7 @@ async function processScheduledPosts() {
   );
 
   for (const item of dueItems) {
-    console.log(`[FEWFEED Server] Processing scheduled post ${item.id}...`);
+    console.log(`[Pubilo] Processing scheduled post ${item.id}...`);
     item.status = "processing";
 
     try {
@@ -348,12 +373,12 @@ async function processScheduledPosts() {
       item.status = "done";
       item.postUrl = result.url;
       stats.published++;
-      console.log(`[FEWFEED Server] Scheduled post ${item.id} published: ${result.url}`);
+      console.log(`[Pubilo] Scheduled post ${item.id} published: ${result.url}`);
     } catch (error) {
       item.status = "failed";
       item.error = error instanceof Error ? error.message : "Unknown error";
       stats.failed++;
-      console.error(`[FEWFEED Server] Scheduled post ${item.id} failed:`, item.error);
+      console.error(`[Pubilo] Scheduled post ${item.id} failed:`, item.error);
     }
   }
 }
@@ -364,7 +389,7 @@ function startScheduler() {
     clearInterval(schedulerInterval);
   }
   schedulerInterval = setInterval(processScheduledPosts, 30 * 1000);
-  console.log("[FEWFEED Server] Scheduler started");
+  console.log("[Pubilo] Scheduler started");
 }
 
 const server = Bun.serve({
@@ -473,7 +498,7 @@ const server = Bun.serve({
 startScheduler();
 
 console.log(`
-  Fewfeed v3.0
+  Pubilo v3.0
 
   http://localhost:${server.port}
 

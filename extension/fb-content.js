@@ -124,7 +124,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function schedulePost(storyId, pageId, fbDtsg, scheduledTime) {
-  const docId = "5001941423228398";
+  // doc_id from business.facebook.com for BusinessToolsContentManagementPublishingActionMutation
+  const docId = "24110679831861040";
 
   const variables = JSON.stringify({
     input: {

@@ -261,7 +261,7 @@ export class FacebookPublisher {
 
   async publish(options: PublishOptions): Promise<PublishResult> {
     if (options.scheduledTime) {
-      this.log(`Starting Facebook scheduled post creation for ${new Date(options.scheduledTime * 1000).toLocaleString('th-TH')}...\n`);
+      this.log(`Creating post for scheduling at ${new Date(options.scheduledTime * 1000).toLocaleString('th-TH')}...\n`);
     } else {
       this.log("Starting Facebook publish...\n");
     }
@@ -272,27 +272,41 @@ export class FacebookPublisher {
     // Step 2: Trigger processing
     await this.triggerProcessing(creativeId);
 
-    // Step 3: Get Page Access Token (always fetch from Ads Token - Postcron token doesn't work with ad content)
+    // Step 3: Get Page Access Token
     const pageAccessToken = await this.fetchPageAccessToken();
 
     // Step 4: Wait for post ID
     const postId = await this.waitForPostId(creativeId);
 
-    // Step 5: Publish or Schedule via REST API (simple approach!)
-    await this.publishPost(postId, pageAccessToken, options.scheduledTime);
-
-    const result: PublishResult = {
-      success: true,
-      postId,
-      url: `https://www.facebook.com/${postId}`,
-      creativeId,
-    };
-
+    // Step 5: Publish immediately OR return for scheduling via extension
     if (options.scheduledTime) {
-      this.log(`\nDone! Post scheduled. View: ${result.url}`);
+      // For scheduling: DON'T publish here - return post ID for frontend to schedule via extension GraphQL
+      this.log("   Post created (unpublished). Frontend will schedule via extension GraphQL.");
+
+      const result: PublishResult = {
+        success: true,
+        postId,
+        url: `https://www.facebook.com/${postId}`,
+        creativeId,
+        needsScheduling: true, // Flag to tell frontend to call extension
+        scheduledTime: options.scheduledTime,
+      };
+
+      this.log(`\nPost ready for scheduling. Post ID: ${postId}`);
+      return result;
     } else {
+      // Immediate publish via REST API
+      await this.publishPost(postId, pageAccessToken);
+
+      const result: PublishResult = {
+        success: true,
+        postId,
+        url: `https://www.facebook.com/${postId}`,
+        creativeId,
+      };
+
       this.log(`\nDone! View post: ${result.url}`);
+      return result;
     }
-    return result;
   }
 }

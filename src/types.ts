@@ -27,6 +27,8 @@ export interface PublishResult {
   postId: string;
   url: string;
   creativeId?: string;
+  needsScheduling?: boolean;  // Flag for frontend to call extension GraphQL
+  scheduledTime?: number;     // Unix timestamp when scheduling
 }
 
 export interface FacebookError {

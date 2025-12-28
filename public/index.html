@@ -1330,7 +1330,7 @@
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
       </svg>
-      Fewfeed<span>v2</span>
+      Pubilo<span>v3</span>
     </div>
     <div class="header-right">
       <div class="status-indicators" id="statusIndicators">
@@ -1563,7 +1563,7 @@
           <div class="card-link-info" id="cardLinkInfo">
             <div class="card-link-details">
               <div class="card-link-caption editable-text" id="previewCaption">LAZADA.CO.TH</div>
-              <div class="card-link-title editable-text" id="previewLinkName">Hello Fewfeed</div>
+              <div class="card-link-title editable-text" id="previewLinkName">Hello Pubilo</div>
               <div class="card-link-description editable-text" id="previewDescription">Click to learn more</div>
             </div>
             <button class="btn-learn-more">Learn More</button>
@@ -1589,7 +1589,7 @@
               <small id="lazadaStatus" style="color: #888; margin-top: 4px; display: block;"></small>
             </div>
             <!-- Hidden inputs for Link Name, Caption, Description (editable via double-click in preview) -->
-            <input type="hidden" id="linkName" value="Hello Fewfeed">
+            <input type="hidden" id="linkName" value="Hello Pubilo">
             <input type="hidden" id="caption" value="LAZADA.CO.TH">
             <input type="hidden" id="description" value="Click to learn more">
           </div>
@@ -1709,20 +1709,49 @@
       }
     }
 
-    // Calculate next schedule time
+    // Calculate next schedule time - rounds to next interval slot (e.g., xx:00 or xx:30)
     function getNextScheduleTime() {
       const interval = parseInt(scheduleInterval.value) || 30;
       let nextTime;
+
       if (lastScheduledTime) {
+        // Add interval to last scheduled time
         nextTime = new Date(lastScheduledTime.getTime() + interval * 60 * 1000);
-        // If next time is in the past, calculate from now
-        if (nextTime < new Date()) {
-          nextTime = new Date(Date.now() + 60 * 1000); // At least 1 minute from now
+      } else {
+        // First post: round up to next interval slot (e.g., xx:00 or xx:30 for 30min interval)
+        nextTime = roundToNextSlot(new Date(), interval);
+      }
+
+      // Facebook requires at least 10 min in the future
+      const minTime = new Date(Date.now() + 10 * 60 * 1000);
+      if (nextTime < minTime) {
+        nextTime = roundToNextSlot(minTime, interval);
+      }
+
+      return nextTime;
+    }
+
+    // Round time up to next interval slot
+    function roundToNextSlot(date, intervalMinutes) {
+      const result = new Date(date);
+      const minutes = result.getMinutes();
+      const nextSlot = Math.ceil(minutes / intervalMinutes) * intervalMinutes;
+
+      if (nextSlot >= 60) {
+        result.setHours(result.getHours() + 1);
+        result.setMinutes(0, 0, 0);
+      } else if (nextSlot === minutes) {
+        // Already on a slot, move to next one
+        result.setMinutes(minutes + intervalMinutes, 0, 0);
+        if (result.getMinutes() >= 60) {
+          result.setHours(result.getHours() + 1);
+          result.setMinutes(result.getMinutes() - 60, 0, 0);
         }
       } else {
-        nextTime = new Date(Date.now() + 60 * 1000); // 1 minute from now for first post
+        result.setMinutes(nextSlot, 0, 0);
       }
-      return nextTime;
+
+      return result;
     }
 
     // Update next schedule display
@@ -2385,6 +2414,9 @@
           console.log("[FEWFEED] Scheduling for:", scheduledTime.toISOString());
         }
 
+        // Get fb_dtsg for GraphQL scheduling
+        const fbDtsg = localStorage.getItem("fewfeed_fbDtsg");
+
         const response = await fetch('/api/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2398,6 +2430,7 @@
             cookieData: cookie,
             pageId: pageId,
             adAccountId: adAccountId,
+            fbDtsg: fbDtsg,  // Required for GraphQL scheduling
             scheduledTime: scheduledTime ? Math.floor(scheduledTime.getTime() / 1000) : null // Unix timestamp
           })
         });
@@ -2415,32 +2448,70 @@
           console.log(text);
         }
 
-        // Parse result from log - simple check for success
+        // Parse result from log
         const urlMatch = fullLog.match(/"url":"([^"]+)"/);
-        const scheduledMatch = fullLog.match(/"scheduled":true/);
+        const postIdMatch = fullLog.match(/"postId":"([^"]+)"/);
+        const needsSchedulingMatch = fullLog.match(/"needsScheduling":true/);
+        const scheduledTimeMatch = fullLog.match(/"scheduledTime":(\d+)/);
 
         if (urlMatch) {
           lastPublishedUrl = urlMatch[1];
+          const postId = postIdMatch ? postIdMatch[1] : null;
 
-          if (scheduledMatch) {
-            // Scheduled successfully via REST API
-            publishBtn.textContent = 'SCHEDULED ✓';
-            publishBtn.classList.add('published');
-            publishBtn.disabled = false;
-            console.log('[FEWFEED] Post scheduled:', lastPublishedUrl);
+          if (needsSchedulingMatch && postId && scheduledTimeMatch) {
+            // Server created post, now schedule via extension GraphQL
+            const scheduleTimestamp = parseInt(scheduledTimeMatch[1]);
+            console.log('[FEWFEED] Post created, scheduling via extension GraphQL...');
+            console.log('[FEWFEED] Post ID:', postId, 'Schedule time:', scheduleTimestamp);
 
-            // Update last scheduled time
-            if (scheduledTime) {
-              lastScheduledTime = scheduledTime;
-              localStorage.setItem('fewfeed_lastScheduledTime', scheduledTime.toISOString());
-              updateNextScheduleDisplay();
+            publishBtn.textContent = 'SCHEDULING...';
+
+            // Call extension to schedule via GraphQL
+            window.postMessage({
+              type: "FEWFEED_SCHEDULE_POST_GRAPHQL",
+              postId: postId,
+              pageId: pageId,
+              fbDtsg: fbDtsg,
+              scheduledTime: scheduleTimestamp
+            }, "*");
+
+            // Wait for response from extension
+            const scheduleResult = await new Promise((resolve) => {
+              const handler = (event) => {
+                if (event.data.type === "FEWFEED_SCHEDULE_POST_GRAPHQL_RESPONSE") {
+                  window.removeEventListener("message", handler);
+                  resolve(event.data.data);
+                }
+              };
+              window.addEventListener("message", handler);
+              // Timeout after 30s
+              setTimeout(() => {
+                window.removeEventListener("message", handler);
+                resolve({ success: false, error: "Extension scheduling timeout" });
+              }, 30000);
+            });
+
+            if (scheduleResult.success) {
+              publishBtn.textContent = 'SCHEDULED ✓';
+              publishBtn.classList.add('published');
+              publishBtn.disabled = false;
+              console.log('[FEWFEED] Post scheduled via GraphQL:', lastPublishedUrl);
+
+              // Update last scheduled time
+              if (scheduledTime) {
+                lastScheduledTime = scheduledTime;
+                localStorage.setItem('fewfeed_lastScheduledTime', scheduledTime.toISOString());
+                updateNextScheduleDisplay();
+              }
+
+              // Reset button after 2 seconds
+              setTimeout(() => {
+                publishBtn.textContent = 'SCHEDULE';
+                publishBtn.classList.remove('published');
+              }, 2000);
+            } else {
+              throw new Error(`GraphQL scheduling failed: ${scheduleResult.error}`);
             }
-
-            // Reset button after 2 seconds
-            setTimeout(() => {
-              publishBtn.textContent = 'SCHEDULE';
-              publishBtn.classList.remove('published');
-            }, 2000);
           } else {
             // Immediate publish success
             publishBtn.textContent = '';
