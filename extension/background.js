@@ -616,6 +616,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     ).then(sendResponse);
     return true;
   }
+
+  // Refresh post token (trigger OAuth flow)
+  if (request.action === "refreshPostToken") {
+    console.log("[Pubilo] Refreshing post token via OAuth...");
+    // Clear existing post token to force refresh
+    chrome.storage.local.remove(["fewfeed_postToken", "fewfeed_postTokenExpiry"]);
+    startPostcronOAuthBackground();
+    sendResponse({ success: true, message: "OAuth flow started" });
+    return true;
+  }
 });
 
 // Schedule post via GraphQL - send message to Facebook tab's content script
