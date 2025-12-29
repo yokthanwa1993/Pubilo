@@ -87,7 +87,7 @@ const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback
 
 // App URLs - supports both local dev and production
 const APP_URLS = ["http://localhost:3000/*", "https://pubilo.vercel.app/*"];
-const PRODUCTION_URL = "http://localhost:3000/";
+const PRODUCTION_URL = "https://pubilo.vercel.app/";
 
 // When extension icon is clicked
 chrome.action.onClicked.addListener(async () => {

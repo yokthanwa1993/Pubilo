@@ -2,7 +2,15 @@
   "framework": null,
   "buildCommand": "echo 'No build needed'",
   "installCommand": "echo 'Skip install'",
-    "outputDirectory": "public",
+  "outputDirectory": "public",
+  "functions": {
+    "api/upload-image.ts": {
+      "maxDuration": 60
+    },
+    "api/publish.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
