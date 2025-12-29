@@ -2954,16 +2954,47 @@
                 console.log("[FEWFEED] Cache invalidated:", pageId || "all");
             }
 
-            // Image cache - convert to WebP thumbnails for fast loading
-            const imageCache = new Map(); // imageUrl -> webpBlobUrl
-            const THUMB_SIZE = 80; // Thumbnail size in pixels
+            // Image cache - convert to WebP thumbnails, persist in localStorage
+            const imageCache = new Map(); // imageUrl -> dataUrl (memory)
+            const THUMB_SIZE = 80;
+            const IMG_CACHE_KEY = "fewfeed_imgcache";
+            const IMG_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+            // Load cached images from localStorage on startup
+            (function loadImageCacheFromStorage() {
+                try {
+                    const stored = localStorage.getItem(IMG_CACHE_KEY);
+                    if (stored) {
+                        const data = JSON.parse(stored);
+                        if (Date.now() - data.timestamp < IMG_CACHE_TTL) {
+                            Object.entries(data.images).forEach(([url, dataUrl]) => {
+                                imageCache.set(url, dataUrl);
+                            });
+                            console.log("[FEWFEED] Loaded", imageCache.size, "cached images");
+                        } else {
+                            localStorage.removeItem(IMG_CACHE_KEY);
+                        }
+                    }
+                } catch (e) {}
+            })();
+
+            function saveImageCacheToStorage() {
+                try {
+                    const images = {};
+                    imageCache.forEach((dataUrl, url) => { images[url] = dataUrl; });
+                    localStorage.setItem(IMG_CACHE_KEY, JSON.stringify({
+                        timestamp: Date.now(),
+                        images: images
+                    }));
+                } catch (e) {}
+            }
 
             async function getCachedImage(imageUrl) {
                 if (!imageUrl) return null;
                 if (imageCache.has(imageUrl)) {
                     return imageCache.get(imageUrl);
                 }
-                // Load, resize, convert to WebP
+                // Load, resize, convert to WebP dataURL
                 return new Promise((resolve) => {
                     const img = new Image();
                     img.crossOrigin = "anonymous";
@@ -2973,20 +3004,14 @@
                             canvas.width = THUMB_SIZE;
                             canvas.height = THUMB_SIZE;
                             const ctx = canvas.getContext("2d");
-                            // Cover fit (crop to square)
                             const size = Math.min(img.width, img.height);
                             const sx = (img.width - size) / 2;
                             const sy = (img.height - size) / 2;
                             ctx.drawImage(img, sx, sy, size, size, 0, 0, THUMB_SIZE, THUMB_SIZE);
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    imageCache.set(imageUrl, blobUrl);
-                                    resolve(blobUrl);
-                                } else {
-                                    resolve(imageUrl);
-                                }
-                            }, "image/webp", 0.7);
+                            const dataUrl = canvas.toDataURL("image/webp", 0.6);
+                            imageCache.set(imageUrl, dataUrl);
+                            saveImageCacheToStorage();
+                            resolve(dataUrl);
                         } catch (e) {
                             resolve(imageUrl);
                         }
