@@ -278,9 +278,10 @@ export class FacebookPublisher {
     // Step 4: Wait for post ID
     const postId = await this.waitForPostId(creativeId);
 
-    // Step 5: Publish immediately OR return for scheduling via extension
+    // Step 5: Publish immediately OR return for scheduling via extension GraphQL
     if (options.scheduledTime) {
       // For scheduling: DON'T publish here - return post ID for frontend to schedule via extension GraphQL
+      // (Ads posts require GraphQL for scheduling - REST API doesn't work)
       this.log("   Post created (unpublished). Frontend will schedule via extension GraphQL.");
 
       const result: PublishResult = {

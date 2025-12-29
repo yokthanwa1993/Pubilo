@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, Modality } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { CONFIG, ANALYSIS_PROMPT, GENERATION_PROMPT_TEMPLATE } from './prompts';
 
 interface ReferenceImage {
@@ -171,7 +171,10 @@ async function generateImages(
           parts: parts,
         },
         config: {
-          responseModalities: [Modality.TEXT, Modality.IMAGE],
+          imageConfig: {
+            aspectRatio: CONFIG.aspectRatio,
+            imageSize: CONFIG.resolution,
+          },
         },
       })
     );

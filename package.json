@@ -3,9 +3,16 @@
   "version": "3.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/server.ts",
+    "dev": "exit 0",
+    "server": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
-    "vercel-dev": "vercel dev"
+    "vercel-dev": "vercel dev",
+    "ext:watch": "bun run scripts/watch-extension.ts",
+    "ext:start": "lsof -ti:35729 | xargs kill -9 2>/dev/null; bun run scripts/watch-extension.ts > /tmp/pubilo-ext-watch.log 2>&1 & echo $! > /tmp/pubilo-ext-watch.pid && sleep 0.5 && echo '✅ Hot reload running in background (PID:' $(cat /tmp/pubilo-ext-watch.pid) ')'",
+    "ext:stop": "kill $(cat /tmp/pubilo-ext-watch.pid 2>/dev/null) 2>/dev/null && rm -f /tmp/pubilo-ext-watch.pid && echo '🛑 Hot reload stopped' || echo '⚠️ Not running'",
+    "ext:status": "kill -0 $(cat /tmp/pubilo-ext-watch.pid 2>/dev/null) 2>/dev/null && echo '✅ Running (PID:' $(cat /tmp/pubilo-ext-watch.pid) ')' || echo '⚠️ Not running'",
+    "ext:log": "tail -f /tmp/pubilo-ext-watch.log",
+    "dev:all": "bun run ext:start && bun run server"
   },
   "devDependencies": {
     "@types/bun": "latest",

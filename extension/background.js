@@ -1,13 +1,80 @@
-// Pubilo Token Helper v8.0
+// Pubilo Token Helper v8.1
 // Auto-fetches Ads Token + Cookie from Facebook AND Post Token from Postcron OAuth
 // Works like FewFeed V2 - just needs browser to be logged into Facebook
+
+// ============================================
+// HOT RELOAD FOR DEVELOPMENT
+// ============================================
+(function setupHotReload() {
+  const WS_URL = "ws://localhost:35729";
+  let ws = null;
+  let reconnectTimer = null;
+
+  function connect() {
+    try {
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log("[HotReload] Connected to dev server");
+        if (reconnectTimer) {
+          clearInterval(reconnectTimer);
+          reconnectTimer = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "reload") {
+            console.log(`[HotReload] Reloading... (${data.file} changed)`);
+            chrome.runtime.reload();
+          }
+        } catch (e) {
+          // Ignore parse errors (like pong responses)
+        }
+      };
+
+      ws.onclose = () => {
+        ws = null;
+        // Try to reconnect every 3 seconds
+        if (!reconnectTimer) {
+          reconnectTimer = setInterval(() => {
+            console.log("[HotReload] Attempting to reconnect...");
+            connect();
+          }, 3000);
+        }
+      };
+
+      ws.onerror = () => {
+        // Silently fail - dev server might not be running
+        ws?.close();
+      };
+    } catch (e) {
+      // WebSocket not available or connection failed
+    }
+  }
+
+  // Start connection
+  connect();
+
+  // Send keepalive ping every 30 seconds
+  setInterval(() => {
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send("ping");
+    }
+  }, 30000);
+})();
+
+// ============================================
+// MAIN EXTENSION CODE
+// ============================================
 
 const POSTCRON_OAUTH_URL = "https://postcron.com/api/v2.0/social-accounts/url-redirect/?should_redirect=true&social_network=facebook";
 const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback";
 
 // App URLs - supports both local dev and production
 const APP_URLS = ["http://localhost:3000/*", "https://pubilo.vercel.app/*"];
-const PRODUCTION_URL = "https://pubilo.vercel.app/";
+const PRODUCTION_URL = "http://localhost:3000/";
 
 // When extension icon is clicked
 chrome.action.onClicked.addListener(async () => {
@@ -542,6 +609,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return;
   }
 
+  // Get Facebook cookies for popup (checks if logged in)
+  if (request.action === "getFacebookCookies") {
+    (async () => {
+      try {
+        // Get Facebook cookies
+        const cookies = await chrome.cookies.getAll({ domain: ".facebook.com" });
+        const cookieString = cookies.map(c => `${c.name}=${c.value}`).join("; ");
+
+        // Get c_user cookie for userId
+        const cUser = cookies.find(c => c.name === "c_user");
+
+        if (cUser && cookieString) {
+          sendResponse({
+            success: true,
+            cookie: cookieString,
+            userId: cUser.value
+          });
+        } else {
+          sendResponse({
+            success: false,
+            error: "Not logged into Facebook"
+          });
+        }
+      } catch (err) {
+        sendResponse({
+          success: false,
+          error: err.message
+        });
+      }
+    })();
+    return true;
+  }
+
   if (request.action === "getStoredData") {
     chrome.storage.local.get([
       "fewfeed_accessToken",
@@ -606,7 +706,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // Schedule post via GraphQL (must be called from extension to have Facebook cookies)
+  // Schedule post via GraphQL (directly from background with cookies)
   if (request.action === "schedulePostGraphQL") {
     schedulePostViaGraphQL(
       request.postId,
@@ -628,12 +728,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Schedule post via GraphQL - send message to Facebook tab's content script
+// Schedule post via GraphQL - forward to Facebook tab content script
 async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
-  console.log("[FEWFEED] schedulePostViaGraphQL called:", { postId, pageId, scheduledTime });
+  console.log("[FEWFEED] schedulePostViaGraphQL called:", { postId, pageId, scheduledTime, fbDtsgPrefix: fbDtsg?.substring(0, 20) });
 
   if (!fbDtsg) {
-    return { success: false, error: "fb_dtsg is required for scheduling" };
+    return { success: false, error: "fb_dtsg is required for scheduling. Please refresh Facebook login." };
   }
 
   // Convert post ID to story ID format
@@ -645,84 +745,97 @@ async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
   const storyId = `S:_I${parts[0]}:${parts[1]}`;
   console.log("[FEWFEED] Story ID:", storyId);
 
-  // Find any Facebook tab (www.facebook.com or business.facebook.com)
-  let tabs = await chrome.tabs.query({ url: "https://business.facebook.com/*" });
-  if (tabs.length === 0) {
-    tabs = await chrome.tabs.query({ url: "https://www.facebook.com/*" });
-  }
-
-  let fbTab = null;
-  let createdNewTab = false;
-
-  if (tabs.length > 0) {
-    fbTab = tabs[0];
-    console.log("[FEWFEED] Found existing Facebook tab:", fbTab.id);
-  } else {
-    // Create a Facebook tab in background
-    console.log("[FEWFEED] No Facebook tab found, creating one...");
-    fbTab = await chrome.tabs.create({
-      url: "https://business.facebook.com/latest/home",
-      active: false
-    });
-    createdNewTab = true;
-    // Wait for page to fully load
-    await new Promise(resolve => setTimeout(resolve, 4000));
-  }
-
-  // Send message to content script on that tab
   try {
-    const result = await chrome.tabs.sendMessage(fbTab.id, {
-      action: "schedulePostGraphQL",
-      storyId,
-      pageId,
-      fbDtsg,
-      scheduledTime
-    });
+    // Find existing Facebook tab
+    const tabs = await chrome.tabs.query({});
+    let fbTab = tabs.find(tab =>
+      tab.url && (
+        tab.url.includes("www.facebook.com") ||
+        tab.url.includes("business.facebook.com")
+      )
+    );
 
-    console.log("[FEWFEED] GraphQL result from content script:", result);
+    if (!fbTab) {
+      // Create a background Facebook window (hidden from user)
+      console.log("[FEWFEED] No Facebook tab found, creating background window...");
+      const bgWindow = await chrome.windows.create({
+        url: "https://www.facebook.com/",
+        type: 'popup',
+        width: 1,
+        height: 1,
+        left: -9999,
+        top: -9999,
+        focused: false
+      });
+      
+      fbTab = bgWindow.tabs[0];
+      
+      // Store window ID for cleanup later
+      const bgWindowId = bgWindow.id;
 
-    // Close the tab if we created it
-    if (createdNewTab && result.success) {
-      setTimeout(() => chrome.tabs.remove(fbTab.id), 1000);
+      // Wait for page to load
+      await new Promise((resolve) => {
+        const listener = (tabId, changeInfo) => {
+          if (tabId === fbTab.id && changeInfo.status === "complete") {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+        setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }, 10000);
+      });
+
+      // Wait for content script
+      await new Promise(r => setTimeout(r, 1500));
+      
+      // Schedule cleanup - close the background window after 30 seconds
+      setTimeout(() => {
+        chrome.windows.remove(bgWindowId).catch(() => {});
+      }, 30000);
     }
 
-    return result;
-  } catch (e) {
-    console.error("[FEWFEED] sendMessage error:", e);
+    console.log("[FEWFEED] Using Facebook tab:", fbTab.id);
 
-    // If content script not ready, try injecting it
-    if (e.message.includes("Receiving end does not exist")) {
-      console.log("[FEWFEED] Content script not ready, injecting...");
+    // Try to send message, inject content script if needed
+    let result;
+    try {
+      result = await chrome.tabs.sendMessage(fbTab.id, {
+        action: "schedulePostGraphQL",
+        storyId: storyId,
+        pageId: pageId,
+        fbDtsg: fbDtsg,
+        scheduledTime: scheduledTime
+      });
+    } catch (msgError) {
+      console.log("[FEWFEED] Message failed, injecting content script...", msgError.message);
 
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: fbTab.id },
-          files: ["fb-content.js"]
-        });
+      // Inject content script manually
+      await chrome.scripting.executeScript({
+        target: { tabId: fbTab.id },
+        files: ["fb-content.js"]
+      });
 
-        // Wait a bit and retry
-        await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for script to initialize
+      await new Promise(r => setTimeout(r, 500));
 
-        const result = await chrome.tabs.sendMessage(fbTab.id, {
-          action: "schedulePostGraphQL",
-          storyId,
-          pageId,
-          fbDtsg,
-          scheduledTime
-        });
-
-        if (createdNewTab && result.success) {
-          setTimeout(() => chrome.tabs.remove(fbTab.id), 1000);
-        }
-
-        return result;
-      } catch (e2) {
-        console.error("[FEWFEED] Retry failed:", e2);
-        return { success: false, error: `Content script injection failed: ${e2.message}` };
-      }
+      // Retry sending message
+      result = await chrome.tabs.sendMessage(fbTab.id, {
+        action: "schedulePostGraphQL",
+        storyId: storyId,
+        pageId: pageId,
+        fbDtsg: fbDtsg,
+        scheduledTime: scheduledTime
+      });
     }
 
-    return { success: false, error: e.message };
+    console.log("[FEWFEED] Schedule result:", result);
+    return result || { success: false, error: "No response from content script" };
+  } catch (error) {
+    console.error("[FEWFEED] Error:", error);
+    return { success: false, error: error.message };
   }
 }
 

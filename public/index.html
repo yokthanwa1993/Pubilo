@@ -112,36 +112,80 @@
       justify-content: center;
       font-weight: 600;
       font-size: 0.875rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .user-avatar #headerAvatarInitial {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
     }
 
     /* Main Layout with Sidebar */
     .app-layout {
-      display: flex;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      grid-template-rows: minmax(0, 1fr);
       align-items: stretch;
-      min-height: calc(100vh - 57px);
+      height: calc(100vh - 120px);
       padding: 1.5rem;
       gap: 1.5rem;
       background: #f8f9fa;
     }
 
-    /* Image Mode - larger preview */
-    .app-layout.image-mode .preview-panel {
-      --image-size: min(640px, calc(100vh - 140px));
-      width: var(--image-size);
+    /* Only apply to Link/Image mode panels */
+    .app-layout:not(.pending-mode) > .sidebar,
+    .app-layout:not(.pending-mode) > .main-content {
+      min-height: 0;
     }
 
     /* Sidebar */
     .sidebar {
       width: 280px;
+      min-width: 280px;
+      max-width: 280px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
+      align-self: stretch;
+    }
+
+    .sidebar-page-selector {
+      padding: 1rem;
+      padding-bottom: 0.5rem;
+      position: relative;
+      background: #fff;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .sidebar-page-selector .page-selector {
+      width: 100%;
+    }
+
+    .sidebar-page-selector .page-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 100;
     }
 
     .sidebar-nav {
       padding: 1rem;
-      flex: 1;
+      padding-top: 0.5rem;
+      background: #fff;
+      border-radius: 0 0 12px 12px;
+    }
+
+    .sidebar-page-selector,
+    .sidebar-nav {
+      box-shadow: none;
+    }
+
+    .sidebar {
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -247,21 +291,21 @@
 
     /* Main Content */
     .main-content {
-      flex: 1;
       display: flex;
-      align-items: stretch;
       gap: 1.5rem;
+      align-items: stretch;
+      min-height: 0;
     }
 
     /* Preview Panel - Center */
     /* คำนวณ: 100vh - header(57px) - padding(48px) - preview header(60px) - link info(100px) - gaps(32px) = ~100vh - 297px */
     .preview-panel {
-      --image-size: min(520px, calc(100vh - 260px));
+      --image-size: min(560px, calc(100vh - 260px));
       width: var(--image-size);
-      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      align-self: stretch;
     }
 
     .preview-panel .card-preview {
@@ -273,6 +317,7 @@
     .preview-header {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 0.75rem;
       position: relative;
     }
@@ -423,7 +468,7 @@
 
     .btn-publish {
       margin-left: auto;
-      background: #10b981;
+      background: #1f2937;
       color: #fff;
       border: none;
       padding: 0.625rem 1.5rem;
@@ -435,7 +480,7 @@
     }
 
     .btn-publish:hover {
-      background: #059669;
+      background: #111827;
     }
 
     .btn-publish:disabled {
@@ -467,6 +512,19 @@
       cursor: pointer;
       overflow: hidden;
       max-height: var(--image-size, 520px);
+    }
+
+    /* Image mode: same card height as Link, just fill available space inside */
+    .app-layout.image-mode .preview-panel .card-preview {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-layout.image-mode .card-image-area {
+      aspect-ratio: unset;
+      flex: 1;
+      max-height: none;
     }
 
     .upload-prompt {
@@ -702,8 +760,8 @@
     .card-link-info {
       display: flex;
       align-items: center;
-      padding: 1rem;
-      gap: 1rem;
+      padding: 0.6rem 0.8rem;
+      gap: 0.75rem;
       border-top: 1px solid #e5e5e5;
     }
 
@@ -712,22 +770,26 @@
     }
 
     .card-link-caption {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: #6b7280;
       text-transform: uppercase;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.15rem;
     }
 
     .card-link-title {
-      font-size: 1rem;
+      font-size: 0.9rem;
       font-weight: 600;
       color: #1a1a1a;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.1rem;
     }
 
     .card-link-description {
       font-size: 0.8125rem;
       color: #6b7280;
+    }
+
+    .card-button-wrapper {
+      position: relative;
     }
 
     .btn-learn-more {
@@ -740,6 +802,60 @@
       color: #374151;
       cursor: pointer;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .btn-learn-more:hover {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+    }
+
+    .btn-learn-more::after {
+      content: '▼';
+      font-size: 0.5rem;
+      opacity: 0.6;
+    }
+
+    .card-button-dropdown {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      margin-bottom: 4px;
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 120px;
+      overflow: hidden;
+      z-index: 100;
+      display: none;
+    }
+
+    .card-button-dropdown.show {
+      display: block;
+    }
+
+    .card-button-option {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      color: #374151;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .card-button-option:hover {
+      background: #f3f4f6;
+    }
+
+    .card-button-option.selected {
+      background: #1f2937;
+      color: white;
+    }
+
+    .card-button-option.selected:hover {
+      background: #111827;
     }
 
     /* Full Image View */
@@ -780,10 +896,10 @@
 
     /* Right Panel - Form */
     .form-panel {
-      flex: 1;
-      min-width: 360px;
+      min-width: 540px;
       display: flex;
       flex-direction: column;
+      align-self: stretch;
     }
 
     .card {
@@ -791,7 +907,8 @@
       border-radius: 12px;
       padding: 1.25rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .card-title {
@@ -964,16 +1081,12 @@
 
     @media (max-width: 1024px) {
       .app-layout {
-        flex-direction: column;
-        align-items: center;
+        grid-template-columns: 1fr;
+        justify-items: center;
       }
       .sidebar {
         width: 100%;
         max-width: 460px;
-      }
-      .main-content {
-        flex-direction: column;
-        align-items: center;
       }
       .preview-panel {
         --image-size: min(460px, 90vw);
@@ -1147,16 +1260,23 @@
     .pending-table-container {
       flex: 1;
       overflow-y: auto;
+      overflow-x: visible;
     }
     .pending-table {
       width: 100%;
       border-collapse: collapse;
+      overflow: visible;
     }
     .pending-table th,
     .pending-table td {
       padding: 0.75rem 1rem;
       text-align: left;
       border-bottom: 1px solid #e5e5e5;
+      overflow: visible;
+    }
+    .pending-table td:first-child {
+      overflow: visible;
+      position: relative;
     }
     .pending-table th {
       font-size: 0.75rem;
@@ -1171,6 +1291,111 @@
       border-radius: 8px;
       object-fit: cover;
       background: #e5e5e5;
+      cursor: pointer;
+    }
+
+    /* Hover preview popup */
+    .thumb-preview-popup {
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      border-radius: 8px;
+      max-width: 500px;
+      max-height: 500px;
+      object-fit: contain;
+      display: none;
+    }
+
+    /* Pending Skeleton Loading */
+    .pending-skeleton {
+      padding: 1rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .pending-skeleton-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .pending-skeleton-row .sk-img {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #e5e5e5 25%, #f0f0f0 50%, #e5e5e5 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+    .pending-skeleton-row .sk-text {
+      flex: 1;
+      height: 16px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #e5e5e5 25%, #f0f0f0 50%, #e5e5e5 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+    .pending-skeleton-row .sk-date {
+      width: 120px;
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #e5e5e5 25%, #f0f0f0 50%, #e5e5e5 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+    .pending-skeleton-row .sk-badge {
+      width: 80px;
+      height: 24px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #e5e5e5 25%, #f0f0f0 50%, #e5e5e5 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+    @keyframes skeleton-shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* Image Lightbox */
+    .lightbox-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .lightbox-overlay.show {
+      display: flex;
+    }
+    .lightbox-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .lightbox-close:hover {
+      background: rgba(255,255,255,0.3);
     }
     .pending-table-title {
       font-weight: 500;
@@ -1198,6 +1423,13 @@
       border-radius: 4px;
       background: #fef3c7;
       color: #92400e;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .pending-table-status:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .pending-table-delete {
       background: #fee2e2;
@@ -1359,7 +1591,10 @@
           <span>Post</span>
         </div>
       </div>
-      <div class="user-avatar">US</div>
+      <div class="user-avatar" id="headerUserAvatar">
+        <img id="headerAvatarImg" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none;">
+        <span id="headerAvatarInitial">U</span>
+      </div>
     </div>
   </header>
 
@@ -1405,6 +1640,28 @@
   <div class="app-layout">
     <!-- Sidebar -->
     <aside class="sidebar">
+      <!-- Page Selector at top of sidebar -->
+      <div class="sidebar-page-selector">
+        <div class="page-selector-skeleton" id="pageSelectorSkeleton">
+          <div class="sk-avatar"></div>
+          <div class="sk-lines">
+            <div class="sk-line"></div>
+            <div class="sk-line"></div>
+          </div>
+        </div>
+        <div class="page-selector" id="pageSelector" style="display:none;">
+          <img class="preview-avatar-img" id="previewAvatarImg" src="" alt="">
+          <div class="preview-page-info">
+            <h3 id="previewPageName">Select Page</h3>
+            <p id="previewPageId">-</p>
+          </div>
+          <svg class="page-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+        <div class="page-dropdown" id="pageDropdown"></div>
+      </div>
+
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-section-title">Main</div>
@@ -1462,16 +1719,6 @@
             </svg>
             AI Image Gen
           </a>
-          <a href="#" class="nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
-            </svg>
-            Templates
-          </a>
         </div>
 
         <div class="nav-section">
@@ -1483,13 +1730,6 @@
             </svg>
             Settings
           </a>
-          <a href="#" class="nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            Notifications
-          </a>
         </div>
       </nav>
 
@@ -1500,24 +1740,6 @@
       <!-- Preview Panel - Center -->
       <div class="preview-panel">
         <div class="preview-header">
-          <div class="page-selector-skeleton" id="pageSelectorSkeleton">
-            <div class="sk-avatar"></div>
-            <div class="sk-lines">
-              <div class="sk-line"></div>
-              <div class="sk-line"></div>
-            </div>
-          </div>
-          <div class="page-selector" id="pageSelector" style="display:none;">
-            <img class="preview-avatar-img" id="previewAvatarImg" src="" alt="">
-            <div class="preview-page-info">
-              <h3 id="previewPageName">Select Page</h3>
-              <p id="previewPageId">-</p>
-            </div>
-            <svg class="page-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </div>
-          <div class="page-dropdown" id="pageDropdown"></div>
           <button class="btn-publish" id="publishBtn">PUBLISH</button>
         </div>
 
@@ -1566,7 +1788,15 @@
               <div class="card-link-title editable-text" id="previewLinkName">Hello Pubilo</div>
               <div class="card-link-description editable-text" id="previewDescription">Click to learn more</div>
             </div>
-            <button class="btn-learn-more">Learn More</button>
+            <div class="card-button-wrapper">
+              <button class="btn-learn-more" id="previewCardButton"><span id="cardButtonText">Learn More</span></button>
+              <div class="card-button-dropdown" id="cardButtonDropdown">
+                <div class="card-button-option selected" data-value="LEARN_MORE">Learn More</div>
+                <div class="card-button-option" data-value="SHOP_NOW">Shop Now</div>
+                <div class="card-button-option" data-value="SIGN_UP">Sign Up</div>
+                <div class="card-button-option" data-value="BOOK_NOW">Book Now</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1597,9 +1827,8 @@
             <label class="form-label">Primary Text</label>
             <textarea class="form-textarea" id="primaryText" placeholder="Write something about your post..."></textarea>
           </div>
-          <!-- Link-only: Card Button (hidden in Image mode) -->
-          <div id="cardButtonGroup" class="form-group">
-            <label class="form-label">Card Button</label>
+          <!-- Card Button - now controlled from preview -->
+          <div id="cardButtonGroup" class="form-group" style="display: none;">
             <select class="form-select" id="cardButton">
               <option value="LEARN_MORE">Learn More</option>
               <option value="SHOP_NOW">Shop Now</option>
@@ -1818,18 +2047,146 @@
     // Current post mode: 'link' or 'image'
     let postMode = 'link';
 
-    // Update pending count from API
+    // Update pending count from Facebook API
     async function updatePendingCount() {
       try {
-        const response = await fetch('/api/queue');
-        const data = await response.json();
-        const pendingItems = data.items.filter(i => i.status === 'pending');
-        const count = pendingItems.length;
+        const scheduledPosts = await fetchScheduledPostsFromFacebook();
+        const count = scheduledPosts.length;
         pendingBadge.textContent = count;
         pendingBadge.style.display = count > 0 ? 'inline' : 'none';
       } catch (err) {
         console.error('Failed to fetch pending count:', err);
       }
+    }
+
+    // Fetch scheduled posts from Facebook API
+    async function fetchScheduledPostsFromFacebook() {
+      const pageId = document.getElementById('pageSelect').value;
+      // Use the specific Page Access Token (not User/Ads token)
+      const selectedPageToken = localStorage.getItem('fewfeed_selectedPageToken');
+
+      console.log('[FEWFEED] Fetching scheduled posts:', {
+        hasPageId: !!pageId,
+        pageId: pageId || '(empty)',
+        hasSelectedPageToken: !!selectedPageToken,
+        tokenPrefix: selectedPageToken?.substring(0, 15) + '...'
+      });
+
+      if (!pageId || !selectedPageToken) {
+        console.log('[FEWFEED] Pages not loaded yet - showing skeleton');
+        return { loading: true };
+      }
+
+      const token = selectedPageToken;
+
+      try {
+        const response = await fetch('/api/scheduled-posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId, pageToken: token })
+        });
+        const data = await response.json();
+
+        console.log('[FEWFEED] Scheduled posts response:', data);
+
+        if (data.success && data.posts) {
+          return data.posts;
+        } else {
+          console.error('[FEWFEED] Failed to fetch scheduled posts:', data.error);
+          return { error: data.error || 'ไม่สามารถดึงข้อมูลได้' };
+        }
+      } catch (err) {
+        console.error('[FEWFEED] Error fetching scheduled posts:', err);
+        return { error: 'Connection error' };
+      }
+    }
+
+    // Build pending table using DOM methods (safe from XSS)
+    function buildPendingTable(posts) {
+      const table = document.createElement('table');
+      table.className = 'pending-table';
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      ['Image', 'Message', 'Scheduled', 'Status'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      posts.forEach(post => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = post.id;
+
+        // Image cell (clickable to show lightbox, hover to preview)
+        const imgTd = document.createElement('td');
+        if (post.imageUrl) {
+          const img = document.createElement('img');
+          img.className = 'pending-table-thumb';
+          img.src = post.imageUrl;
+          img.alt = '';
+          img.onclick = () => showLightbox(post.imageUrl);
+          img.onmouseenter = (e) => showThumbPreview(post.imageUrl, e);
+          img.onmousemove = (e) => moveThumbPreview(e);
+          img.onmouseleave = () => hideThumbPreview();
+          imgTd.appendChild(img);
+        } else {
+          const span = document.createElement('span');
+          span.style.color = '#999';
+          span.textContent = 'No image';
+          imgTd.appendChild(span);
+        }
+        tr.appendChild(imgTd);
+
+        // Message cell
+        const msgTd = document.createElement('td');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'pending-table-title';
+        const message = post.message || '(No message)';
+        msgDiv.textContent = message.length > 50 ? message.substring(0, 50) + '...' : message;
+        msgDiv.title = message;
+        msgTd.appendChild(msgDiv);
+        tr.appendChild(msgTd);
+
+        // Scheduled time cell
+        const timeTd = document.createElement('td');
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'pending-table-time';
+        timeSpan.textContent = post.scheduledTime
+          ? new Date(post.scheduledTime * 1000).toLocaleString('th-TH')
+          : '-';
+        timeTd.appendChild(timeSpan);
+        tr.appendChild(timeTd);
+
+        // Status cell (clickable link to Facebook post)
+        const statusTd = document.createElement('td');
+        if (post.permalink || post.id) {
+          const statusLink = document.createElement('a');
+          statusLink.className = 'pending-table-status';
+          statusLink.style.background = '#dcfce7';
+          statusLink.style.color = '#166534';
+          statusLink.textContent = 'Scheduled';
+          statusLink.href = post.permalink || `https://www.facebook.com/${post.id}`;
+          statusLink.target = '_blank';
+          statusLink.title = 'View on Facebook';
+          statusTd.appendChild(statusLink);
+        } else {
+          const statusSpan = document.createElement('span');
+          statusSpan.className = 'pending-table-status';
+          statusSpan.style.background = '#dcfce7';
+          statusSpan.style.color = '#166534';
+          statusSpan.textContent = 'Scheduled';
+          statusTd.appendChild(statusSpan);
+        }
+        tr.appendChild(statusTd);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      return table;
     }
 
     // Show pending panel (replaces both preview + form panels)
@@ -1839,56 +2196,63 @@
       formPanel.style.display = 'none';
       // Show pending panel (full width)
       pendingPanel.style.display = 'flex';
+      // Add pending mode class
+      appLayout.classList.add('pending-mode');
+      appLayout.classList.remove('image-mode');
+
+      // Show skeleton loading state
+      pendingTableContainer.innerHTML = `
+        <div class="pending-skeleton">
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+        </div>
+      `;
 
       try {
-        const response = await fetch('/api/queue');
-        const data = await response.json();
-        const pendingItems = data.items.filter(i => i.status === 'pending');
+        // Fetch scheduled posts from Facebook API
+        const result = await fetchScheduledPostsFromFacebook();
 
-        if (pendingItems.length === 0) {
-          pendingTableContainer.innerHTML = '<div class="pending-empty">No pending posts</div>';
+        // Handle loading state (pages not ready yet)
+        if (result && result.loading) {
+          // Keep skeleton, will be refreshed when pages load
+          return;
+        }
+
+        pendingTableContainer.textContent = '';
+
+        // Handle error response
+        if (result && result.error) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'pending-empty';
+          errorDiv.textContent = result.error;
+          pendingTableContainer.appendChild(errorDiv);
+          return;
+        }
+
+        // Handle empty or array result
+        const scheduledPosts = Array.isArray(result) ? result : [];
+
+        if (scheduledPosts.length === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'pending-empty';
+          emptyDiv.textContent = 'No scheduled posts';
+          pendingTableContainer.appendChild(emptyDiv);
         } else {
-          pendingTableContainer.innerHTML = `
-            <table class="pending-table">
-              <thead>
-                <tr>
-                  <th>Image</th>
-                  <th>Title</th>
-                  <th>Link URL</th>
-                  <th>Scheduled</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${pendingItems.map(item => {
-                  const scheduledDate = item.scheduledTime
-                    ? new Date(item.scheduledTime * 1000).toLocaleString('th-TH')
-                    : '-';
-                  return `
-                    <tr data-id="${item.id}">
-                      <td><img class="pending-table-thumb" src="${item.imageUrl}" alt=""></td>
-                      <td><div class="pending-table-title">${item.linkName}</div></td>
-                      <td><div class="pending-table-url">${item.linkUrl}</div></td>
-                      <td><span class="pending-table-time">${scheduledDate}</span></td>
-                      <td><span class="pending-table-status">Pending</span></td>
-                      <td>
-                        <button class="pending-table-delete" onclick="deletePendingItem('${item.id}')">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          `;
+          const table = buildPendingTable(scheduledPosts);
+          pendingTableContainer.appendChild(table);
         }
       } catch (err) {
-        console.error('Failed to fetch pending list:', err);
-        pendingTableContainer.innerHTML = '<div class="pending-empty">Failed to load</div>';
+        console.error('Failed to fetch scheduled posts:', err);
+        pendingTableContainer.textContent = '';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'pending-empty';
+        errorDiv.textContent = 'Failed to load from Facebook';
+        pendingTableContainer.appendChild(errorDiv);
       }
     }
 
@@ -1897,6 +2261,8 @@
       pendingPanel.style.display = 'none';
       previewPanel.style.display = '';
       formPanel.style.display = '';
+      // Remove pending mode class
+      appLayout.classList.remove('pending-mode');
     }
 
     // Delete pending item
@@ -1910,33 +2276,56 @@
       }
     };
 
+    // Navigate to a specific page (updates URL hash)
+    function navigateTo(page) {
+      window.location.hash = page;
+    }
+
+    // Handle navigation based on URL hash
+    function handleNavigation() {
+      const hash = window.location.hash.slice(1) || 'link'; // Default to 'link'
+
+      // Update active state
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+      if (hash === 'pending') {
+        pendingNavItem.classList.add('active');
+        showPendingPanel();
+      } else if (hash === 'image') {
+        imageNavItem.classList.add('active');
+        setPostMode('image');
+        showDashboard();
+      } else {
+        // Default: link
+        dashboardNavItem.classList.add('active');
+        setPostMode('link');
+        showDashboard();
+      }
+    }
+
+    // Listen for hash changes (back/forward navigation)
+    window.addEventListener('hashchange', handleNavigation);
+
+
+    // Handle initial page load
+    handleNavigation();
+
     // Pending nav item click
     pendingNavItem.addEventListener('click', (e) => {
       e.preventDefault();
-      // Update active state
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      pendingNavItem.classList.add('active');
-      showPendingPanel();
+      navigateTo('pending');
     });
 
     // Link nav item click (Dashboard renamed to Link)
     dashboardNavItem.addEventListener('click', (e) => {
       e.preventDefault();
-      // Update active state
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      dashboardNavItem.classList.add('active');
-      setPostMode('link');
-      showDashboard();
+      navigateTo('link');
     });
 
     // Image nav item click
     imageNavItem.addEventListener('click', (e) => {
       e.preventDefault();
-      // Update active state
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      imageNavItem.classList.add('active');
-      setPostMode('image');
-      showDashboard();
+      navigateTo('image');
     });
 
     // Set post mode (link or image)
@@ -1946,13 +2335,11 @@
         // Image mode: larger preview, hide link elements
         appLayout.classList.add('image-mode');
         linkOnlyFields.style.display = 'none';
-        cardButtonGroup.style.display = 'none';
         cardLinkInfo.style.display = 'none';
       } else {
         // Link mode: normal size
         appLayout.classList.remove('image-mode');
         linkOnlyFields.style.display = '';
-        cardButtonGroup.style.display = '';
         cardLinkInfo.style.display = '';
       }
     }
@@ -1966,6 +2353,45 @@
     const previewLinkName = document.getElementById('previewLinkName');
     const previewCaption = document.getElementById('previewCaption');
     const previewDescription = document.getElementById('previewDescription');
+    const previewCardButton = document.getElementById('previewCardButton');
+    const cardButtonText = document.getElementById('cardButtonText');
+    const cardButtonDropdown = document.getElementById('cardButtonDropdown');
+    const cardButtonSelect = document.getElementById('cardButton');
+
+    // Toggle dropdown on button click
+    previewCardButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cardButtonDropdown.classList.toggle('show');
+    });
+
+    // Handle option selection
+    cardButtonDropdown.addEventListener('click', (e) => {
+      const option = e.target.closest('.card-button-option');
+      if (option) {
+        const value = option.dataset.value;
+        const label = option.textContent;
+
+        // Update button text
+        cardButtonText.textContent = label;
+
+        // Update hidden select
+        cardButtonSelect.value = value;
+
+        // Update selected state
+        cardButtonDropdown.querySelectorAll('.card-button-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        option.classList.add('selected');
+
+        // Close dropdown
+        cardButtonDropdown.classList.remove('show');
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      cardButtonDropdown.classList.remove('show');
+    });
 
     // State
     let referenceImages = [];
@@ -2368,9 +2794,12 @@
     let lastPublishedUrl = null;
 
     publishBtn.addEventListener('click', async () => {
-      // If already published, open the URL
+      // If already published, open the URL in background
       if (lastPublishedUrl && publishBtn.classList.contains('published')) {
-        window.open(lastPublishedUrl, '_blank');
+        // Reset button after viewing
+        publishBtn.textContent = autoScheduleEnabled.checked ? 'SCHEDULE' : 'PUBLISH';
+        publishBtn.classList.remove('published');
+        lastPublishedUrl = null;
         return;
       }
 
@@ -2463,6 +2892,11 @@
             const scheduleTimestamp = parseInt(scheduledTimeMatch[1]);
             console.log('[FEWFEED] Post created, scheduling via extension GraphQL...');
             console.log('[FEWFEED] Post ID:', postId, 'Schedule time:', scheduleTimestamp);
+            console.log('[FEWFEED] fb_dtsg:', fbDtsg ? fbDtsg.substring(0, 20) + '...' : '(empty)');
+
+            if (!fbDtsg) {
+              throw new Error('fb_dtsg is required for scheduling. Please refresh your Facebook login.');
+            }
 
             publishBtn.textContent = 'SCHEDULING...';
 
@@ -2603,8 +3037,13 @@
       const page = allPages[index];
       if (!page) return;
 
-      // Note: Page Token no longer needed here - server fetches it directly from Ads Token
-      console.log("[FEWFEED] Selected page:", page.name, "id:", page.id);
+      console.log("[FEWFEED] Selected page:", page.name, "id:", page.id, "hasPageToken:", !!page.access_token);
+
+      // Store Page Access Token for this specific page (for scheduled posts API)
+      if (page.access_token) {
+        localStorage.setItem('fewfeed_selectedPageToken', page.access_token);
+        console.log("[FEWFEED] Stored Page Access Token for scheduled posts");
+      }
 
       // Hide skeleton, show real selector
       const skeleton = document.getElementById('pageSelectorSkeleton');
@@ -2706,6 +3145,10 @@
         if (response.success && response.pages && response.pages.length > 0) {
           renderPagesDropdown(response.pages);
           console.log("[FEWFEED] Pages loaded:", response.pages.length);
+          // Re-trigger navigation in case we landed on #pending before pages were loaded
+          if (window.location.hash === '#pending') {
+            handleNavigation();
+          }
         }
       }
 
@@ -2776,10 +3219,30 @@
         postTokenIndicator.classList.add(hasPostToken ? 'valid' : 'invalid');
       }
 
-      // Update header avatar with user initial
-      if (connected && userName) {
-        const userAvatar = document.querySelector('.user-avatar');
-        if (userAvatar) userAvatar.textContent = (userName || "U").charAt(0).toUpperCase();
+      // Update header avatar with user photo or initial
+      if (connected) {
+        const userId = localStorage.getItem("fewfeed_userId");
+        const accessToken = localStorage.getItem("fewfeed_accessToken");
+        const avatarImg = document.getElementById('headerAvatarImg');
+        const avatarInitial = document.getElementById('headerAvatarInitial');
+
+        if (userId && accessToken && avatarImg) {
+          const avatarUrl = `https://graph.facebook.com/${userId}/picture?type=normal&width=72&height=72&access_token=${accessToken}`;
+          avatarImg.src = avatarUrl;
+          avatarImg.onload = () => {
+            avatarImg.style.display = 'block';
+            if (avatarInitial) avatarInitial.style.display = 'none';
+          };
+          avatarImg.onerror = () => {
+            avatarImg.style.display = 'none';
+            if (avatarInitial) {
+              avatarInitial.style.display = 'flex';
+              avatarInitial.textContent = (userName || "U").charAt(0).toUpperCase();
+            }
+          };
+        } else if (avatarInitial) {
+          avatarInitial.textContent = (userName || "U").charAt(0).toUpperCase();
+        }
       }
 
       console.log("[FEWFEED] Status updated - AdsToken:", hasToken ? "valid" : "invalid", "Cookie:", hasCookie ? "valid" : "invalid", "PostToken:", hasPostToken ? "valid" : "invalid");
@@ -2928,6 +3391,60 @@
 
     // Load on startup
     loadSavedData();
+
+    // Lightbox functionality
+    const lightboxOverlay = document.getElementById('lightboxOverlay');
+    const lightboxImage = document.getElementById('lightboxImage');
+
+    window.showLightbox = function(src) {
+      lightboxImage.src = src;
+      lightboxOverlay.classList.add('show');
+    };
+
+    window.closeLightbox = function() {
+      lightboxOverlay.classList.remove('show');
+    };
+
+    lightboxOverlay.addEventListener('click', (e) => {
+      if (e.target === lightboxOverlay) {
+        closeLightbox();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+
+    // Thumb hover preview functions
+    const thumbPreviewPopup = document.getElementById('thumbPreviewPopup');
+
+    window.showThumbPreview = function(src, e) {
+      thumbPreviewPopup.src = src;
+      thumbPreviewPopup.style.display = 'block';
+      moveThumbPreview(e);
+    };
+
+    window.moveThumbPreview = function(e) {
+      const x = e.clientX + 20;
+      const y = e.clientY - 100;
+      thumbPreviewPopup.style.left = x + 'px';
+      thumbPreviewPopup.style.top = Math.max(10, y) + 'px';
+    };
+
+    window.hideThumbPreview = function() {
+      thumbPreviewPopup.style.display = 'none';
+    };
   </script>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox-overlay" id="lightboxOverlay">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img class="lightbox-image" id="lightboxImage" src="" alt="">
+  </div>
+
+  <!-- Hover Preview Popup -->
+  <img class="thumb-preview-popup" id="thumbPreviewPopup" src="" alt="">
 </body>
 </html>

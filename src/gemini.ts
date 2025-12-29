@@ -1,9 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { ReferenceImage } from "./types";
-import { ANALYSIS_PROMPT, GENERATION_PROMPT_TEMPLATE } from "./prompts";
-
-const GENERATION_MODEL = 'gemini-3-pro-image-preview';
-const ANALYSIS_MODEL = 'gemini-3-pro-preview';
+import { ANALYSIS_PROMPT, GENERATION_PROMPT_TEMPLATE, CONFIG } from "./prompts";
 
 /**
  * Helper to replace placeholders in the prompt template
@@ -50,7 +47,7 @@ export class GeminiGenerator {
 
     try {
       const response = await this.ai.models.generateContent({
-        model: ANALYSIS_MODEL,
+        model: CONFIG.analysisModel, // Use config
         contents: { parts },
         config: {
           responseMimeType: "application/json"
@@ -152,18 +149,18 @@ export class GeminiGenerator {
     parts.push({ text: finalPrompt });
 
     try {
-      // Parallel generation for 4 variations
-      const requestCount = 4;
+      // Parallel generation based on CONFIG.variationCount
+      const requestCount = CONFIG.variationCount || 1;
       const generatePromises = Array(requestCount).fill(null).map(() =>
         this.ai.models.generateContent({
-          model: GENERATION_MODEL,
+          model: CONFIG.generationModel, // Use config
           contents: {
             parts: parts,
           },
           config: {
             imageConfig: {
-              aspectRatio: '1:1',
-              imageSize: '2K',
+              aspectRatio: CONFIG.aspectRatio, // Use config
+              imageSize: CONFIG.resolution,    // Use config
             },
           },
         })

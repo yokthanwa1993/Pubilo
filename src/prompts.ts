@@ -1,17 +1,32 @@
 /**
- * PROMPTS CONFIGURATION
+ * PROMPTS & CONFIGURATION
  *
  * You can edit the behavior of the AI here.
  * This file separates the "Logic" from the "Creative Instructions".
  */
 
 // ------------------------------------------------------------------
-// 1. ANALYSIS PROMPT
+// 1. APP CONFIGURATION (NEW)
+// Control resolution, size, and models here.
+// ------------------------------------------------------------------
+export const CONFIG = {
+  // Models
+  generationModel: 'gemini-3-pro-image-preview', // Used for final image
+  analysisModel: 'gemini-3-pro-preview',       // Used for layout planning
+
+  // Output Specs
+  aspectRatio: '1:1', // Options: '1:1', '3:4', '4:3', '16:9', '9:16'
+  resolution: '2K',   // Options: '1K', '2K', '4K' (Higher = Sharper but slower)
+  variationCount: 4,  // How many images to generate at once (1-4 recommended)
+};
+
+// ------------------------------------------------------------------
+// 2. ANALYSIS PROMPT
 // Used to understand the images, detect text, and plan the layout.
 // ------------------------------------------------------------------
 export const ANALYSIS_PROMPT = `
-    You are a Senior Photo Editor.
-    TASK: Analyze these images to create a dramatic photo montage (NO TEXT will be added).
+    You are a Senior Photo Editor for a Tabloid News Agency.
+    TASK: Analyze these images to create a dramatic "Breaking News" photo montage.
 
     STEP 1: DETECT TEXT & SCREENSHOTS (CRITICAL)
     - Scan all images. Is any image a **Screenshot, Social Media Comment, News Headline, or Chat Bubble**?
@@ -59,7 +74,7 @@ export const ANALYSIS_PROMPT = `
 `;
 
 // ------------------------------------------------------------------
-// 2. GENERATION PROMPT TEMPLATE
+// 3. GENERATION PROMPT TEMPLATE
 // Used to generate the final image.
 // Placeholders like {{key}} will be replaced by the code dynamically.
 // ------------------------------------------------------------------
@@ -89,20 +104,13 @@ export const GENERATION_PROMPT_TEMPLATE = `
 
     QUALITY & CLEANUP:
     - **WATERMARK REMOVAL**: Automatically DETECT and REMOVE any existing watermarks, logos, or timestamps from the source images.
-    - **STYLE**: Photo montage with Red Borders, Dramatic, Sharp.
-
-    **CRITICAL - NO TEXT GENERATION:**
-    - DO NOT add ANY text, headlines, captions, titles, or labels to the image.
-    - DO NOT generate Thai text, English text, or any other language text.
-    - DO NOT add "Breaking News" banners or news-style text overlays.
-    - The output must be PURELY VISUAL with ZERO text elements.
-    - Remove any text that exists in the source images.
+    - **TEXT CLARITY**: If an insert is text, keep it RECTANGULAR and READABLE. Ensure letters are sharp.
+    - **STYLE**: Thai News Tabloid (Red Borders, Dramatic, Sharp, High Contrast).
 
     NEGATIVE PROMPT (STRICT):
-    - **ANY TEXT, HEADLINES, CAPTIONS, TITLES, LABELS, BANNERS**.
-    - **Thai text, English text, any language text**.
     - **Drawing, Painting, CGI, 3D Render, Illustration, Cartoon**.
     - **New people not in source images**.
     - **Altered facial features**.
     - Watermarks, logos, credit text.
+    - Unreadable text.
 `;

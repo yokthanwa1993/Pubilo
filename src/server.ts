@@ -486,6 +486,65 @@ const server = Bun.serve({
       return Response.json({ success: true }, { headers: corsHeaders });
     }
 
+    // Fetch scheduled posts from Facebook API
+    if (path === "/api/scheduled-posts" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        const { pageId, pageToken } = body;
+
+        console.log("[Pubilo] Fetching scheduled posts:", {
+          pageId: pageId || "(empty)",
+          hasToken: !!pageToken,
+          tokenPrefix: pageToken?.substring(0, 15) + "..."
+        });
+
+        if (!pageId || !pageToken) {
+          return Response.json(
+            { success: false, error: "Missing pageId or pageToken" },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Fetch scheduled posts from Facebook Graph API
+        const fbUrl = `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=id,message,scheduled_publish_time,full_picture,permalink_url,attachments{media}&access_token=${pageToken}`;
+        console.log("[Pubilo] Facebook API URL:", fbUrl.replace(pageToken, "TOKEN_HIDDEN"));
+
+        const fbResponse = await fetch(fbUrl);
+        const fbData = await fbResponse.json();
+
+        console.log("[Pubilo] Facebook API response:", JSON.stringify(fbData, null, 2).substring(0, 500));
+
+        if (fbData.error) {
+          console.error("[Pubilo] Facebook API error:", fbData.error);
+          return Response.json(
+            { success: false, error: fbData.error.message },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Transform Facebook data to match our format
+        const scheduledPosts = (fbData.data || []).map((post: any) => ({
+          id: post.id,
+          message: post.message || "",
+          scheduledTime: post.scheduled_publish_time,
+          imageUrl: post.full_picture || post.attachments?.data?.[0]?.media?.image?.src || "",
+          permalink: post.permalink_url || "",
+        }));
+
+        return Response.json(
+          { success: true, posts: scheduledPosts },
+          { headers: corsHeaders }
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Pubilo] Scheduled posts fetch error:", msg);
+        return Response.json(
+          { success: false, error: msg },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    }
+
     if (path === "/") {
       return serveStatic("./public/index.html");
     }
