@@ -57,7 +57,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: post.message || '',
         createdTime: post.created_time,
         scheduledTime: post.scheduled_publish_time,
-        imageUrl: post.full_picture || post.picture || null,
+        imageUrl: post.picture || null, // Small thumbnail for table
+        fullImageUrl: post.full_picture || post.picture || null, // Full size for lightbox
         postType,
       };
     });
