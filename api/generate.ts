@@ -21,28 +21,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { prompt, referenceImage } = req.body;
+    const { prompt, referenceImage, referenceImages } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
+    // Use provided prompt or default for image variations
+    const finalPrompt = prompt || 'Create 4 creative variations of this image for social media advertising. Make them visually appealing and professional.';
+
+    // Support both single referenceImage and array referenceImages
+    const refImg = referenceImage || (referenceImages && referenceImages[0]);
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const contents: any[] = [];
 
     // Add reference image if provided
-    if (referenceImage?.data) {
+    if (refImg?.data) {
       contents.push({
         inlineData: {
-          mimeType: referenceImage.mimeType || 'image/png',
-          data: referenceImage.data,
+          mimeType: refImg.mimeType || 'image/png',
+          data: refImg.data,
         },
       });
     }
 
     // Add text prompt
-    contents.push({ text: prompt });
+    contents.push({ text: finalPrompt });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash-exp-image-generation',
