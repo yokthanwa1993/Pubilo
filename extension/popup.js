@@ -1,6 +1,6 @@
-// FEWFEED Cookie Helper - Popup Script
+// Pubilo Extension - Popup Script
 
-const statusEl = document.getElementById("status");
+const skeletonLoader = document.getElementById("skeletonLoader");
 const userInfoEl = document.getElementById("userInfo");
 const userAvatarEl = document.getElementById("userAvatar");
 const userNameEl = document.getElementById("userName");
@@ -10,83 +10,62 @@ const loginBtn = document.getElementById("loginBtn");
 
 let cookieData = null;
 
-function setStatus(type, icon, message) {
-  statusEl.className = "status " + type;
-  statusEl.textContent = "";
+function showUserInfo() {
+  skeletonLoader.classList.add("hidden");
+  userInfoEl.classList.remove("hidden");
+}
 
-  const iconSpan = document.createElement("span");
-  iconSpan.className = "status-icon";
-  iconSpan.textContent = icon;
-
-  const msgSpan = document.createElement("span");
-  msgSpan.textContent = message;
-
-  statusEl.appendChild(iconSpan);
-  statusEl.appendChild(msgSpan);
+function hideUserInfo() {
+  skeletonLoader.classList.add("hidden");
+  userInfoEl.classList.add("hidden");
 }
 
 // Check Facebook login status on popup open
 async function checkStatus() {
-  setStatus("loading", "⏳", "Checking Facebook...");
-
   try {
+    // First trigger token fetch to ensure we have latest data
+    const tokenResponse = await chrome.runtime.sendMessage({ action: "fetchToken" });
+    console.log("[Popup] Token fetch result:", tokenResponse);
+
     const response = await chrome.runtime.sendMessage({ action: "getFacebookCookies" });
 
     if (response.success) {
       cookieData = response;
 
-      setStatus("success", "✅", "Ready to post!");
+      // Get stored data including user name
+      const data = await chrome.storage.local.get(["fewfeed_accessToken", "fewfeed_userName"]);
 
-      // Show user info
-      userInfoEl.style.display = "flex";
+      // Set user name
+      userNameEl.textContent = data.fewfeed_userName || "Facebook User";
+      userIdEl.textContent = "ID: " + response.userId;
 
-      // Try to get stored access token for authenticated image fetch and user name
-      chrome.storage.local.get(["fewfeed_accessToken"]).then(async (data) => {
-        if (data.fewfeed_accessToken) {
-          // Use access token for authenticated request
-          const avatarUrl = `https://graph.facebook.com/${response.userId}/picture?type=normal&width=96&height=96&access_token=${data.fewfeed_accessToken}`;
-          userAvatarEl.src = avatarUrl;
+      if (data.fewfeed_accessToken) {
+        // Use access token for authenticated avatar
+        userAvatarEl.src = `https://graph.facebook.com/${response.userId}/picture?type=normal&width=96&height=96&access_token=${data.fewfeed_accessToken}`;
+      } else {
+        // Fallback to unauthenticated
+        userAvatarEl.src = `https://graph.facebook.com/${response.userId}/picture?type=normal&width=96&height=96`;
+      }
 
-          // Fetch user's name from Graph API
-          try {
-            const nameResponse = await fetch(`https://graph.facebook.com/${response.userId}?fields=name&access_token=${data.fewfeed_accessToken}`);
-            const userData = await nameResponse.json();
-            if (userData.name) {
-              userNameEl.textContent = userData.name;
-            }
-          } catch (e) {
-            console.log("Could not fetch user name:", e);
-          }
-        } else {
-          // Fallback to unauthenticated
-          userAvatarEl.src = `https://graph.facebook.com/${response.userId}/picture?type=normal&width=96&height=96`;
-        }
-      });
-
-      // Fallback to default avatar if loading fails
+      // Fallback avatar on error
       userAvatarEl.onerror = () => {
         userAvatarEl.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237c3aed'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
       };
 
-      userNameEl.textContent = "Loading...";
-      userIdEl.textContent = "ID: " + response.userId;
-
-      openBtn.style.display = "flex";
-      loginBtn.style.display = "none";
+      showUserInfo();
+      loginBtn.classList.add("hidden");
     } else {
-      setStatus("error", "❌", response.error || "Not logged in");
-
-      userInfoEl.style.display = "none";
-      openBtn.style.display = "none";
-      loginBtn.style.display = "flex";
+      hideUserInfo();
+      openBtn.classList.add("hidden");
+      loginBtn.classList.remove("hidden");
     }
   } catch (error) {
-    setStatus("error", "❌", "Error: " + error.message);
-    loginBtn.style.display = "flex";
+    hideUserInfo();
+    loginBtn.classList.remove("hidden");
   }
 }
 
-// Open FEWFEED with cookie data
+// Open Pubilo with cookie data
 openBtn.addEventListener("click", async () => {
   if (!cookieData) return;
 
@@ -99,7 +78,6 @@ openBtn.addEventListener("click", async () => {
 
   // Open Pubilo
   chrome.tabs.create({ url: "http://localhost:3000/" }, () => {
-    // Close popup
     window.close();
   });
 });

@@ -17,64 +17,84 @@
       padding: 20px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     }
-    h1 {
-      font-size: 20px;
-      margin: 0 0 16px 0;
-      color: #1a1a1a;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+
+    /* Skeleton Loading */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
     }
-    h1 span {
-      color: #7c3aed;
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
     }
-    .status {
-      padding: 12px 16px;
-      border-radius: 10px;
+
+    /* User Info - shared styles for skeleton and loaded */
+    .user-info-wrapper {
       margin-bottom: 16px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
-    .status.success {
-      background: #d4edda;
-      color: #155724;
-    }
-    .status.error {
-      background: #f8d7da;
-      color: #721c24;
-    }
-    .status.loading {
-      background: #fff3cd;
-      color: #856404;
-    }
-    .status-icon {
-      font-size: 20px;
-    }
-    .user-info {
+    .user-info,
+    .skeleton-user {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px;
       background: #f8f9fa;
       border-radius: 10px;
-      margin-bottom: 16px;
+      min-height: 52px;
+      box-sizing: border-box;
     }
-    .user-avatar {
+    .user-avatar,
+    .skeleton-avatar {
       width: 48px;
       height: 48px;
       border-radius: 50%;
+      flex-shrink: 0;
       border: 2px solid #7c3aed;
+      box-sizing: border-box;
+    }
+    .skeleton-avatar {
+      border-color: #e0e0e0;
+    }
+    .user-avatar {
+      object-fit: cover;
+    }
+    .user-text-group,
+    .skeleton-text-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .user-name,
+    .skeleton-name {
+      height: 18px;
+      line-height: 18px;
     }
     .user-name {
       font-weight: 600;
       font-size: 15px;
     }
+    .skeleton-name {
+      width: 120px;
+      border-radius: 4px;
+    }
+    .user-id,
+    .skeleton-id {
+      height: 14px;
+      line-height: 14px;
+    }
     .user-id {
       font-size: 12px;
       color: #666;
     }
+    .skeleton-id {
+      width: 160px;
+      border-radius: 4px;
+    }
+
+    /* Buttons */
     button {
       width: 100%;
       padding: 14px;
@@ -114,32 +134,38 @@
       text-align: center;
       margin-top: 16px;
     }
+
+    /* Hide elements */
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect width="24" height="24" rx="6" fill="#7c3aed"/>
-        <path d="M7 12L10.5 15.5L17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Pubilo</span>
-    </h1>
+    <!-- User Info Wrapper - maintains consistent height -->
+    <div class="user-info-wrapper">
+      <!-- Skeleton Loading State -->
+      <div id="skeletonLoader" class="skeleton-user">
+        <div class="skeleton skeleton-avatar"></div>
+        <div class="skeleton-text-group">
+          <div class="skeleton skeleton-name"></div>
+          <div class="skeleton skeleton-id"></div>
+        </div>
+      </div>
 
-    <div id="status" class="status loading">
-      <span class="status-icon">⏳</span>
-      <span>Checking Facebook...</span>
-    </div>
-
-    <div id="userInfo" class="user-info" style="display: none;">
-      <img id="userAvatar" class="user-avatar" src="" alt="">
-      <div>
-        <div id="userName" class="user-name">Loading...</div>
-        <div id="userId" class="user-id"></div>
+      <!-- Loaded User Info -->
+      <div id="userInfo" class="user-info hidden">
+        <img id="userAvatar" class="user-avatar" src="" alt="">
+        <div class="user-text-group">
+          <div id="userName" class="user-name"></div>
+          <div id="userId" class="user-id"></div>
+        </div>
       </div>
     </div>
 
-    <button id="openBtn" class="btn-primary" style="display: none;">
+    <!-- Buttons always visible -->
+    <button id="openBtn" class="btn-primary">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
         <polyline points="15 3 21 3 21 9"/>
@@ -148,7 +174,7 @@
       Open Pubilo
     </button>
 
-    <button id="loginBtn" class="btn-secondary" style="display: none;">
+    <button id="loginBtn" class="btn-secondary hidden">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
       </svg>

@@ -38,6 +38,13 @@ export interface ScheduledPost {
   updated_at: string;
 }
 
+export interface PageSettings {
+  page_id: string;
+  auto_schedule: boolean;
+  schedule_minutes: string;
+  updated_at: string;
+}
+
 // Helper functions
 export async function getToken(userId: string): Promise<Token | null> {
   const result = await sql`SELECT * FROM tokens WHERE user_id = ${userId} LIMIT 1`;
@@ -94,6 +101,24 @@ export async function updatePostStatus(id: string, status: string, postId?: stri
     UPDATE scheduled_posts
     SET status = ${status}, post_id = ${postId || null}, error = ${error || null}, updated_at = NOW()
     WHERE id = ${id}
+    RETURNING *
+  `;
+}
+
+// Page Settings functions
+export async function getPageSettings(pageId: string): Promise<PageSettings | null> {
+  const result = await sql`SELECT * FROM page_settings WHERE page_id = ${pageId} LIMIT 1`;
+  return result[0] as PageSettings || null;
+}
+
+export async function upsertPageSettings(pageId: string, autoSchedule: boolean, scheduleMinutes: string) {
+  return sql`
+    INSERT INTO page_settings (page_id, auto_schedule, schedule_minutes, updated_at)
+    VALUES (${pageId}, ${autoSchedule}, ${scheduleMinutes}, NOW())
+    ON CONFLICT (page_id) DO UPDATE SET
+      auto_schedule = EXCLUDED.auto_schedule,
+      schedule_minutes = EXCLUDED.schedule_minutes,
+      updated_at = NOW()
     RETURNING *
   `;
 }

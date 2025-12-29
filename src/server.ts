@@ -1,6 +1,7 @@
 import { FacebookPublisher } from "./facebook";
 import { GeminiGenerator } from "./gemini";
 import type { Config, QueueItem } from "./types";
+import { sql, getPageSettings, upsertPageSettings } from "./lib/db";
 
 const PORT = 3000;
 
@@ -433,6 +434,58 @@ const server = Bun.serve({
       return response;
     }
 
+    // Upload image endpoint (base64 to freeimage.host)
+    if (path === "/api/upload-image" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        const { imageData } = body;
+
+        if (!imageData) {
+          return Response.json({ success: false, error: "No image data provided" }, { status: 400, headers: corsHeaders });
+        }
+
+        // If already a URL (not base64), return as-is
+        if (!imageData.startsWith("data:")) {
+          return Response.json({ success: true, url: imageData }, { headers: corsHeaders });
+        }
+
+        // Upload base64 to freeimage.host
+        if (!FREEIMAGE_API_KEY) {
+          return Response.json({ success: false, error: "FREEIMAGE_API_KEY not configured" }, { status: 500, headers: corsHeaders });
+        }
+
+        const base64Content = imageData.replace(/^data:image\/\w+;base64,/, "");
+        const formData = new FormData();
+        formData.append("key", FREEIMAGE_API_KEY);
+        formData.append("source", base64Content);
+        formData.append("format", "json");
+
+        const response = await fetch("https://freeimage.host/api/1/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const text = await response.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          return Response.json({ success: false, error: `Failed to parse response: ${text.substring(0, 100)}` }, { status: 500, headers: corsHeaders });
+        }
+
+        if (!data.image?.url) {
+          return Response.json({ success: false, error: data.error?.message || "Upload failed" }, { status: 500, headers: corsHeaders });
+        }
+
+        console.log("[upload-image] Uploaded:", data.image.url);
+        return Response.json({ success: true, url: data.image.url }, { headers: corsHeaders });
+
+      } catch (error) {
+        console.error("[upload-image] Error:", error);
+        return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500, headers: corsHeaders });
+      }
+    }
+
     // Stats endpoint
     if (path === "/api/stats" && req.method === "GET") {
       return Response.json({
@@ -542,6 +595,97 @@ const server = Bun.serve({
           { success: false, error: msg },
           { status: 500, headers: corsHeaders }
         );
+      }
+    }
+
+    // Page settings - GET
+    if (path === "/api/page-settings" && req.method === "GET") {
+      try {
+        const pageId = url.searchParams.get("pageId");
+        if (!pageId) {
+          return Response.json({ success: false, error: "Missing pageId" }, { status: 400, headers: corsHeaders });
+        }
+
+        // Auto-create table if not exists
+        await sql`
+          CREATE TABLE IF NOT EXISTS page_settings (
+            page_id TEXT PRIMARY KEY,
+            auto_schedule BOOLEAN DEFAULT false,
+            schedule_minutes TEXT DEFAULT '00, 15, 30, 45',
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
+
+        const settings = await getPageSettings(pageId);
+        return Response.json({
+          success: true,
+          settings: settings || {
+            page_id: pageId,
+            auto_schedule: false,
+            schedule_minutes: "00, 15, 30, 45",
+          },
+        }, { headers: corsHeaders });
+      } catch (error) {
+        console.error("[page-settings] GET error:", error);
+        return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // Page settings - POST
+    if (path === "/api/page-settings" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        const { pageId, autoSchedule, scheduleMinutes } = body;
+        if (!pageId) {
+          return Response.json({ success: false, error: "Missing pageId" }, { status: 400, headers: corsHeaders });
+        }
+
+        // Auto-create table if not exists
+        await sql`
+          CREATE TABLE IF NOT EXISTS page_settings (
+            page_id TEXT PRIMARY KEY,
+            auto_schedule BOOLEAN DEFAULT false,
+            schedule_minutes TEXT DEFAULT '00, 15, 30, 45',
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
+
+        const result = await upsertPageSettings(
+          pageId,
+          autoSchedule === true || autoSchedule === "true",
+          scheduleMinutes || "00, 15, 30, 45"
+        );
+        console.log("[page-settings] Saved:", { pageId, autoSchedule, scheduleMinutes });
+        return Response.json({ success: true, settings: result[0] }, { headers: corsHeaders });
+      } catch (error) {
+        console.error("[page-settings] POST error:", error);
+        return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // Migrate - create page_settings table
+    if (path === "/api/migrate" && req.method === "GET") {
+      try {
+        await sql`
+          CREATE TABLE IF NOT EXISTS page_settings (
+            page_id TEXT PRIMARY KEY,
+            auto_schedule BOOLEAN DEFAULT false,
+            schedule_minutes TEXT DEFAULT '00, 15, 30, 45',
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
+        console.log("[migrate] page_settings table created/verified");
+        const settings = await sql`SELECT * FROM page_settings ORDER BY updated_at DESC`;
+        return Response.json({
+          success: true,
+          message: "Migration completed: page_settings table created",
+          table: "page_settings",
+          rowCount: settings.length,
+          data: settings,
+        }, { headers: corsHeaders });
+      } catch (error) {
+        console.error("[migrate] Error:", error);
+        return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500, headers: corsHeaders });
       }
     }
 

@@ -3,19 +3,28 @@
 // Works like FewFeed V2 - just needs browser to be logged into Facebook
 
 // ============================================
-// HOT RELOAD FOR DEVELOPMENT
+// HOT RELOAD FOR DEVELOPMENT (disabled in production)
 // ============================================
 (function setupHotReload() {
+  // Only enable hot reload if explicitly enabled via localStorage or in dev mode
+  // Set localStorage.setItem('PUBILO_DEV_MODE', 'true') to enable
+  const DEV_MODE = false; // Set to true during development
+  if (!DEV_MODE) return;
+
   const WS_URL = "ws://localhost:35729";
   let ws = null;
   let reconnectTimer = null;
+  let connectionFailed = false;
 
   function connect() {
+    if (connectionFailed) return; // Don't retry after first failure
+
     try {
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
         console.log("[HotReload] Connected to dev server");
+        connectionFailed = false;
         if (reconnectTimer) {
           clearInterval(reconnectTimer);
           reconnectTimer = null;
@@ -36,21 +45,25 @@
 
       ws.onclose = () => {
         ws = null;
-        // Try to reconnect every 3 seconds
-        if (!reconnectTimer) {
+        // Only reconnect if we were previously connected
+        if (!connectionFailed && !reconnectTimer) {
           reconnectTimer = setInterval(() => {
-            console.log("[HotReload] Attempting to reconnect...");
             connect();
           }, 3000);
         }
       };
 
       ws.onerror = () => {
-        // Silently fail - dev server might not be running
+        // Mark as failed so we don't keep retrying
+        connectionFailed = true;
+        if (reconnectTimer) {
+          clearInterval(reconnectTimer);
+          reconnectTimer = null;
+        }
         ws?.close();
       };
     } catch (e) {
-      // WebSocket not available or connection failed
+      connectionFailed = true;
     }
   }
 
@@ -370,8 +383,23 @@ async function fetchAndStoreToken() {
       fbDtsg = await fetchDtsgFromBusiness(cookieString);
     }
 
+    // Fetch user name from Graph API if we have access token
+    if (accessToken && userId) {
+      try {
+        const nameResponse = await fetch(`https://graph.facebook.com/${userId}?fields=name&access_token=${accessToken}`);
+        const userData = await nameResponse.json();
+        if (userData.name) {
+          userName = userData.name;
+          console.log("[FEWFEED] Fetched user name:", userName);
+        }
+      } catch (e) {
+        console.log("[FEWFEED] Could not fetch user name:", e.message);
+      }
+    }
+
     console.log("[FEWFEED] Result:", {
       userId,
+      userName,
       hasAdsToken: !!accessToken,
       hasDtsg: !!fbDtsg,
       hasCookie: !!cookieString
@@ -728,7 +756,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Schedule post via GraphQL - forward to Facebook tab content script
+// Schedule post via GraphQL - use hidden Facebook window with content script
 async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
   console.log("[FEWFEED] schedulePostViaGraphQL called:", { postId, pageId, scheduledTime, fbDtsgPrefix: fbDtsg?.substring(0, 20) });
 
@@ -755,23 +783,20 @@ async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
       )
     );
 
+    let bgWindowId = null;
+
     if (!fbTab) {
-      // Create a background Facebook window (hidden from user)
-      console.log("[FEWFEED] No Facebook tab found, creating background window...");
+      // Create a minimized background Facebook window (invisible to user)
+      console.log("[FEWFEED] No Facebook tab found, creating minimized background window...");
       const bgWindow = await chrome.windows.create({
-        url: "https://www.facebook.com/",
+        url: "https://business.facebook.com/latest/home",
         type: 'popup',
-        width: 1,
-        height: 1,
-        left: -9999,
-        top: -9999,
+        state: 'minimized',
         focused: false
       });
-      
+
       fbTab = bgWindow.tabs[0];
-      
-      // Store window ID for cleanup later
-      const bgWindowId = bgWindow.id;
+      bgWindowId = bgWindow.id;
 
       // Wait for page to load
       await new Promise((resolve) => {
@@ -788,13 +813,8 @@ async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
         }, 10000);
       });
 
-      // Wait for content script
+      // Wait for content script to initialize
       await new Promise(r => setTimeout(r, 1500));
-      
-      // Schedule cleanup - close the background window after 30 seconds
-      setTimeout(() => {
-        chrome.windows.remove(bgWindowId).catch(() => {});
-      }, 30000);
     }
 
     console.log("[FEWFEED] Using Facebook tab:", fbTab.id);
@@ -829,6 +849,11 @@ async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
         fbDtsg: fbDtsg,
         scheduledTime: scheduledTime
       });
+    }
+
+    // Clean up background window immediately after request completes
+    if (bgWindowId) {
+      chrome.windows.remove(bgWindowId).catch(() => {});
     }
 
     console.log("[FEWFEED] Schedule result:", result);
