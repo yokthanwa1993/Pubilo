@@ -2941,6 +2941,8 @@
                     posts: posts,
                     timestamp: Date.now()
                 });
+                // Preload images for faster rendering
+                preloadImages(posts);
             }
 
             function invalidatePostsCache(pageId = null) {
@@ -2950,6 +2952,37 @@
                     scheduledPostsCache.clear();
                 }
                 console.log("[FEWFEED] Cache invalidated:", pageId || "all");
+            }
+
+            // Image cache for pending posts thumbnails
+            const imageCache = new Map(); // imageUrl -> blobUrl
+
+            async function getCachedImage(imageUrl) {
+                if (!imageUrl) return null;
+                // Check memory cache first
+                if (imageCache.has(imageUrl)) {
+                    return imageCache.get(imageUrl);
+                }
+                // Fetch and cache as blob URL
+                try {
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    imageCache.set(imageUrl, blobUrl);
+                    return blobUrl;
+                } catch (err) {
+                    console.warn("[FEWFEED] Image cache failed:", err);
+                    return imageUrl; // Fallback to original URL
+                }
+            }
+
+            function preloadImages(posts) {
+                if (!posts || !Array.isArray(posts)) return;
+                posts.forEach(post => {
+                    if (post.imageUrl && !imageCache.has(post.imageUrl)) {
+                        getCachedImage(post.imageUrl); // Fire and forget
+                    }
+                });
             }
 
             // Load settings from API (per-page) - database only
@@ -3300,11 +3333,22 @@
                     if (post.imageUrl) {
                         const img = document.createElement("img");
                         img.className = "pending-table-thumb";
-                        img.src = post.imageUrl;
                         img.alt = "";
-                        img.onclick = () => showLightbox(post.imageUrl);
+                        img.loading = "lazy";
+                        // Use cached image if available, otherwise load and cache
+                        const cachedUrl = imageCache.get(post.imageUrl);
+                        if (cachedUrl) {
+                            img.src = cachedUrl;
+                        } else {
+                            img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23f3f4f6' width='40' height='40'/%3E%3C/svg%3E";
+                            getCachedImage(post.imageUrl).then(url => {
+                                img.src = url;
+                            });
+                        }
+                        const originalUrl = post.imageUrl;
+                        img.onclick = () => showLightbox(imageCache.get(originalUrl) || originalUrl);
                         img.onmouseenter = (e) =>
-                            showThumbPreview(post.imageUrl, e);
+                            showThumbPreview(imageCache.get(originalUrl) || originalUrl, e);
                         img.onmousemove = (e) => moveThumbPreview(e);
                         img.onmouseleave = () => hideThumbPreview();
                         imgTd.appendChild(img);
