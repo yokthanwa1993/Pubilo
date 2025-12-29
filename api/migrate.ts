@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '../src/lib/db';
+import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow GET for simple trigger
@@ -8,6 +8,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Create connection directly here
+    const sql = neon(process.env.DATABASE_URL!);
+
     // Create page_settings table if not exists
     await sql`
       CREATE TABLE IF NOT EXISTS page_settings (
