@@ -2954,33 +2954,53 @@
                 console.log("[FEWFEED] Cache invalidated:", pageId || "all");
             }
 
-            // Image cache for pending posts thumbnails
-            const imageCache = new Map(); // imageUrl -> blobUrl
+            // Image cache - convert to WebP thumbnails for fast loading
+            const imageCache = new Map(); // imageUrl -> webpBlobUrl
+            const THUMB_SIZE = 80; // Thumbnail size in pixels
 
             async function getCachedImage(imageUrl) {
                 if (!imageUrl) return null;
-                // Check memory cache first
                 if (imageCache.has(imageUrl)) {
                     return imageCache.get(imageUrl);
                 }
-                // Fetch and cache as blob URL
-                try {
-                    const response = await fetch(imageUrl);
-                    const blob = await response.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    imageCache.set(imageUrl, blobUrl);
-                    return blobUrl;
-                } catch (err) {
-                    console.warn("[FEWFEED] Image cache failed:", err);
-                    return imageUrl; // Fallback to original URL
-                }
+                // Load, resize, convert to WebP
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.onload = () => {
+                        try {
+                            const canvas = document.createElement("canvas");
+                            canvas.width = THUMB_SIZE;
+                            canvas.height = THUMB_SIZE;
+                            const ctx = canvas.getContext("2d");
+                            // Cover fit (crop to square)
+                            const size = Math.min(img.width, img.height);
+                            const sx = (img.width - size) / 2;
+                            const sy = (img.height - size) / 2;
+                            ctx.drawImage(img, sx, sy, size, size, 0, 0, THUMB_SIZE, THUMB_SIZE);
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    imageCache.set(imageUrl, blobUrl);
+                                    resolve(blobUrl);
+                                } else {
+                                    resolve(imageUrl);
+                                }
+                            }, "image/webp", 0.7);
+                        } catch (e) {
+                            resolve(imageUrl);
+                        }
+                    };
+                    img.onerror = () => resolve(imageUrl);
+                    img.src = imageUrl;
+                });
             }
 
             function preloadImages(posts) {
                 if (!posts || !Array.isArray(posts)) return;
                 posts.forEach(post => {
                     if (post.imageUrl && !imageCache.has(post.imageUrl)) {
-                        getCachedImage(post.imageUrl); // Fire and forget
+                        getCachedImage(post.imageUrl);
                     }
                 });
             }
