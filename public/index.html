@@ -1439,6 +1439,39 @@
                 flex-shrink: 0;
             }
 
+            #settingsPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 3rem);
+                overflow: hidden;
+            }
+
+            #settingsPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            .settings-content {
+                overflow-y: auto;
+                flex: 1;
+                padding-top: 0.5rem;
+            }
+
+            .settings-section {
+                background: #f9fafb;
+                border-radius: 8px;
+                padding: 1.25rem;
+                margin-bottom: 1rem;
+            }
+
+            .settings-section-title {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
             .pending-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -2289,8 +2322,8 @@
                     </div>
 
                     <div class="nav-section">
-                        <div class="nav-section-title">Settings</div>
-                        <a href="#" class="nav-item" id="openSettingsBtn">
+                        <div class="nav-section-title">SETTINGS</div>
+                        <a href="#settings" class="nav-item" id="settingsNavBtn">
                             <svg
                                 viewBox="0 0 24 24"
                                 fill="none"
@@ -2890,6 +2923,84 @@
                         <div class="pending-empty">ยังไม่มีคำคม</div>
                     </div>
                 </div>
+
+                <!-- Settings Panel -->
+                <div
+                    class="pending-panel"
+                    id="settingsPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Settings</h2>
+                    </div>
+                    <div class="settings-content">
+                        <!-- Schedule Settings -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">ตั้งเวลาโพสต์</h3>
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="autoScheduleEnabledPanel" />
+                                    <span>Auto Schedule Posts</span>
+                                </label>
+                                <p class="setting-desc">
+                                    โพสต์จะถูกตั้งเวลาอัตโนมัติตามนาทีที่กำหนด
+                                </p>
+                            </div>
+                            <div
+                                class="setting-group"
+                                id="scheduleIntervalGroupPanel"
+                                style="display: none"
+                            >
+                                <label class="form-label">นาทีที่ต้องการโพสต์</label>
+                                <input
+                                    type="text"
+                                    class="form-input"
+                                    id="scheduleMinutesPanel"
+                                    value="00, 15, 30, 45"
+                                    placeholder="00, 15, 30, 45"
+                                />
+                                <p class="setting-desc">
+                                    ใส่นาทีที่ต้องการโพสต์ คั่นด้วยคอมม่า เช่น 00, 15, 30, 45 = โพสต์ทุก 15 นาที
+                                </p>
+                            </div>
+                            <div
+                                class="setting-group"
+                                id="nextScheduleInfoPanel"
+                                style="display: none"
+                            >
+                                <label class="form-label">Next Scheduled Time</label>
+                                <div
+                                    class="next-schedule-display"
+                                    id="nextScheduleDisplayPanel"
+                                >
+                                    -
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Image Prompt Settings -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">AI Image Generation</h3>
+                            <div class="setting-group">
+                                <label class="form-label">Default Prompt สำหรับเพจนี้</label>
+                                <textarea
+                                    id="aiPromptInput"
+                                    class="form-input"
+                                    rows="4"
+                                    placeholder="ใส่ prompt สำหรับเจนรูป AI เช่น: A beautiful Thai landscape with..."
+                                    style="resize: vertical; min-height: 100px;"
+                                ></textarea>
+                                <p class="setting-desc">
+                                    Prompt นี้จะถูกใช้เป็นค่าเริ่มต้นสำหรับการเจนรูป AI ของเพจนี้
+                                </p>
+                            </div>
+                        </div>
+
+                        <button class="btn-save" id="saveSettingsPanelBtn" style="margin-top: 1rem;">
+                            บันทึกการตั้งค่า
+                        </button>
+                    </div>
+                </div>
             </main>
         </div>
 
@@ -3023,7 +3134,8 @@
 
             // Settings elements
             const settingsModal = document.getElementById("settingsModal");
-            const openSettingsBtn = document.getElementById("openSettingsBtn");
+            // Settings nav button (renamed from openSettingsBtn)
+            const settingsNavBtn = document.getElementById("settingsNavBtn");
             const closeSettingsBtn =
                 document.getElementById("closeSettingsBtn");
             const saveSettingsBtn = document.getElementById("saveSettingsBtn");
@@ -3271,12 +3383,8 @@
                 }
             }
 
-            // Settings modal handlers
-            openSettingsBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                settingsModal.style.display = "flex";
-                loadSettings();
-            });
+            // Settings modal is now deprecated - using settings panel instead
+            // The settingsNavBtn click is handled in the navigation section below
 
             closeSettingsBtn.addEventListener("click", () => {
                 settingsModal.style.display = "none";
@@ -3337,6 +3445,121 @@
                 updatePublishButton();
             });
 
+            // Settings Panel functionality
+            const autoScheduleEnabledPanel = document.getElementById("autoScheduleEnabledPanel");
+            const scheduleMinutesPanel = document.getElementById("scheduleMinutesPanel");
+            const scheduleIntervalGroupPanel = document.getElementById("scheduleIntervalGroupPanel");
+            const nextScheduleInfoPanel = document.getElementById("nextScheduleInfoPanel");
+            const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
+            const aiPromptInput = document.getElementById("aiPromptInput");
+            const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
+
+            // Load settings into the panel
+            function loadSettingsPanel() {
+                const pageId = getCurrentPageId();
+                if (!pageId) {
+                    console.log("[Settings Panel] No page selected");
+                    return;
+                }
+
+                // Load schedule settings from cache
+                if (cachedPageSettings && cachedPageSettings.pageId === pageId) {
+                    autoScheduleEnabledPanel.checked = cachedPageSettings.autoSchedule || false;
+                    scheduleMinutesPanel.value = cachedPageSettings.scheduleMinutes || "00, 15, 30, 45";
+                } else {
+                    autoScheduleEnabledPanel.checked = false;
+                    scheduleMinutesPanel.value = "00, 15, 30, 45";
+                }
+
+                // Update visibility
+                scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                if (autoScheduleEnabledPanel.checked) {
+                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                }
+
+                // Load AI prompt from localStorage (per page)
+                const savedPrompt = localStorage.getItem(`aiPrompt_${pageId}`) || "";
+                aiPromptInput.value = savedPrompt;
+            }
+
+            // Auto schedule checkbox change handler for panel
+            autoScheduleEnabledPanel.addEventListener("change", () => {
+                scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                if (autoScheduleEnabledPanel.checked) {
+                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                }
+            });
+
+            // Schedule minutes change handler for panel
+            scheduleMinutesPanel.addEventListener("input", () => {
+                if (autoScheduleEnabledPanel.checked) {
+                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                }
+            });
+
+            // Save settings panel button handler
+            saveSettingsPanelBtn.addEventListener("click", async () => {
+                const pageId = getCurrentPageId();
+                if (!pageId) {
+                    alert("กรุณาเลือกเพจก่อน");
+                    return;
+                }
+
+                const autoSchedule = autoScheduleEnabledPanel.checked;
+                const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
+                const aiPrompt = aiPromptInput.value.trim();
+
+                // Save AI prompt to localStorage (per page)
+                localStorage.setItem(`aiPrompt_${pageId}`, aiPrompt);
+
+                // Update cache immediately
+                cachedPageSettings = {
+                    pageId,
+                    autoSchedule,
+                    scheduleMinutes: mins
+                };
+
+                // Also update the modal settings (keep in sync)
+                autoScheduleEnabled.checked = autoSchedule;
+                scheduleMinutes.value = mins;
+                scheduleIntervalGroup.style.display = autoSchedule ? "block" : "none";
+                nextScheduleInfo.style.display = autoSchedule ? "block" : "none";
+
+                // Save to database via API
+                try {
+                    const response = await fetch('/api/page-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pageId,
+                            autoSchedule,
+                            scheduleMinutes: mins
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log("[FEWFEED] Settings saved to database");
+                        // Show success feedback
+                        saveSettingsPanelBtn.textContent = "บันทึกแล้ว ✓";
+                        saveSettingsPanelBtn.style.background = "#10b981";
+                        setTimeout(() => {
+                            saveSettingsPanelBtn.textContent = "บันทึกการตั้งค่า";
+                            saveSettingsPanelBtn.style.background = "";
+                        }, 2000);
+                    } else {
+                        console.error("[FEWFEED] Failed to save settings:", data.error);
+                        alert("บันทึกไม่สำเร็จ: " + data.error);
+                    }
+                } catch (error) {
+                    console.error("[FEWFEED] API error:", error);
+                    alert("บันทึกไม่สำเร็จ กรุณาลองใหม่");
+                }
+
+                updatePublishButton();
+            });
+
             // Load settings on page load
             loadSettings();
 
@@ -3350,6 +3573,7 @@
             const pendingBadge = document.getElementById("pendingBadge");
             const pendingPanel = document.getElementById("pendingPanel");
             const quotesPanel = document.getElementById("quotesPanel");
+            const settingsPanel = document.getElementById("settingsPanel");
             const pendingTableContainer = document.getElementById(
                 "pendingTableContainer",
             );
@@ -3750,8 +3974,9 @@
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
                 });
-                // Hide quotes panel
+                // Hide quotes and settings panels
                 quotesPanel.style.display = "none";
+                settingsPanel.style.display = "none";
                 // Lock body scroll
                 document.body.style.overflow = "hidden";
                 // Show pending panel (full width)
@@ -3828,10 +4053,11 @@
                 }
             }
 
-            // Show dashboard (hide pending/quotes panels, show mode containers)
+            // Show dashboard (hide pending/quotes/settings panels, show mode containers)
             function showDashboard() {
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
+                settingsPanel.style.display = "none";
                 // Restore body scroll
                 document.body.style.overflow = "";
                 // Remove pending mode class
@@ -3845,12 +4071,29 @@
                     c.classList.remove("active");
                 });
                 pendingPanel.style.display = "none";
+                settingsPanel.style.display = "none";
                 quotesPanel.style.display = "flex";
                 appLayout.classList.add("pending-mode");
                 // Lock body scroll
                 document.body.style.overflow = "hidden";
                 // Load quotes
                 loadQuotes();
+            }
+
+            // Show settings panel
+            function showSettingsPanel() {
+                // Hide all mode containers
+                document.querySelectorAll(".mode-container").forEach((c) => {
+                    c.classList.remove("active");
+                });
+                pendingPanel.style.display = "none";
+                quotesPanel.style.display = "none";
+                settingsPanel.style.display = "flex";
+                appLayout.classList.add("pending-mode");
+                // Lock body scroll
+                document.body.style.overflow = "hidden";
+                // Load settings for current page
+                loadSettingsPanel();
             }
 
             // Quotes functionality
@@ -4068,6 +4311,9 @@
                 } else if (hash === "quotes") {
                     quotesNavItem.classList.add("active");
                     showQuotesPanel();
+                } else if (hash === "settings") {
+                    document.getElementById("settingsNavBtn").classList.add("active");
+                    showSettingsPanel();
                 } else if (hash === "image") {
                     imageNavItem.classList.add("active");
                     setPostMode("image");
@@ -4102,6 +4348,12 @@
             quotesNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
                 navigateTo("quotes");
+            });
+
+            // Settings nav item click
+            document.getElementById("settingsNavBtn").addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo("settings");
             });
 
             // Link nav item click (Dashboard renamed to Link)
