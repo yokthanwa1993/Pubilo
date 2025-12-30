@@ -2978,25 +2978,21 @@
                             </div>
                         </div>
 
-                        <!-- AI Image Prompt Settings -->
+                        <!-- Link Post AI Settings -->
                         <div class="settings-section">
-                            <h3 class="settings-section-title">AI Image Generation</h3>
+                            <h3 class="settings-section-title">🔗 Link Post - AI Image</h3>
                             <div class="setting-group">
-                                <label class="form-label">Default Prompt สำหรับเพจนี้</label>
+                                <label class="form-label">Prompt สำหรับเจนรูป Link Post</label>
                                 <textarea
-                                    id="aiPromptInput"
+                                    id="linkPromptInput"
                                     class="form-input"
-                                    rows="4"
-                                    placeholder="ใส่ prompt สำหรับเจนรูป AI เช่น: A beautiful Thai landscape with..."
-                                    style="resize: vertical; min-height: 100px;"
+                                    rows="3"
+                                    placeholder="ใส่ prompt สำหรับเจนรูป Link Post เช่น: A professional banner image..."
+                                    style="resize: vertical; min-height: 80px;"
                                 ></textarea>
-                                <p class="setting-desc">
-                                    Prompt นี้จะถูกใช้เป็นค่าเริ่มต้นสำหรับการเจนรูป AI ของเพจนี้
-                                </p>
                             </div>
-
-                            <div class="setting-group" style="margin-top: 1rem;">
-                                <label class="form-label">ขนาดรูปสำหรับ Link Post</label>
+                            <div class="setting-group" style="margin-top: 0.75rem;">
+                                <label class="form-label">ขนาดรูป</label>
                                 <select id="linkImageSize" class="form-input" style="padding: 0.5rem;">
                                     <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
                                     <option value="16:9">16:9 (แนวนอน)</option>
@@ -3007,9 +3003,23 @@
                                     <option value="2:3">2:3 (แนวตั้ง)</option>
                                 </select>
                             </div>
+                        </div>
 
-                            <div class="setting-group" style="margin-top: 1rem;">
-                                <label class="form-label">ขนาดรูปสำหรับ Image Post</label>
+                        <!-- Image Post AI Settings -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">🖼️ Image Post - AI Image</h3>
+                            <div class="setting-group">
+                                <label class="form-label">Prompt สำหรับเจนรูป Image Post</label>
+                                <textarea
+                                    id="imagePromptInput"
+                                    class="form-input"
+                                    rows="3"
+                                    placeholder="ใส่ prompt สำหรับเจนรูป Image Post เช่น: A vibrant social media image..."
+                                    style="resize: vertical; min-height: 80px;"
+                                ></textarea>
+                            </div>
+                            <div class="setting-group" style="margin-top: 0.75rem;">
+                                <label class="form-label">ขนาดรูป</label>
                                 <select id="imageImageSize" class="form-input" style="padding: 0.5rem;">
                                     <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
                                     <option value="16:9">16:9 (แนวนอน)</option>
@@ -3197,6 +3207,17 @@
                 const isLinkMode = currentMode === "link";
                 const storageKey = isLinkMode ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
                 return localStorage.getItem(storageKey) || "1:1";
+            }
+
+            // Get current prompt based on mode (link or image)
+            function getCurrentPrompt() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return "";
+
+                // Check current mode
+                const isLinkMode = currentMode === "link";
+                const storageKey = isLinkMode ? `linkPrompt_${pageId}` : `imagePrompt_${pageId}`;
+                return localStorage.getItem(storageKey) || "";
             }
 
             // Cache for current page settings
@@ -3517,7 +3538,8 @@
             const scheduleIntervalGroupPanel = document.getElementById("scheduleIntervalGroupPanel");
             const nextScheduleInfoPanel = document.getElementById("nextScheduleInfoPanel");
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
-            const aiPromptInput = document.getElementById("aiPromptInput");
+            const linkPromptInput = document.getElementById("linkPromptInput");
+            const imagePromptInput = document.getElementById("imagePromptInput");
             const linkImageSizeSelect = document.getElementById("linkImageSize");
             const imageImageSizeSelect = document.getElementById("imageImageSize");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
@@ -3570,9 +3592,11 @@
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
 
-                // Load AI prompt from localStorage (per page)
-                const savedPrompt = localStorage.getItem(`aiPrompt_${pageId}`) || "";
-                aiPromptInput.value = savedPrompt;
+                // Load AI prompts from localStorage (per page, separate for link and image)
+                const savedLinkPrompt = localStorage.getItem(`linkPrompt_${pageId}`) || "";
+                const savedImagePrompt = localStorage.getItem(`imagePrompt_${pageId}`) || "";
+                linkPromptInput.value = savedLinkPrompt;
+                imagePromptInput.value = savedImagePrompt;
 
                 // Load image sizes from localStorage (per page)
                 const savedLinkImageSize = localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
@@ -3607,12 +3631,14 @@
 
                 const autoSchedule = autoScheduleEnabledPanel.checked;
                 const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
-                const aiPrompt = aiPromptInput.value.trim();
+                const linkPrompt = linkPromptInput.value.trim();
+                const imagePrompt = imagePromptInput.value.trim();
                 const linkImageSize = linkImageSizeSelect.value;
                 const imageImageSize = imageImageSizeSelect.value;
 
-                // Save AI prompt and image sizes to localStorage (per page)
-                localStorage.setItem(`aiPrompt_${pageId}`, aiPrompt);
+                // Save AI prompts and image sizes to localStorage (per page)
+                localStorage.setItem(`linkPrompt_${pageId}`, linkPrompt);
+                localStorage.setItem(`imagePrompt_${pageId}`, imagePrompt);
                 localStorage.setItem(`linkImageSize_${pageId}`, linkImageSize);
                 localStorage.setItem(`imageImageSize_${pageId}`, imageImageSize);
 
