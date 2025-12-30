@@ -4594,6 +4594,12 @@
                             if (scheduledTime) {
                                 await refreshScheduledPostTimes();
                                 updateNextScheduleDisplay();
+
+                                // Navigate to pending page after 1 second
+                                setTimeout(() => {
+                                    window.location.hash = "#pending";
+                                    handleNavigation();
+                                }, 1000);
                             }
 
                             // Reset button after 2 seconds
@@ -4808,6 +4814,12 @@
                                         await refreshScheduledPostTimes();
                                         updateNextScheduleDisplay();
                                     }
+
+                                    // Navigate to pending page after 1 second
+                                    setTimeout(() => {
+                                        window.location.hash = "#pending";
+                                        handleNavigation();
+                                    }, 1000);
 
                                     // Reset button after 2 seconds
                                     setTimeout(() => {
