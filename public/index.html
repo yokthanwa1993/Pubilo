@@ -3990,7 +3990,7 @@
             }
 
             // Auto-convert Lazada URL on paste
-            linkUrl.addEventListener("paste", (e) => {
+            if (linkUrl) linkUrl.addEventListener("paste", (e) => {
                 // Wait for the paste to complete
                 setTimeout(() => {
                     let url = linkUrl.value.trim();
@@ -4593,11 +4593,17 @@
                         const primaryTextEl = els.primaryText;
                         const isLinkMode = mode === "link";
 
+                        // Compress image before upload to avoid 413 error
+                        let imageToUpload = state.selectedImage;
+                        if (imageToUpload && imageToUpload.startsWith("data:")) {
+                            imageToUpload = await compressImage(imageToUpload, 1200, 0.8);
+                        }
+
                         const response = await fetch("/api/publish", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                imageUrl: state.selectedImage,
+                                imageUrl: imageToUpload,
                                 linkUrl: isLinkMode ? linkUrl.value : "",
                                 linkName: isLinkMode ? linkName.value : "",
                                 caption: isLinkMode ? caption.value : "",
