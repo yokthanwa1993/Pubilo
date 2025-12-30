@@ -5592,6 +5592,11 @@
                 // Load page-specific settings
                 loadSettings();
 
+                // If on settings page, reload settings panel
+                if (window.location.hash === "#settings" && settingsPanel.style.display === "flex") {
+                    loadSettingsPanel();
+                }
+
                 // If on pending panel, refresh scheduled posts for new page
                 if (pendingPanel.style.display === "block") {
                     showPendingPanel();
