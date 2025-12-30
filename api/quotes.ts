@@ -1,0 +1,94 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { neon } from '@neondatabase/serverless';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).setHeader('Access-Control-Allow-Origin', '*').end();
+  }
+
+  const sql = neon(process.env.DATABASE_URL!);
+
+  // Ensure table exists
+  await sql`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id SERIAL PRIMARY KEY,
+      quote_text TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
+  // GET - List all quotes
+  if (req.method === 'GET') {
+    try {
+      const quotes = await sql`SELECT * FROM quotes ORDER BY created_at DESC`;
+      return res.status(200).json({
+        success: true,
+        quotes,
+      });
+    } catch (error) {
+      console.error('[quotes] GET error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // POST - Add new quote
+  if (req.method === 'POST') {
+    try {
+      const { quoteText } = req.body;
+
+      if (!quoteText || quoteText.trim().length === 0) {
+        return res.status(400).json({ success: false, error: 'Missing quote text' });
+      }
+
+      const result = await sql`
+        INSERT INTO quotes (quote_text)
+        VALUES (${quoteText.trim()})
+        RETURNING *
+      `;
+
+      console.log('[quotes] Added:', result[0]);
+
+      return res.status(200).json({
+        success: true,
+        quote: result[0],
+      });
+    } catch (error) {
+      console.error('[quotes] POST error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // DELETE - Remove quote by id
+  if (req.method === 'DELETE') {
+    try {
+      const { id } = req.query;
+
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Missing quote id' });
+      }
+
+      await sql`DELETE FROM quotes WHERE id = ${id}`;
+
+      console.log('[quotes] Deleted:', id);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (error) {
+      console.error('[quotes] DELETE error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}

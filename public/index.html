@@ -2826,8 +2826,25 @@
                     <div class="pending-panel-header">
                         <h2>Quotes</h2>
                     </div>
-                    <div class="quotes-content">
-                        <p style="color: #888; text-align: center; padding: 2rem;">Coming soon...</p>
+                    <div class="quotes-form" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                        <input
+                            type="text"
+                            id="quoteInput"
+                            placeholder="เพิ่มคำคมใหม่..."
+                            style="flex: 1; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;"
+                        />
+                        <button
+                            id="addQuoteBtn"
+                            style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                        >
+                            เพิ่ม
+                        </button>
+                    </div>
+                    <div
+                        class="quotes-table-container"
+                        id="quotesTableContainer"
+                    >
+                        <div class="pending-empty">ยังไม่มีคำคม</div>
                     </div>
                 </div>
             </main>
@@ -3783,6 +3800,143 @@
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "block";
                 appLayout.classList.add("pending-mode");
+                // Load quotes
+                loadQuotes();
+            }
+
+            // Quotes functionality
+            const quotesTableContainer = document.getElementById("quotesTableContainer");
+            const quoteInput = document.getElementById("quoteInput");
+            const addQuoteBtn = document.getElementById("addQuoteBtn");
+
+            async function loadQuotes() {
+                try {
+                    quotesTableContainer.innerHTML = `
+                        <div class="pending-skeleton">
+                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                        </div>
+                    `;
+                    const response = await fetch("/api/quotes");
+                    const data = await response.json();
+                    if (data.success) {
+                        renderQuotes(data.quotes);
+                    } else {
+                        quotesTableContainer.innerHTML = `<div class="pending-empty">${data.error}</div>`;
+                    }
+                } catch (error) {
+                    console.error("[FEWFEED] Failed to load quotes:", error);
+                    quotesTableContainer.innerHTML = `<div class="pending-empty">Failed to load quotes</div>`;
+                }
+            }
+
+            function renderQuotes(quotes) {
+                quotesTableContainer.textContent = "";
+                if (!quotes || quotes.length === 0) {
+                    const emptyDiv = document.createElement("div");
+                    emptyDiv.className = "pending-empty";
+                    emptyDiv.textContent = "ยังไม่มีคำคม";
+                    quotesTableContainer.appendChild(emptyDiv);
+                    return;
+                }
+
+                const table = document.createElement("table");
+                table.className = "pending-table";
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th style="width: 70%;">คำคม</th>
+                            <th style="width: 20%;">วันที่</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                `;
+
+                const tbody = document.createElement("tbody");
+                quotes.forEach(quote => {
+                    const tr = document.createElement("tr");
+                    const date = new Date(quote.created_at);
+                    tr.innerHTML = `
+                        <td style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(quote.quote_text)}</td>
+                        <td style="color: #888; font-size: 0.85rem;">${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>
+                            <button onclick="deleteQuote(${quote.id})" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(tbody);
+                quotesTableContainer.appendChild(table);
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement("div");
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            window.deleteQuote = async function(id) {
+                if (!confirm("ลบคำคมนี้?")) return;
+                try {
+                    const response = await fetch(`/api/quotes?id=${id}`, { method: "DELETE" });
+                    const data = await response.json();
+                    if (data.success) {
+                        loadQuotes();
+                    } else {
+                        alert("ลบไม่สำเร็จ: " + data.error);
+                    }
+                } catch (error) {
+                    console.error("[FEWFEED] Failed to delete quote:", error);
+                    alert("ลบไม่สำเร็จ");
+                }
+            };
+
+            if (addQuoteBtn) {
+                addQuoteBtn.addEventListener("click", async () => {
+                    const text = quoteInput.value.trim();
+                    if (!text) {
+                        alert("กรุณาใส่คำคม");
+                        return;
+                    }
+                    try {
+                        addQuoteBtn.disabled = true;
+                        addQuoteBtn.textContent = "...";
+                        const response = await fetch("/api/quotes", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ quoteText: text }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            quoteInput.value = "";
+                            loadQuotes();
+                        } else {
+                            alert("เพิ่มไม่สำเร็จ: " + data.error);
+                        }
+                    } catch (error) {
+                        console.error("[FEWFEED] Failed to add quote:", error);
+                        alert("เพิ่มไม่สำเร็จ");
+                    } finally {
+                        addQuoteBtn.disabled = false;
+                        addQuoteBtn.textContent = "เพิ่ม";
+                    }
+                });
+            }
+
+            // Enter key to add quote
+            if (quoteInput) {
+                quoteInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        addQuoteBtn.click();
+                    }
+                });
             }
 
             // Delete pending item
