@@ -4595,6 +4595,12 @@
                                 await refreshScheduledPostTimes();
                                 updateNextScheduleDisplay();
 
+                                // Clear the uploaded image
+                                state.selectedImage = null;
+                                state.currentView = "upload";
+                                if (els.fullImageView) els.fullImageView.style.display = "none";
+                                if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
+
                                 // Navigate to pending page after 1 second
                                 setTimeout(() => {
                                     window.location.hash = "#pending";
@@ -4814,6 +4820,12 @@
                                         await refreshScheduledPostTimes();
                                         updateNextScheduleDisplay();
                                     }
+
+                                    // Clear the uploaded image
+                                    state.selectedImage = null;
+                                    state.currentView = "upload";
+                                    if (els.fullImageView) els.fullImageView.style.display = "none";
+                                    if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
 
                                     // Navigate to pending page after 1 second
                                     setTimeout(() => {
