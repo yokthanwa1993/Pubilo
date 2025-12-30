@@ -2885,6 +2885,30 @@
             const description = document.getElementById("description");
             const linkUrl = document.getElementById("linkUrl");
 
+            // Validate Link URL - disable SCHEDULE button if empty in link mode
+            function validateLinkMode() {
+                const currentMode = document.querySelector('.nav-item.active')?.dataset?.mode || 'link';
+                if (currentMode === 'link') {
+                    const hasUrl = linkUrl && linkUrl.value.trim().length > 0;
+                    publishBtn.disabled = !hasUrl;
+                    publishBtn.style.opacity = hasUrl ? '1' : '0.5';
+                    publishBtn.style.cursor = hasUrl ? 'pointer' : 'not-allowed';
+                } else {
+                    // Other modes don't require link URL
+                    publishBtn.disabled = false;
+                    publishBtn.style.opacity = '1';
+                    publishBtn.style.cursor = 'pointer';
+                }
+            }
+
+            // Listen for link URL changes
+            if (linkUrl) {
+                linkUrl.addEventListener("input", validateLinkMode);
+            }
+
+            // Initial validation
+            setTimeout(validateLinkMode, 500);
+
             // Settings elements
             const settingsModal = document.getElementById("settingsModal");
             const openSettingsBtn = document.getElementById("openSettingsBtn");
@@ -3699,6 +3723,8 @@
                     setPostMode("link");
                     showDashboard();
                 }
+                // Re-validate after mode change
+                validateLinkMode();
             }
 
             // Listen for hash changes (back/forward navigation)
