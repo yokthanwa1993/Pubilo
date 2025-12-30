@@ -35,11 +35,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // POST - Add new quote
+  // POST - Add new quote (single or bulk)
   if (req.method === 'POST') {
     try {
-      const { quoteText } = req.body;
+      const { quoteText, quotes } = req.body;
 
+      // Bulk import
+      if (quotes && Array.isArray(quotes)) {
+        let inserted = 0;
+        for (const quote of quotes) {
+          const text = quote.text || quote.quoteText;
+          if (text && text.trim()) {
+            await sql`INSERT INTO quotes (quote_text) VALUES (${text.trim()})`;
+            inserted++;
+          }
+        }
+        console.log(`[quotes] Bulk imported ${inserted} quotes`);
+        return res.status(200).json({
+          success: true,
+          imported: inserted,
+        });
+      }
+
+      // Single quote
       if (!quoteText || quoteText.trim().length === 0) {
         return res.status(400).json({ success: false, error: 'Missing quote text' });
       }
