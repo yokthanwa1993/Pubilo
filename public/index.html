@@ -2231,6 +2231,18 @@
                             </svg>
                             AI Image Gen
                         </a>
+                        <a href="#quotes" class="nav-item" id="quotesNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
+                                <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" />
+                            </svg>
+                            Quotes
+                        </a>
                     </div>
 
                     <div class="nav-section">
@@ -2804,6 +2816,20 @@
                         <div class="pending-empty">No pending posts</div>
                     </div>
                 </div>
+
+                <!-- Quotes Panel -->
+                <div
+                    class="pending-panel"
+                    id="quotesPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Quotes</h2>
+                    </div>
+                    <div class="quotes-content">
+                        <p style="color: #888; text-align: center; padding: 2rem;">Coming soon...</p>
+                    </div>
+                </div>
             </main>
         </div>
 
@@ -3260,8 +3286,10 @@
             const imageNavItem = document.getElementById("imageNavItem");
             const reelsNavItem = document.getElementById("reelsNavItem");
             const pendingNavItem = document.getElementById("pendingNavItem");
+            const quotesNavItem = document.getElementById("quotesNavItem");
             const pendingBadge = document.getElementById("pendingBadge");
             const pendingPanel = document.getElementById("pendingPanel");
+            const quotesPanel = document.getElementById("quotesPanel");
             const pendingTableContainer = document.getElementById(
                 "pendingTableContainer",
             );
@@ -3662,6 +3690,8 @@
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
                 });
+                // Hide quotes panel
+                quotesPanel.style.display = "none";
                 // Show pending panel (full width)
                 pendingPanel.style.display = "block";
                 // Add pending mode class
@@ -3736,11 +3766,23 @@
                 }
             }
 
-            // Show dashboard (hide pending panel, show mode containers)
+            // Show dashboard (hide pending/quotes panels, show mode containers)
             function showDashboard() {
                 pendingPanel.style.display = "none";
+                quotesPanel.style.display = "none";
                 // Remove pending mode class
                 appLayout.classList.remove("pending-mode");
+            }
+
+            // Show quotes panel
+            function showQuotesPanel() {
+                // Hide all mode containers
+                document.querySelectorAll(".mode-container").forEach((c) => {
+                    c.classList.remove("active");
+                });
+                pendingPanel.style.display = "none";
+                quotesPanel.style.display = "block";
+                appLayout.classList.add("pending-mode");
             }
 
             // Delete pending item
@@ -3771,6 +3813,9 @@
                 if (hash === "pending") {
                     pendingNavItem.classList.add("active");
                     showPendingPanel();
+                } else if (hash === "quotes") {
+                    quotesNavItem.classList.add("active");
+                    showQuotesPanel();
                 } else if (hash === "image") {
                     imageNavItem.classList.add("active");
                     setPostMode("image");
@@ -3799,6 +3844,12 @@
             pendingNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
                 navigateTo("pending");
+            });
+
+            // Quotes nav item click
+            quotesNavItem.addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo("quotes");
             });
 
             // Link nav item click (Dashboard renamed to Link)
