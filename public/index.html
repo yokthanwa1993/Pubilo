@@ -3820,12 +3820,18 @@
             let quotesHasMore = false;
             let quotesLoading = false;
 
-            // Infinite scroll for quotes
-            quotesTableContainer.addEventListener("scroll", () => {
+            // Infinite scroll for quotes (using window scroll)
+            window.addEventListener("scroll", () => {
+                // Only trigger if quotes panel is visible
+                if (quotesPanel.style.display === "none") return;
                 if (quotesLoading || !quotesHasMore) return;
-                const { scrollTop, scrollHeight, clientHeight } = quotesTableContainer;
-                // Load more when 100px from bottom
-                if (scrollTop + clientHeight >= scrollHeight - 100) {
+
+                // Check if near bottom of page
+                const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                const scrollHeight = document.documentElement.scrollHeight;
+                const clientHeight = window.innerHeight;
+
+                if (scrollTop + clientHeight >= scrollHeight - 200) {
                     loadQuotes(true);
                 }
             });
