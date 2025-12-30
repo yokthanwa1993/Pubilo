@@ -1281,6 +1281,37 @@
                 margin-left: 1.625rem;
             }
 
+            .radio-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .radio-option {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.4rem 0.75rem;
+                background: #f3f4f6;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.875rem;
+                transition: all 0.15s;
+            }
+
+            .radio-option:hover {
+                background: #e5e7eb;
+            }
+
+            .radio-option:has(input:checked) {
+                background: #7c3aed;
+                color: #fff;
+            }
+
+            .radio-option input[type="radio"] {
+                display: none;
+            }
+
             .next-schedule-display {
                 background: #f3e8ff;
                 color: #7c3aed;
@@ -2993,15 +3024,13 @@
                             </div>
                             <div class="setting-group" style="margin-top: 0.75rem;">
                                 <label class="form-label">ขนาดรูป</label>
-                                <select id="linkImageSize" class="form-input" style="padding: 0.5rem;">
-                                    <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
-                                    <option value="16:9">16:9 (แนวนอน)</option>
-                                    <option value="4:3">4:3 (แนวนอน)</option>
-                                    <option value="3:2">3:2 (แนวนอน)</option>
-                                    <option value="9:16">9:16 (แนวตั้ง)</option>
-                                    <option value="3:4">3:4 (แนวตั้ง)</option>
-                                    <option value="2:3">2:3 (แนวตั้ง)</option>
-                                </select>
+                                <div class="radio-group" id="linkImageSizeGroup">
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="1:1" checked> 1:1</label>
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="16:9"> 16:9</label>
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="4:3"> 4:3</label>
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="9:16"> 9:16</label>
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="3:4"> 3:4</label>
+                                </div>
                             </div>
                         </div>
 
@@ -3020,15 +3049,13 @@
                             </div>
                             <div class="setting-group" style="margin-top: 0.75rem;">
                                 <label class="form-label">ขนาดรูป</label>
-                                <select id="imageImageSize" class="form-input" style="padding: 0.5rem;">
-                                    <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
-                                    <option value="16:9">16:9 (แนวนอน)</option>
-                                    <option value="4:3">4:3 (แนวนอน)</option>
-                                    <option value="3:2">3:2 (แนวนอน)</option>
-                                    <option value="9:16">9:16 (แนวตั้ง)</option>
-                                    <option value="3:4">3:4 (แนวตั้ง)</option>
-                                    <option value="2:3">2:3 (แนวตั้ง)</option>
-                                </select>
+                                <div class="radio-group" id="imageImageSizeGroup">
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="1:1" checked> 1:1</label>
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="16:9"> 16:9</label>
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="4:3"> 4:3</label>
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="9:16"> 9:16</label>
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="3:4"> 3:4</label>
+                                </div>
                             </div>
                         </div>
 
@@ -3203,7 +3230,7 @@
                 const pageId = getCurrentPageId();
                 if (!pageId) return "1:1";
 
-                // Check current mode
+                // Check current mode and get from localStorage
                 const isLinkMode = currentMode === "link";
                 const storageKey = isLinkMode ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
                 return localStorage.getItem(storageKey) || "1:1";
@@ -3540,9 +3567,25 @@
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
             const imagePromptInput = document.getElementById("imagePromptInput");
-            const linkImageSizeSelect = document.getElementById("linkImageSize");
-            const imageImageSizeSelect = document.getElementById("imageImageSize");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
+
+            // Helper functions for radio buttons
+            function getLinkImageSize() {
+                const checked = document.querySelector('input[name="linkImageSize"]:checked');
+                return checked ? checked.value : "1:1";
+            }
+            function setLinkImageSize(value) {
+                const radio = document.querySelector(`input[name="linkImageSize"][value="${value}"]`);
+                if (radio) radio.checked = true;
+            }
+            function getImageImageSize() {
+                const checked = document.querySelector('input[name="imageImageSize"]:checked');
+                return checked ? checked.value : "1:1";
+            }
+            function setImageImageSize(value) {
+                const radio = document.querySelector(`input[name="imageImageSize"][value="${value}"]`);
+                if (radio) radio.checked = true;
+            }
 
             // Load settings into the panel
             async function loadSettingsPanel() {
@@ -3601,8 +3644,8 @@
                 // Load image sizes from localStorage (per page)
                 const savedLinkImageSize = localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
                 const savedImageImageSize = localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
-                linkImageSizeSelect.value = savedLinkImageSize;
-                imageImageSizeSelect.value = savedImageImageSize;
+                setLinkImageSize(savedLinkImageSize);
+                setImageImageSize(savedImageImageSize);
             }
 
             // Auto schedule checkbox change handler for panel
@@ -3633,8 +3676,8 @@
                 const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
                 const linkPrompt = linkPromptInput.value.trim();
                 const imagePrompt = imagePromptInput.value.trim();
-                const linkImageSize = linkImageSizeSelect.value;
-                const imageImageSize = imageImageSizeSelect.value;
+                const linkImageSize = getLinkImageSize();
+                const imageImageSize = getImageImageSize();
 
                 // Save AI prompts and image sizes to localStorage (per page)
                 localStorage.setItem(`linkPrompt_${pageId}`, linkPrompt);
