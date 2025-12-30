@@ -1375,6 +1375,28 @@
                 font-weight: 600;
             }
 
+            .sort-toggle-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.4rem 0.75rem;
+                background: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                color: #666;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-left: auto;
+            }
+            .sort-toggle-btn:hover {
+                background: #eee;
+                border-color: #ccc;
+            }
+            .sort-toggle-btn .sort-icon {
+                font-size: 1rem;
+            }
+
             .pending-table-container {
                 overflow-x: auto;
                 width: 100%;
@@ -2770,6 +2792,10 @@
                 >
                     <div class="pending-panel-header">
                         <h2>Pending Posts</h2>
+                        <button class="sort-toggle-btn" id="sortToggleBtn">
+                            <span class="sort-icon">↓</span>
+                            <span class="sort-label">ล่าสุดก่อน</span>
+                        </button>
                     </div>
                     <div
                         class="pending-table-container"
@@ -3243,6 +3269,35 @@
             const formPanel = document.querySelector(".form-panel");
             const appLayout = document.querySelector(".app-layout");
 
+            // Sort state for pending posts (true = newest first, false = oldest/soonest first)
+            let sortNewestFirst = true;
+            const sortToggleBtn = document.getElementById("sortToggleBtn");
+
+            function updateSortButton() {
+                const icon = sortToggleBtn.querySelector(".sort-icon");
+                const label = sortToggleBtn.querySelector(".sort-label");
+                if (sortNewestFirst) {
+                    icon.textContent = "↓";
+                    label.textContent = "ล่าสุดก่อน";
+                } else {
+                    icon.textContent = "↑";
+                    label.textContent = "โพสต์เร็วๆนี้ก่อน";
+                }
+            }
+
+            if (sortToggleBtn) {
+                sortToggleBtn.addEventListener("click", () => {
+                    sortNewestFirst = !sortNewestFirst;
+                    updateSortButton();
+                    // Re-render with new sort order
+                    const pageId = getCurrentPageId();
+                    const cachedPosts = getCachedPosts(pageId);
+                    if (cachedPosts) {
+                        renderPendingPosts(cachedPosts);
+                    }
+                });
+            }
+
             // Link-only elements (hidden in Image mode)
             const linkOnlyFields = document.getElementById("linkOnlyFields");
             const cardButtonGroup = document.getElementById("cardButtonGroup");
@@ -3580,7 +3635,14 @@
                     emptyDiv.textContent = "No scheduled posts";
                     pendingTableContainer.appendChild(emptyDiv);
                 } else {
-                    const sorted = [...posts].sort((a, b) => (a.scheduledTime || 0) - (b.scheduledTime || 0));
+                    // Sort based on user preference
+                    const sorted = [...posts].sort((a, b) => {
+                        const timeA = a.scheduledTime || 0;
+                        const timeB = b.scheduledTime || 0;
+                        // sortNewestFirst: true = newest scheduled time first (descending)
+                        // sortNewestFirst: false = soonest to post first (ascending)
+                        return sortNewestFirst ? (timeB - timeA) : (timeA - timeB);
+                    });
                     const table = buildPendingTable(sorted);
                     pendingTableContainer.appendChild(table);
                 }
