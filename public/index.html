@@ -1404,8 +1404,20 @@
 
             .quotes-table-container {
                 overflow-y: auto;
-                max-height: calc(100vh - 200px);
+                flex: 1;
                 width: 100%;
+            }
+
+            #quotesPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 80px);
+                overflow: hidden;
+            }
+
+            #quotesPanel .pending-panel-header,
+            #quotesPanel .quotes-form {
+                flex-shrink: 0;
             }
 
             .pending-table {
@@ -3820,17 +3832,11 @@
             let quotesHasMore = false;
             let quotesLoading = false;
 
-            // Infinite scroll for quotes (using window scroll)
-            window.addEventListener("scroll", () => {
-                // Only trigger if quotes panel is visible
-                if (quotesPanel.style.display === "none") return;
+            // Infinite scroll for quotes (using container scroll)
+            quotesTableContainer.addEventListener("scroll", () => {
                 if (quotesLoading || !quotesHasMore) return;
-
-                // Check if near bottom of page
-                const scrollTop = window.scrollY || document.documentElement.scrollTop;
-                const scrollHeight = document.documentElement.scrollHeight;
-                const clientHeight = window.innerHeight;
-
+                const { scrollTop, scrollHeight, clientHeight } = quotesTableContainer;
+                // Load more when 200px from bottom
                 if (scrollTop + clientHeight >= scrollHeight - 200) {
                     loadQuotes(true);
                 }
