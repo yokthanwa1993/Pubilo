@@ -18,13 +18,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     )
   `;
 
-  // GET - List all quotes
+  // GET - List quotes with pagination
   if (req.method === 'GET') {
     try {
-      const quotes = await sql`SELECT * FROM quotes ORDER BY created_at DESC`;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      // Get total count
+      const countResult = await sql`SELECT COUNT(*) as total FROM quotes`;
+      const total = parseInt(countResult[0].total);
+
+      // Get paginated quotes
+      const quotes = await sql`SELECT * FROM quotes ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+
       return res.status(200).json({
         success: true,
         quotes,
+        total,
+        hasMore: offset + quotes.length < total,
       });
     } catch (error) {
       console.error('[quotes] GET error:', error);

@@ -3809,19 +3809,29 @@
             const quoteInput = document.getElementById("quoteInput");
             const addQuoteBtn = document.getElementById("addQuoteBtn");
 
-            async function loadQuotes() {
+            let quotesOffset = 0;
+            let quotesTotal = 0;
+            let quotesHasMore = false;
+
+            async function loadQuotes(append = false) {
                 try {
-                    quotesTableContainer.innerHTML = `
-                        <div class="pending-skeleton">
-                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
-                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
-                          <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
-                        </div>
-                    `;
-                    const response = await fetch("/api/quotes");
+                    if (!append) {
+                        quotesOffset = 0;
+                        quotesTableContainer.innerHTML = `
+                            <div class="pending-skeleton">
+                              <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                              <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                              <div class="pending-skeleton-row"><div class="sk-text" style="width: 80%;"></div><div class="sk-date"></div></div>
+                            </div>
+                        `;
+                    }
+                    const response = await fetch(`/api/quotes?limit=50&offset=${quotesOffset}`);
                     const data = await response.json();
                     if (data.success) {
-                        renderQuotes(data.quotes);
+                        quotesTotal = data.total;
+                        quotesHasMore = data.hasMore;
+                        quotesOffset += data.quotes.length;
+                        renderQuotes(data.quotes, append);
                     } else {
                         quotesTableContainer.innerHTML = `<div class="pending-empty">${data.error}</div>`;
                     }
@@ -3831,29 +3841,43 @@
                 }
             }
 
-            function renderQuotes(quotes) {
-                quotesTableContainer.textContent = "";
+            function renderQuotes(quotes, append = false) {
+                if (!append) {
+                    quotesTableContainer.textContent = "";
+                }
+
                 if (!quotes || quotes.length === 0) {
-                    const emptyDiv = document.createElement("div");
-                    emptyDiv.className = "pending-empty";
-                    emptyDiv.textContent = "ยังไม่มีคำคม";
-                    quotesTableContainer.appendChild(emptyDiv);
+                    if (!append) {
+                        const emptyDiv = document.createElement("div");
+                        emptyDiv.className = "pending-empty";
+                        emptyDiv.textContent = "ยังไม่มีคำคม";
+                        quotesTableContainer.appendChild(emptyDiv);
+                    }
                     return;
                 }
 
-                const table = document.createElement("table");
-                table.className = "pending-table";
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th style="width: 70%;">คำคม</th>
-                            <th style="width: 20%;">วันที่</th>
-                            <th style="width: 10%;"></th>
-                        </tr>
-                    </thead>
-                `;
+                let table = quotesTableContainer.querySelector("table");
+                let tbody;
 
-                const tbody = document.createElement("tbody");
+                if (!table) {
+                    table = document.createElement("table");
+                    table.className = "pending-table";
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th style="width: 70%;">คำคม</th>
+                                <th style="width: 20%;">วันที่</th>
+                                <th style="width: 10%;"></th>
+                            </tr>
+                        </thead>
+                    `;
+                    tbody = document.createElement("tbody");
+                    table.appendChild(tbody);
+                    quotesTableContainer.appendChild(table);
+                } else {
+                    tbody = table.querySelector("tbody");
+                }
+
                 quotes.forEach(quote => {
                     const tr = document.createElement("tr");
                     const date = new Date(quote.created_at);
@@ -3872,8 +3896,23 @@
                     tbody.appendChild(tr);
                 });
 
-                table.appendChild(tbody);
-                quotesTableContainer.appendChild(table);
+                // Remove old load more button
+                const oldBtn = quotesTableContainer.querySelector(".load-more-btn");
+                if (oldBtn) oldBtn.remove();
+
+                // Add load more button if there are more quotes
+                if (quotesHasMore) {
+                    const loadMoreBtn = document.createElement("button");
+                    loadMoreBtn.className = "load-more-btn";
+                    loadMoreBtn.style.cssText = "display: block; width: 100%; padding: 0.75rem; margin-top: 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: #666;";
+                    loadMoreBtn.textContent = `โหลดเพิ่ม (${quotesOffset}/${quotesTotal})`;
+                    loadMoreBtn.onclick = () => {
+                        loadMoreBtn.textContent = "กำลังโหลด...";
+                        loadMoreBtn.disabled = true;
+                        loadQuotes(true);
+                    };
+                    quotesTableContainer.appendChild(loadMoreBtn);
+                }
             }
 
             function escapeHtml(text) {
@@ -3883,7 +3922,6 @@
             }
 
             window.deleteQuote = async function(id, btn) {
-                if (!confirm("ลบคำคมนี้?")) return;
                 try {
                     // Find the row element
                     const row = btn.closest("tr");
