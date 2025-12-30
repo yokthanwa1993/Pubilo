@@ -4595,24 +4595,19 @@
                                 await refreshScheduledPostTimes();
                                 updateNextScheduleDisplay();
 
-                                // Clear the uploaded image
-                                state.selectedImage = null;
-                                state.currentView = "upload";
-                                if (els.fullImageView) els.fullImageView.style.display = "none";
-                                if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
-
-                                // Navigate to pending page after 1 second
+                                // Navigate to pending page after 1 second, then clear image silently
                                 setTimeout(() => {
                                     window.location.hash = "#pending";
                                     handleNavigation();
+                                    // Clear the uploaded image after navigation
+                                    state.selectedImage = null;
+                                    state.currentView = "upload";
+                                    if (els.fullImageView) els.fullImageView.style.display = "none";
+                                    if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
+                                    els.publishBtn.textContent = "SCHEDULE";
+                                    els.publishBtn.classList.remove("published");
                                 }, 1000);
                             }
-
-                            // Reset button after 2 seconds
-                            setTimeout(() => {
-                                els.publishBtn.textContent = "SCHEDULE";
-                                els.publishBtn.classList.remove("published");
-                            }, 2000);
 
                             return; // Exit early for image mode
                         }
@@ -4821,23 +4816,18 @@
                                         updateNextScheduleDisplay();
                                     }
 
-                                    // Clear the uploaded image
-                                    state.selectedImage = null;
-                                    state.currentView = "upload";
-                                    if (els.fullImageView) els.fullImageView.style.display = "none";
-                                    if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
-
-                                    // Navigate to pending page after 1 second
+                                    // Navigate to pending page after 1 second, then clear image silently
                                     setTimeout(() => {
                                         window.location.hash = "#pending";
                                         handleNavigation();
-                                    }, 1000);
-
-                                    // Reset button after 2 seconds
-                                    setTimeout(() => {
+                                        // Clear the uploaded image after navigation
+                                        state.selectedImage = null;
+                                        state.currentView = "upload";
+                                        if (els.fullImageView) els.fullImageView.style.display = "none";
+                                        if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
                                         els.publishBtn.textContent = "SCHEDULE";
                                         els.publishBtn.classList.remove("published");
-                                    }, 2000);
+                                    }, 1000);
                                 } else {
                                     throw new Error(
                                         `GraphQL scheduling failed: ${scheduleResult.error}`,
