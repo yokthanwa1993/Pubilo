@@ -3733,6 +3733,8 @@
                 });
                 // Hide quotes panel
                 quotesPanel.style.display = "none";
+                // Restore body scroll
+                document.body.style.overflow = "";
                 // Show pending panel (full width)
                 pendingPanel.style.display = "block";
                 // Add pending mode class
@@ -3811,6 +3813,8 @@
             function showDashboard() {
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
+                // Restore body scroll
+                document.body.style.overflow = "";
                 // Remove pending mode class
                 appLayout.classList.remove("pending-mode");
             }
@@ -3824,6 +3828,8 @@
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "flex";
                 appLayout.classList.add("pending-mode");
+                // Lock body scroll
+                document.body.style.overflow = "hidden";
                 // Load quotes
                 loadQuotes();
             }
