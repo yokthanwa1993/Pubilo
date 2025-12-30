@@ -66,7 +66,8 @@ async function analyzeImages(
 async function generateImages(
   ai: GoogleGenAI,
   referenceImages: ReferenceImage[],
-  analysisContext: string
+  analysisContext: string,
+  aspectRatio: string = CONFIG.aspectRatio
 ): Promise<string[]> {
   // 1. Process Analysis Result
   let selectedImages: ReferenceImage[] = referenceImages;
@@ -172,7 +173,7 @@ async function generateImages(
         },
         config: {
           imageConfig: {
-            aspectRatio: CONFIG.aspectRatio,
+            aspectRatio: aspectRatio,
             imageSize: CONFIG.resolution,
           },
         },
@@ -234,7 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { referenceImage, referenceImages } = req.body;
+    const { referenceImage, referenceImages, aspectRatio } = req.body;
 
     // Support both single referenceImage and array referenceImages
     let images: ReferenceImage[] = [];
@@ -249,6 +250,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'No reference images provided' });
     }
 
+    // Use custom aspect ratio if provided, otherwise use CONFIG default
+    const finalAspectRatio = aspectRatio || CONFIG.aspectRatio;
+    console.log('[Pubilo] Using aspect ratio:', finalAspectRatio);
+
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     // Step 1: Analyze Images
@@ -258,7 +263,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Step 2: Generate Images using analysis context
     console.log(`[Pubilo] Step 2: Rendering ${CONFIG.variationCount} variations...`);
-    const generatedImages = await generateImages(ai, images, analysisResult);
+    const generatedImages = await generateImages(ai, images, analysisResult, finalAspectRatio);
 
     console.log(`[Pubilo] Successfully generated ${generatedImages.length} images`);
     return res.status(200).json({ images: generatedImages });

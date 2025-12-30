@@ -2994,6 +2994,32 @@
                                     Prompt นี้จะถูกใช้เป็นค่าเริ่มต้นสำหรับการเจนรูป AI ของเพจนี้
                                 </p>
                             </div>
+
+                            <div class="setting-group" style="margin-top: 1rem;">
+                                <label class="form-label">ขนาดรูปสำหรับ Link Post</label>
+                                <select id="linkImageSize" class="form-input" style="padding: 0.5rem;">
+                                    <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
+                                    <option value="16:9">16:9 (แนวนอน)</option>
+                                    <option value="4:3">4:3 (แนวนอน)</option>
+                                    <option value="3:2">3:2 (แนวนอน)</option>
+                                    <option value="9:16">9:16 (แนวตั้ง)</option>
+                                    <option value="3:4">3:4 (แนวตั้ง)</option>
+                                    <option value="2:3">2:3 (แนวตั้ง)</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group" style="margin-top: 1rem;">
+                                <label class="form-label">ขนาดรูปสำหรับ Image Post</label>
+                                <select id="imageImageSize" class="form-input" style="padding: 0.5rem;">
+                                    <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส)</option>
+                                    <option value="16:9">16:9 (แนวนอน)</option>
+                                    <option value="4:3">4:3 (แนวนอน)</option>
+                                    <option value="3:2">3:2 (แนวนอน)</option>
+                                    <option value="9:16">9:16 (แนวตั้ง)</option>
+                                    <option value="3:4">3:4 (แนวตั้ง)</option>
+                                    <option value="2:3">2:3 (แนวตั้ง)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <button class="btn-save" id="saveSettingsPanelBtn" style="margin-top: 1rem;">
@@ -3160,6 +3186,17 @@
             function getCurrentPageId() {
                 const pageSelect = document.getElementById("pageSelect");
                 return pageSelect ? pageSelect.value : null;
+            }
+
+            // Get current aspect ratio based on mode (link or image)
+            function getCurrentAspectRatio() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return "1:1";
+
+                // Check current mode
+                const isLinkMode = currentMode === "link";
+                const storageKey = isLinkMode ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
+                return localStorage.getItem(storageKey) || "1:1";
             }
 
             // Cache for current page settings
@@ -3481,6 +3518,8 @@
             const nextScheduleInfoPanel = document.getElementById("nextScheduleInfoPanel");
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
             const aiPromptInput = document.getElementById("aiPromptInput");
+            const linkImageSizeSelect = document.getElementById("linkImageSize");
+            const imageImageSizeSelect = document.getElementById("imageImageSize");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
 
             // Load settings into the panel
@@ -3534,6 +3573,12 @@
                 // Load AI prompt from localStorage (per page)
                 const savedPrompt = localStorage.getItem(`aiPrompt_${pageId}`) || "";
                 aiPromptInput.value = savedPrompt;
+
+                // Load image sizes from localStorage (per page)
+                const savedLinkImageSize = localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
+                const savedImageImageSize = localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
+                linkImageSizeSelect.value = savedLinkImageSize;
+                imageImageSizeSelect.value = savedImageImageSize;
             }
 
             // Auto schedule checkbox change handler for panel
@@ -3563,9 +3608,13 @@
                 const autoSchedule = autoScheduleEnabledPanel.checked;
                 const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
                 const aiPrompt = aiPromptInput.value.trim();
+                const linkImageSize = linkImageSizeSelect.value;
+                const imageImageSize = imageImageSizeSelect.value;
 
-                // Save AI prompt to localStorage (per page)
+                // Save AI prompt and image sizes to localStorage (per page)
                 localStorage.setItem(`aiPrompt_${pageId}`, aiPrompt);
+                localStorage.setItem(`linkImageSize_${pageId}`, linkImageSize);
+                localStorage.setItem(`imageImageSize_${pageId}`, imageImageSize);
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -4821,6 +4870,7 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             referenceImages: state.referenceImages,
+                            aspectRatio: getCurrentAspectRatio(),
                         }),
                     });
 
@@ -4883,11 +4933,17 @@
                         '<span class="loading"></span> Generating...';
 
                     try {
+                        // Get aspect ratio based on mode
+                        const pageId = getCurrentPageId();
+                        const storageKey = mode === "link" ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
+                        const aspectRatio = localStorage.getItem(storageKey) || "1:1";
+
                         const response = await fetch("/api/generate", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 referenceImages: state.referenceImages,
+                                aspectRatio: aspectRatio,
                             }),
                         });
 
@@ -4977,6 +5033,7 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             referenceImages: state.referenceImages,
+                            aspectRatio: getCurrentAspectRatio(),
                         }),
                     });
 
