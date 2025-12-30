@@ -1402,6 +1402,12 @@
                 width: 100%;
             }
 
+            .quotes-table-container {
+                overflow-y: auto;
+                max-height: calc(100vh - 200px);
+                width: 100%;
+            }
+
             .pending-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -3812,8 +3818,21 @@
             let quotesOffset = 0;
             let quotesTotal = 0;
             let quotesHasMore = false;
+            let quotesLoading = false;
+
+            // Infinite scroll for quotes
+            quotesTableContainer.addEventListener("scroll", () => {
+                if (quotesLoading || !quotesHasMore) return;
+                const { scrollTop, scrollHeight, clientHeight } = quotesTableContainer;
+                // Load more when 100px from bottom
+                if (scrollTop + clientHeight >= scrollHeight - 100) {
+                    loadQuotes(true);
+                }
+            });
 
             async function loadQuotes(append = false) {
+                if (quotesLoading) return;
+                quotesLoading = true;
                 try {
                     if (!append) {
                         quotesOffset = 0;
@@ -3838,6 +3857,8 @@
                 } catch (error) {
                     console.error("[FEWFEED] Failed to load quotes:", error);
                     quotesTableContainer.innerHTML = `<div class="pending-empty">Failed to load quotes</div>`;
+                } finally {
+                    quotesLoading = false;
                 }
             }
 
@@ -3895,24 +3916,6 @@
                     `;
                     tbody.appendChild(tr);
                 });
-
-                // Remove old load more button
-                const oldBtn = quotesTableContainer.querySelector(".load-more-btn");
-                if (oldBtn) oldBtn.remove();
-
-                // Add load more button if there are more quotes
-                if (quotesHasMore) {
-                    const loadMoreBtn = document.createElement("button");
-                    loadMoreBtn.className = "load-more-btn";
-                    loadMoreBtn.style.cssText = "display: block; width: 100%; padding: 0.75rem; margin-top: 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: #666;";
-                    loadMoreBtn.textContent = `โหลดเพิ่ม (${quotesOffset}/${quotesTotal})`;
-                    loadMoreBtn.onclick = () => {
-                        loadMoreBtn.textContent = "กำลังโหลด...";
-                        loadMoreBtn.disabled = true;
-                        loadQuotes(true);
-                    };
-                    quotesTableContainer.appendChild(loadMoreBtn);
-                }
             }
 
             function escapeHtml(text) {
