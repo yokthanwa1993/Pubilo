@@ -3383,6 +3383,35 @@
                 }
             }
 
+            // Calculate next schedule for panel (uses panel's input value)
+            function calculateNextScheduleForPanel() {
+                const str = scheduleMinutesPanel.value || "00, 15, 30, 45";
+                const minutesArr = str.split(",")
+                    .map(s => parseInt(s.trim()))
+                    .filter(n => !isNaN(n) && n >= 0 && n < 60)
+                    .sort((a, b) => a - b);
+
+                if (minutesArr.length === 0) {
+                    return new Date(Date.now() + 15 * 60 * 1000).toLocaleString("th-TH");
+                }
+
+                const minTime = new Date(Date.now() + 10 * 60 * 1000);
+                const result = new Date(minTime);
+                result.setSeconds(0, 0);
+
+                const currentMinute = result.getMinutes();
+                const nextMinute = minutesArr.find(m => m > currentMinute);
+
+                if (nextMinute !== undefined) {
+                    result.setMinutes(nextMinute, 0, 0);
+                } else {
+                    result.setHours(result.getHours() + 1);
+                    result.setMinutes(minutesArr[0], 0, 0);
+                }
+
+                return result.toLocaleString("th-TH");
+            }
+
             // Settings modal is now deprecated - using settings panel instead
             // The settingsNavBtn click is handled in the navigation section below
 
@@ -3455,17 +3484,40 @@
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
 
             // Load settings into the panel
-            function loadSettingsPanel() {
+            async function loadSettingsPanel() {
                 const pageId = getCurrentPageId();
                 if (!pageId) {
                     console.log("[Settings Panel] No page selected");
                     return;
                 }
 
-                // Load schedule settings from cache
+                // Try to load from cache first, otherwise fetch from API
+                let settings = null;
                 if (cachedPageSettings && cachedPageSettings.pageId === pageId) {
-                    autoScheduleEnabledPanel.checked = cachedPageSettings.autoSchedule || false;
-                    scheduleMinutesPanel.value = cachedPageSettings.scheduleMinutes || "00, 15, 30, 45";
+                    settings = cachedPageSettings;
+                } else {
+                    // Fetch from API
+                    try {
+                        const response = await fetch(`/api/page-settings?pageId=${pageId}`);
+                        const data = await response.json();
+                        if (data.success && data.settings) {
+                            settings = {
+                                pageId,
+                                autoSchedule: data.settings.autoSchedule,
+                                scheduleMinutes: data.settings.scheduleMinutes
+                            };
+                            // Update cache
+                            cachedPageSettings = settings;
+                        }
+                    } catch (err) {
+                        console.error("[Settings Panel] Failed to load settings:", err);
+                    }
+                }
+
+                // Apply settings to panel
+                if (settings) {
+                    autoScheduleEnabledPanel.checked = settings.autoSchedule || false;
+                    scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
                 } else {
                     autoScheduleEnabledPanel.checked = false;
                     scheduleMinutesPanel.value = "00, 15, 30, 45";
@@ -3475,7 +3527,7 @@
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
 
                 // Load AI prompt from localStorage (per page)
@@ -3488,14 +3540,14 @@
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
             });
 
             // Schedule minutes change handler for panel
             scheduleMinutesPanel.addEventListener("input", () => {
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextSchedule();
+                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
             });
 
