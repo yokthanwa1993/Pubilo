@@ -3503,11 +3503,12 @@
                         if (data.success && data.settings) {
                             settings = {
                                 pageId,
-                                autoSchedule: data.settings.autoSchedule,
-                                scheduleMinutes: data.settings.scheduleMinutes
+                                autoSchedule: data.settings.auto_schedule,
+                                scheduleMinutes: data.settings.schedule_minutes
                             };
                             // Update cache
                             cachedPageSettings = settings;
+                            console.log("[Settings Panel] Loaded from API:", settings);
                         }
                     } catch (err) {
                         console.error("[Settings Panel] Failed to load settings:", err);
