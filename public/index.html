@@ -3926,22 +3926,25 @@
 
             window.deleteQuote = async function(id, btn) {
                 try {
-                    // Find the row element
                     const row = btn.closest("tr");
-                    if (row) row.style.opacity = "0.5";
+                    // Replace trash icon with spinner
+                    const originalIcon = btn.innerHTML;
+                    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10"></circle>
+                    </svg>`;
+                    btn.disabled = true;
 
                     const response = await fetch(`/api/quotes?id=${id}`, { method: "DELETE" });
                     const data = await response.json();
                     if (data.success) {
-                        // Remove row from DOM instead of reloading
                         if (row) row.remove();
-                        // Check if table is empty
                         const tbody = quotesTableContainer.querySelector("tbody");
                         if (tbody && tbody.children.length === 0) {
                             quotesTableContainer.innerHTML = '<div class="pending-empty">ยังไม่มีคำคม</div>';
                         }
                     } else {
-                        if (row) row.style.opacity = "1";
+                        btn.innerHTML = originalIcon;
+                        btn.disabled = false;
                         alert("ลบไม่สำเร็จ: " + data.error);
                     }
                 } catch (error) {
