@@ -3861,7 +3861,7 @@
                         <td style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(quote.quote_text)}</td>
                         <td style="color: #888; font-size: 0.85rem;">${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
                         <td>
-                            <button onclick="deleteQuote(${quote.id})" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ">
+                            <button onclick="deleteQuote(${quote.id}, this)" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -3882,14 +3882,25 @@
                 return div.innerHTML;
             }
 
-            window.deleteQuote = async function(id) {
+            window.deleteQuote = async function(id, btn) {
                 if (!confirm("ลบคำคมนี้?")) return;
                 try {
+                    // Find the row element
+                    const row = btn.closest("tr");
+                    if (row) row.style.opacity = "0.5";
+
                     const response = await fetch(`/api/quotes?id=${id}`, { method: "DELETE" });
                     const data = await response.json();
                     if (data.success) {
-                        loadQuotes();
+                        // Remove row from DOM instead of reloading
+                        if (row) row.remove();
+                        // Check if table is empty
+                        const tbody = quotesTableContainer.querySelector("tbody");
+                        if (tbody && tbody.children.length === 0) {
+                            quotesTableContainer.innerHTML = '<div class="pending-empty">ยังไม่มีคำคม</div>';
+                        }
                     } else {
+                        if (row) row.style.opacity = "1";
                         alert("ลบไม่สำเร็จ: " + data.error);
                     }
                 } catch (error) {
