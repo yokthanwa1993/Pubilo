@@ -744,6 +744,49 @@
                 position: relative;
             }
 
+            .image-action-buttons {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                display: flex;
+                gap: 8px;
+                z-index: 10;
+            }
+
+            .btn-action {
+                background: rgba(249, 115, 22, 0.9);
+                color: #fff;
+                border: none;
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+
+            .btn-action:hover {
+                background: #ea580c;
+                transform: scale(1.05);
+            }
+
+            .btn-action.delete {
+                background: rgba(220, 53, 69, 0.9);
+            }
+
+            .btn-action.delete:hover {
+                background: #c82333;
+            }
+
+            .btn-action svg {
+                width: 18px;
+                height: 18px;
+            }
+
             .btn-regenerate {
                 position: absolute;
                 top: 12px;
@@ -5452,11 +5495,17 @@
                     z-index: 10;
                 `;
 
-                // Delete button
+                // Delete button (leftmost)
                 const deleteBtn = document.createElement("button");
-                deleteBtn.className = "btn-regenerate";
-                deleteBtn.style.cssText = "background: #dc3545;";
-                deleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> ลบรูป';
+                deleteBtn.className = "btn-action delete";
+                deleteBtn.title = "ลบรูป";
+                const deleteIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                deleteIcon.setAttribute("viewBox", "0 0 24 24");
+                deleteIcon.setAttribute("fill", "none");
+                deleteIcon.setAttribute("stroke", "currentColor");
+                deleteIcon.setAttribute("stroke-width", "2");
+                deleteIcon.innerHTML = '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
+                deleteBtn.appendChild(deleteIcon);
                 deleteBtn.addEventListener("click", (e) => {
                     e.stopPropagation();
                     state.currentView = "upload";
@@ -5467,16 +5516,39 @@
                 });
                 btnContainer.appendChild(deleteBtn);
 
-                // Regenerate button
-                const regenBtn = document.createElement("button");
-                regenBtn.className = "btn-regenerate";
-                regenBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> เจนใหม่';
-                regenBtn.addEventListener("click", (e) => {
+                // Regenerate with same text button
+                const regenSameBtn = document.createElement("button");
+                regenSameBtn.className = "btn-action";
+                regenSameBtn.title = "เจนใหม่ข้อความเดิม";
+                const regenSameIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                regenSameIcon.setAttribute("viewBox", "0 0 24 24");
+                regenSameIcon.setAttribute("fill", "none");
+                regenSameIcon.setAttribute("stroke", "currentColor");
+                regenSameIcon.setAttribute("stroke-width", "2");
+                regenSameIcon.innerHTML = '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>';
+                regenSameBtn.appendChild(regenSameIcon);
+                regenSameBtn.addEventListener("click", (e) => {
                     e.stopPropagation();
-                    // Trigger generate again
-                    els.generateBtn.click();
+                    regenerateImages(false);
                 });
-                btnContainer.appendChild(regenBtn);
+                btnContainer.appendChild(regenSameBtn);
+
+                // Regenerate with new text button
+                const regenNewBtn = document.createElement("button");
+                regenNewBtn.className = "btn-action";
+                regenNewBtn.title = "เจนใหม่ข้อความใหม่";
+                const regenNewIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                regenNewIcon.setAttribute("viewBox", "0 0 24 24");
+                regenNewIcon.setAttribute("fill", "none");
+                regenNewIcon.setAttribute("stroke", "currentColor");
+                regenNewIcon.setAttribute("stroke-width", "2");
+                regenNewIcon.innerHTML = '<path d="M12 3v3m0 12v3m-9-9h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1m0-12.8l-2.1 2.1m-8.6 8.6l-2.1 2.1"/>';
+                regenNewBtn.appendChild(regenNewIcon);
+                regenNewBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    regenerateImages(true);
+                });
+                btnContainer.appendChild(regenNewBtn);
                 els.fullImageView.appendChild(btnContainer);
             }
 
@@ -5526,7 +5598,8 @@
             }
 
             // Regenerate images (uses current mode)
-            async function regenerateImages() {
+            // getNewText: true = fetch new quote, false = use current caption
+            async function regenerateImages(getNewText = false) {
                 const state = getState();
                 const els = getModeElements();
 
@@ -5541,9 +5614,33 @@
                 els.skeletonGrid.style.display = "grid";
 
                 try {
-                    // Get caption from field
+                    // Get caption
                     const captionField = document.getElementById("caption");
-                    const caption = captionField ? captionField.value : "";
+                    let caption = captionField ? captionField.value : "";
+
+                    // If getNewText, fetch a new unused quote
+                    if (getNewText) {
+                        const pageId = document.getElementById("pageSelect")?.value;
+                        if (pageId) {
+                            const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                            const quotesData = await quotesRes.json();
+                            if (quotesData.success && quotesData.quotes.length > 0) {
+                                const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
+                                if (unusedQuote) {
+                                    caption = unusedQuote.quote_text;
+                                    // Update caption field
+                                    if (captionField) captionField.value = caption;
+                                    // Mark as used
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: unusedQuote.id, pageId })
+                                    });
+                                    state.lastUsedQuoteId = unusedQuote.id;
+                                }
+                            }
+                        }
+                    }
 
                     // Build request body
                     const requestBody = {
