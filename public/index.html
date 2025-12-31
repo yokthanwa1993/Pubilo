@@ -908,16 +908,13 @@
                 word-break: break-all;
                 outline: none;
                 border: none;
+                min-width: 80px;
+                display: inline-block;
             }
 
             #previewDescription:empty {
-                min-width: 150px;
-                display: inline-block;
-                border-bottom: 1px dashed #ccc;
-            }
-
-            #previewDescription:empty::after {
-                content: "\00a0";
+                border-bottom: 1px dashed #aaa;
+                padding-right: 80px;
             }
 
             .card-button-wrapper {
