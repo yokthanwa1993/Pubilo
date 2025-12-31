@@ -902,19 +902,25 @@
                 user-select: none;
             }
 
-            #previewDescription {
-                cursor: text;
-                color: #6b7280;
-                word-break: break-all;
-                outline: none;
-                border: none;
-                min-width: 80px;
-                display: inline-block;
+            .description-input {
+                flex: 1;
+                padding: 0.4rem 0.6rem;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                color: #374151;
+                background: #fff;
+                min-width: 120px;
+                max-width: 200px;
             }
 
-            #previewDescription:empty {
-                border-bottom: 1px dashed #aaa;
-                padding-right: 80px;
+            .description-input:focus {
+                outline: none;
+                border-color: #1877f2;
+            }
+
+            .description-input::placeholder {
+                color: #9ca3af;
             }
 
             .card-button-wrapper {
@@ -2553,10 +2559,13 @@
                                         S.LAZADA.CO.TH
                                     </div>
                                     <div class="card-link-title">
-                                        <span class="description-prefix">พิกัด :&nbsp;</span><span
-                                            class="editable-text"
+                                        <span class="description-prefix">พิกัด :&nbsp;</span>
+                                        <input
+                                            type="text"
+                                            class="description-input"
                                             id="previewDescription"
-                                        ></span>
+                                            placeholder="พิมพ์ข้อความ..."
+                                        />
                                     </div>
                                 </div>
                                 <div class="card-button-wrapper">
@@ -5610,7 +5619,11 @@
             );
             description.addEventListener(
                 "input",
-                () => (previewDescription.textContent = description.value),
+                () => (previewDescription.value = description.value),
+            );
+            previewDescription.addEventListener(
+                "input",
+                () => (description.value = previewDescription.value),
             );
 
             // Double-click to edit preview text
@@ -5646,7 +5659,6 @@
             }
 
             setupEditableText(previewCaption, caption);
-            setupEditableText(previewDescription, description);
 
             // Publish
             let lastPublishedUrl = null;
@@ -6060,7 +6072,7 @@
                         }
                         if (config.defaults.description) {
                             description.value = config.defaults.description;
-                            previewDescription.textContent =
+                            previewDescription.value =
                                 config.defaults.description;
                         }
                     }
