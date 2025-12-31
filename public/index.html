@@ -869,7 +869,7 @@
 
             .card-link-title {
                 font-size: 0.9rem;
-                font-weight: 600;
+                font-weight: 400;
                 color: #1a1a1a;
                 margin-bottom: 0.1rem;
             }
@@ -877,6 +877,26 @@
             .card-link-description {
                 font-size: 0.8125rem;
                 color: #6b7280;
+                display: flex;
+                align-items: center;
+            }
+
+            .description-prefix {
+                color: #6b7280;
+                pointer-events: none;
+                user-select: none;
+            }
+
+            #previewDescription {
+                min-width: 150px;
+                min-height: 1.2em;
+                display: inline-block;
+                cursor: text;
+            }
+
+            #previewDescription:empty::after {
+                content: "___";
+                color: transparent;
             }
 
             .card-button-wrapper {
@@ -2512,15 +2532,9 @@
                                         class="card-link-caption editable-text"
                                         id="previewCaption"
                                     >
-                                        LAZADA.CO.TH
+                                        S.LAZADA.CO.TH
                                     </div>
-                                    <div
-                                        class="card-link-title editable-text"
-                                        id="previewLinkName"
-                                    >
-                                        Hello Pubilo
-                                    </div>
-                                    <div class="card-link-description">
+                                    <div class="card-link-title">
                                         <span class="description-prefix">พิกัด : </span><span
                                             class="editable-text"
                                             id="previewDescription"
@@ -2612,17 +2626,17 @@
                                 <input
                                     type="hidden"
                                     id="linkName"
-                                    value="Hello Pubilo"
+                                    value="S.LAZADA.CO.TH"
                                 />
                                 <input
                                     type="hidden"
                                     id="caption"
-                                    value="LAZADA.CO.TH"
+                                    value="S.LAZADA.CO.TH"
                                 />
                                 <input
                                     type="hidden"
                                     id="description"
-                                    value="พิกัด :"
+                                    value=""
                                 />
                             </div>
                             <div class="form-group">
@@ -4785,7 +4799,6 @@
             setInterval(updatePendingCount, 30000);
 
             // Preview elements
-            const previewLinkName = document.getElementById("previewLinkName");
             const previewCaption = document.getElementById("previewCaption");
             const previewDescription =
                 document.getElementById("previewDescription");
@@ -5573,10 +5586,6 @@
             }
 
             // Update preview on input change
-            linkName.addEventListener(
-                "input",
-                () => (previewLinkName.textContent = linkName.value),
-            );
             caption.addEventListener(
                 "input",
                 () => (previewCaption.textContent = caption.value),
@@ -5619,7 +5628,6 @@
             }
 
             setupEditableText(previewCaption, caption);
-            setupEditableText(previewLinkName, linkName);
             setupEditableText(previewDescription, description);
 
             // Publish
@@ -5824,7 +5832,7 @@
                                 linkName: isLinkMode ? linkName.value : "",
                                 caption: isLinkMode ? caption.value : "",
                                 description: isLinkMode
-                                    ? description.value
+                                    ? "พิกัด : " + description.value
                                     : "",
                                 primaryText: primaryTextEl
                                     ? primaryTextEl.value
