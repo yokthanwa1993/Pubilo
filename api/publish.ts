@@ -171,7 +171,7 @@ async function createAdCreative(options: {
     multi_share_optimized: true,
     multi_share_end_card: false,
     caption: options.caption,
-    call_to_action: { type: "LEARN_MORE" },
+    call_to_action: { type: "SHOP_NOW" },
   };
 
   // Only include name if linkName is provided
