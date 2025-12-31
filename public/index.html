@@ -997,52 +997,6 @@
                 border-color: #d1d5db;
             }
 
-            .btn-learn-more::after {
-                content: "▼";
-                font-size: 0.5rem;
-                opacity: 0.6;
-            }
-
-            .card-button-dropdown {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                margin-top: 4px;
-                background: white;
-                border: 1px solid #e5e5e5;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                min-width: 120px;
-                overflow: visible;
-                z-index: 1000;
-                display: none;
-            }
-
-            .card-button-dropdown.show {
-                display: block;
-            }
-
-            .card-button-option {
-                padding: 0.5rem 0.75rem;
-                font-size: 0.8125rem;
-                color: #374151;
-                cursor: pointer;
-                transition: background 0.15s;
-            }
-
-            .card-button-option:hover {
-                background: #f3f4f6;
-            }
-
-            .card-button-option.selected {
-                background: #1f2937;
-                color: white;
-            }
-
-            .card-button-option.selected:hover {
-                background: #111827;
-            }
-
             /* Full Image View */
             .full-image-view {
                 width: 100%;
@@ -2621,39 +2575,8 @@
                                         class="btn-learn-more"
                                         id="previewCardButton"
                                     >
-                                        <span id="cardButtonText"
-                                            >Shop Now</span
-                                        >
+                                        Shop Now
                                     </button>
-                                    <div
-                                        class="card-button-dropdown"
-                                        id="cardButtonDropdown"
-                                    >
-                                        <div
-                                            class="card-button-option selected"
-                                            data-value="SHOP_NOW"
-                                        >
-                                            Shop Now
-                                        </div>
-                                        <div
-                                            class="card-button-option"
-                                            data-value="LEARN_MORE"
-                                        >
-                                            Learn More
-                                        </div>
-                                        <div
-                                            class="card-button-option"
-                                            data-value="SIGN_UP"
-                                        >
-                                            Sign Up
-                                        </div>
-                                        <div
-                                            class="card-button-option"
-                                            data-value="BOOK_NOW"
-                                        >
-                                            Book Now
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4879,48 +4802,6 @@
                 document.getElementById("previewDescription");
             const previewCardButton =
                 document.getElementById("previewCardButton");
-            const cardButtonText = document.getElementById("cardButtonText");
-            const cardButtonDropdown =
-                document.getElementById("cardButtonDropdown");
-            const cardButtonSelect = document.getElementById("cardButton");
-
-            // Toggle dropdown on button click
-            previewCardButton.addEventListener("click", (e) => {
-                e.stopPropagation();
-                cardButtonDropdown.classList.toggle("show");
-            });
-
-            // Handle option selection
-            cardButtonDropdown.addEventListener("click", (e) => {
-                const option = e.target.closest(".card-button-option");
-                if (option) {
-                    const value = option.dataset.value;
-                    const label = option.textContent;
-
-                    // Update button text
-                    cardButtonText.textContent = label;
-
-                    // Update hidden select
-                    cardButtonSelect.value = value;
-
-                    // Update selected state
-                    cardButtonDropdown
-                        .querySelectorAll(".card-button-option")
-                        .forEach((opt) => {
-                            opt.classList.remove("selected");
-                        });
-                    option.classList.add("selected");
-
-                    // Close dropdown
-                    cardButtonDropdown.classList.remove("show");
-                }
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener("click", () => {
-                cardButtonDropdown.classList.remove("show");
-            });
-
             // State per mode - each mode has independent state
             const modeState = {
                 link: {
