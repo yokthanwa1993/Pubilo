@@ -883,8 +883,10 @@
                 margin-bottom: 0.1rem;
                 word-break: break-all;
                 white-space: normal;
-                display: flex;
-                flex-wrap: wrap;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
             }
 
             .card-link-description {
