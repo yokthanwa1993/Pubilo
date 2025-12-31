@@ -82,6 +82,28 @@
 // MAIN EXTENSION CODE
 // ============================================
 
+// ============================================
+// KEEPALIVE - Keep service worker alive
+// ============================================
+const KEEPALIVE_INTERVAL = 20; // seconds (must be under 30s for Chrome)
+
+// Create keepalive alarm on startup
+chrome.alarms.create("keepalive", { periodInMinutes: 0.4 }); // ~24 seconds
+
+// Listen for alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "keepalive") {
+    // Just log to keep service worker active
+    console.log("[Pubilo] Keepalive ping", new Date().toLocaleTimeString());
+  }
+});
+
+// Also run on install/update
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create("keepalive", { periodInMinutes: 0.4 });
+  console.log("[Pubilo] Keepalive alarm created");
+});
+
 const POSTCRON_OAUTH_URL = "https://postcron.com/api/v2.0/social-accounts/url-redirect/?should_redirect=true&social_network=facebook";
 const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback";
 

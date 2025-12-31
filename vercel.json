@@ -3,12 +3,16 @@
   "buildCommand": "echo 'No build needed'",
   "installCommand": "echo 'Skip install'",
   "outputDirectory": "public",
+  "regions": ["sin1"],
   "functions": {
     "api/upload-image.ts": {
       "maxDuration": 60
     },
     "api/publish.ts": {
       "maxDuration": 60
+    },
+    "api/page-settings.ts": {
+      "memory": 128
     }
   },
   "rewrites": [

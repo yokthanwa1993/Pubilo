@@ -1,13 +1,28 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+interface PageSettings {
+  page_id: string;
+  auto_schedule: boolean;
+  schedule_minutes: string;
+  updated_at?: string;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).setHeader('Access-Control-Allow-Origin', '*').end();
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  const sql = neon(process.env.DATABASE_URL!);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   // GET - Load settings for a page
   if (req.method === 'GET') {
@@ -18,12 +33,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ success: false, error: 'Missing pageId' });
       }
 
-      const result = await sql`SELECT * FROM page_settings WHERE page_id = ${pageId} LIMIT 1`;
-      const settings = result[0] || null;
+      const { data, error } = await supabase
+        .from('page_settings')
+        .select('*')
+        .eq('page_id', pageId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('[page-settings] GET error:', error);
+      }
 
       return res.status(200).json({
         success: true,
-        settings: settings || {
+        settings: data || {
           page_id: pageId,
           auto_schedule: false,
           schedule_minutes: '00, 15, 30, 45',
@@ -50,21 +72,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const autoScheduleBool = autoSchedule === true || autoSchedule === 'true';
       const mins = scheduleMinutes || '00, 15, 30, 45';
 
-      const result = await sql`
-        INSERT INTO page_settings (page_id, auto_schedule, schedule_minutes, updated_at)
-        VALUES (${pageId}, ${autoScheduleBool}, ${mins}, NOW())
-        ON CONFLICT (page_id) DO UPDATE SET
-          auto_schedule = EXCLUDED.auto_schedule,
-          schedule_minutes = EXCLUDED.schedule_minutes,
-          updated_at = NOW()
-        RETURNING *
-      `;
+      const settings: PageSettings = {
+        page_id: pageId,
+        auto_schedule: autoScheduleBool,
+        schedule_minutes: mins,
+        updated_at: new Date().toISOString(),
+      };
 
-      console.log('[page-settings] Saved:', { pageId, autoSchedule, scheduleMinutes });
+      const { data, error } = await supabase
+        .from('page_settings')
+        .upsert(settings, { onConflict: 'page_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[page-settings] POST error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      console.log('[page-settings] Saved:', data);
 
       return res.status(200).json({
         success: true,
-        settings: result[0],
+        settings: data,
       });
     } catch (error) {
       console.error('[page-settings] POST error:', error);

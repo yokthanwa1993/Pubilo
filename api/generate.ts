@@ -1,11 +1,47 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI } from '@google/genai';
-import { CONFIG, ANALYSIS_PROMPT, GENERATION_PROMPT_TEMPLATE } from './prompts';
+
+// Inline CONFIG to avoid any import issues
+const CONFIG = {
+  generationModel: 'gemini-2.0-flash-exp',
+  analysisModel: 'gemini-2.0-flash',
+  aspectRatio: '1:1',
+  resolution: '2K',
+  variationCount: 1, // Changed to 1 for faster generation
+};
+
+const ANALYSIS_PROMPT = 'Analyze these images and return JSON with selected_indices array.';
+const GENERATION_PROMPT_TEMPLATE = 'Generate an image based on these inputs.';
 
 interface ReferenceImage {
   id?: string;
   data: string; // Base64
   mimeType: string;
+}
+
+// Direct API call to Gemini instead of using SDK
+async function callGeminiAPI(apiKey: string, model: string, contents: any, config?: any) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const body: any = {
+    contents: [contents],
+  };
+
+  if (config) {
+    body.generationConfig = config;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -24,16 +60,14 @@ const fillTemplate = (template: string, replacements: Record<string, string>): s
  * Step 1: Analyze images to select the best ones and assign layout roles.
  */
 async function analyzeImages(
-  ai: GoogleGenAI,
+  apiKey: string,
   referenceImages: ReferenceImage[]
 ): Promise<string> {
   const parts: any[] = [];
 
   // Add each image with its index label
   referenceImages.forEach((img, index) => {
-    parts.push({
-      text: `Image Index [${index}]:`,
-    });
+    parts.push({ text: `Image Index [${index}]:` });
     parts.push({
       inlineData: {
         mimeType: img.mimeType,
@@ -46,14 +80,15 @@ async function analyzeImages(
   parts.push({ text: ANALYSIS_PROMPT });
 
   try {
-    const response = await ai.models.generateContent({
-      model: CONFIG.analysisModel,
-      contents: { parts },
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
-    return response.text || '';
+    const response = await callGeminiAPI(
+      apiKey,
+      CONFIG.analysisModel,
+      { parts },
+      { responseMimeType: 'application/json' }
+    );
+
+    const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return text;
   } catch (error) {
     console.warn('[Pubilo] Analysis failed:', error);
     return '';
@@ -64,10 +99,11 @@ async function analyzeImages(
  * Step 2: Generate the final image using analysis context.
  */
 async function generateImages(
-  ai: GoogleGenAI,
+  apiKey: string,
   referenceImages: ReferenceImage[],
   analysisContext: string,
-  aspectRatio: string = CONFIG.aspectRatio
+  aspectRatio: string = CONFIG.aspectRatio,
+  generationModel: string = CONFIG.generationModel
 ): Promise<string[]> {
   // 1. Process Analysis Result
   let selectedImages: ReferenceImage[] = referenceImages;
@@ -163,20 +199,12 @@ async function generateImages(
 
   // 4. Parallel generation based on CONFIG.variationCount
   const requestCount = CONFIG.variationCount || 1;
+
   const generatePromises = Array(requestCount)
     .fill(null)
     .map(() =>
-      ai.models.generateContent({
-        model: CONFIG.generationModel,
-        contents: {
-          parts: parts,
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: aspectRatio,
-            imageSize: CONFIG.resolution,
-          },
-        },
+      callGeminiAPI(apiKey, generationModel, { parts }, {
+        responseModalities: ['IMAGE', 'TEXT'],
       })
     );
 
@@ -216,6 +244,8 @@ async function generateImages(
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('[Pubilo] Generate API called');
+
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -230,12 +260,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  console.log('[Pubilo] API Key exists:', !!GEMINI_API_KEY);
+
   if (!GEMINI_API_KEY) {
     return res.status(400).json({ error: 'GEMINI_API_KEY not configured' });
   }
 
   try {
-    const { referenceImage, referenceImages, aspectRatio } = req.body;
+    console.log('[Pubilo] Request body keys:', Object.keys(req.body || {}));
+    const { referenceImage, referenceImages, aspectRatio, model, prompt, caption, numberOfImages, resolution, customPrompt } = req.body;
 
     // Support both single referenceImage and array referenceImages
     let images: ReferenceImage[] = [];
@@ -246,27 +279,130 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       images = [referenceImage];
     }
 
-    if (images.length === 0) {
-      return res.status(400).json({ error: 'No reference images provided' });
+    // Use custom settings if provided, otherwise use CONFIG defaults
+    const finalAspectRatio = aspectRatio || CONFIG.aspectRatio;
+    const finalModel = model || CONFIG.generationModel;
+    const finalCount = numberOfImages || CONFIG.variationCount;
+    const finalResolution = resolution || CONFIG.resolution;
+    console.log('[Pubilo] Using aspect ratio:', finalAspectRatio);
+    console.log('[Pubilo] Using model:', finalModel);
+    console.log('[Pubilo] Using resolution:', finalResolution);
+    console.log('[Pubilo] Number of images:', finalCount);
+
+    // TEXT-ONLY GENERATION: If no images but prompt/caption provided
+    if (images.length === 0 && (prompt || caption)) {
+      console.log('[Pubilo] Text-only generation mode');
+
+      // Build prompt - use custom prompt if provided, otherwise use default
+      let textPrompt: string;
+      const quoteText = caption || prompt;
+
+      if (customPrompt && customPrompt.trim()) {
+        // Use custom prompt template - replace placeholders
+        textPrompt = customPrompt
+          .replace(/\{\{QUOTE\}\}/g, quoteText)
+          .replace(/\{\{ASPECT_RATIO\}\}/g, finalAspectRatio)
+          .replace(/\{\{RESOLUTION\}\}/g, finalResolution);
+        console.log('[Pubilo] Using custom prompt template');
+      } else {
+        // Use default prompt
+        textPrompt = `สร้างรูปภาพสำหรับโพสต์ Facebook ที่มีลักษณะดังนี้:
+
+**พื้นหลัง:**
+- ภาพถ่ายธรรมชาติสวยงาม เช่น พระอาทิตย์ตก/ขึ้น ภูเขา ทะเล ท้องฟ้า หมอก ทุ่งหญ้า
+- สีโทนอบอุ่น gradient จากส้มทอง เหลือง ไปฟ้าอ่อน
+- ภาพต้องมีความชัด สวยงาม ดูสงบ ให้ความรู้สึกผ่อนคลาย
+
+**ข้อความภาษาไทย:**
+"${quoteText}"
+
+**การจัดวางข้อความ:**
+- ข้อความอยู่ตรงกลางบน-กลางรูป (ประมาณ 1/3 บนของรูป)
+- ฟอนต์หนา ตัวใหญ่ อ่านง่าย
+- สีข้อความเป็นสีเข้ม (ดำหรือน้ำตาลเข้ม) ให้ตัดกับพื้นหลังสีอ่อน
+- มีเงาข้อความเล็กน้อยให้อ่านง่ายขึ้น
+- แบ่งบรรทัดให้สวยงาม อ่านง่าย
+
+**สไตล์โดยรวม:**
+- ดูเป็นมืออาชีพ เหมาะโพสต์ Facebook
+- รูปแบบ Quote/คำคม ที่นิยมใน Social Media ไทย
+- ขนาดรูป: ${finalAspectRatio}`;
+      }
+
+      try {
+        const generatePromises = Array(finalCount)
+          .fill(null)
+          .map(() =>
+            callGeminiAPI(GEMINI_API_KEY, finalModel, { parts: [{ text: textPrompt }] }, {
+              responseModalities: ['IMAGE', 'TEXT'],
+            })
+          );
+
+        const results = await Promise.allSettled(generatePromises);
+        const generatedImages: string[] = [];
+        let lastError: any = null;
+
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            const response = result.value;
+            if (response.candidates && response.candidates.length > 0) {
+              const content = response.candidates[0].content;
+              if (content && content.parts) {
+                for (const part of content.parts) {
+                  if (part.inlineData && part.inlineData.data) {
+                    const base64Str = part.inlineData.data;
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    generatedImages.push(`data:${mimeType};base64,${base64Str}`);
+                  }
+                }
+              }
+            }
+          } else {
+            lastError = result.reason;
+            console.warn('[Pubilo] Text generation failed:', result.reason);
+          }
+        }
+
+        if (generatedImages.length === 0) {
+          if (lastError) throw lastError;
+          throw new Error('No image generated from text prompt');
+        }
+
+        console.log(`[Pubilo] Successfully generated ${generatedImages.length} images from text`);
+        return res.status(200).json({ images: generatedImages });
+      } catch (genError) {
+        console.error('[Pubilo] Text-to-image generation failed:', genError);
+        const errorMessage = genError instanceof Error ? genError.message : 'Unknown generation error';
+        return res.status(500).json({ error: 'Generation failed: ' + errorMessage });
+      }
     }
 
-    // Use custom aspect ratio if provided, otherwise use CONFIG default
-    const finalAspectRatio = aspectRatio || CONFIG.aspectRatio;
-    console.log('[Pubilo] Using aspect ratio:', finalAspectRatio);
-
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    // IMAGE-BASED GENERATION: Original flow with reference images
+    if (images.length === 0) {
+      return res.status(400).json({ error: 'No reference images or prompt provided' });
+    }
 
     // Step 1: Analyze Images
     console.log('[Pubilo] Step 1: Analyzing composition...');
-    const analysisResult = await analyzeImages(ai, images);
-    console.log('[Pubilo] Analysis Result:', analysisResult);
+    let analysisResult = '';
+    try {
+      analysisResult = await analyzeImages(GEMINI_API_KEY, images);
+      console.log('[Pubilo] Analysis Result:', analysisResult);
+    } catch (analysisError) {
+      console.warn('[Pubilo] Analysis failed, proceeding without it:', analysisError);
+    }
 
     // Step 2: Generate Images using analysis context
-    console.log(`[Pubilo] Step 2: Rendering ${CONFIG.variationCount} variations...`);
-    const generatedImages = await generateImages(ai, images, analysisResult, finalAspectRatio);
-
-    console.log(`[Pubilo] Successfully generated ${generatedImages.length} images`);
-    return res.status(200).json({ images: generatedImages });
+    console.log(`[Pubilo] Step 2: Rendering ${finalCount} variations with model: ${finalModel}...`);
+    try {
+      const generatedImages = await generateImages(GEMINI_API_KEY, images, analysisResult, finalAspectRatio, finalModel);
+      console.log(`[Pubilo] Successfully generated ${generatedImages.length} images`);
+      return res.status(200).json({ images: generatedImages });
+    } catch (genError) {
+      console.error('[Pubilo] Image generation failed:', genError);
+      const errorMessage = genError instanceof Error ? genError.message : 'Unknown generation error';
+      return res.status(500).json({ error: 'Generation failed: ' + errorMessage });
+    }
   } catch (error) {
     console.error('[Pubilo] Generate error:', error);
     return res.status(500).json({

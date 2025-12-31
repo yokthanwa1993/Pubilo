@@ -808,6 +808,15 @@
                 background: #1a1a1a;
             }
 
+            .skeleton-grid.single {
+                grid-template-columns: 1fr;
+                padding: 0;
+            }
+
+            .skeleton-grid.single .skeleton-card {
+                border-radius: 0;
+            }
+
             .skeleton-card {
                 background: #2a2a2a;
                 border-radius: 8px;
@@ -1536,6 +1545,27 @@
                 z-index: 1;
             }
 
+            .quote-text-cell {
+                cursor: default;
+            }
+
+            /* Used quote styling */
+            .quote-row-used {
+                background: rgba(16, 185, 129, 0.15) !important;
+            }
+            .quote-row-used td {
+                border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+            }
+            .quote-used-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                background: #10b981;
+                color: white;
+                border-radius: 4px;
+                font-size: 0.7rem;
+                margin-left: 0.5rem;
+                vertical-align: middle;
+            }
             .pending-table-thumb {
                 width: 56px;
                 height: 56px;
@@ -2447,7 +2477,7 @@
                                                 points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
                                             />
                                         </svg>
-                                        Generate 4 Variations
+                                        Generate
                                     </button>
                                 </div>
                                 <div
@@ -2490,11 +2520,11 @@
                                     >
                                         Hello Pubilo
                                     </div>
-                                    <div
-                                        class="card-link-description editable-text"
-                                        id="previewDescription"
-                                    >
-                                        Click to learn more
+                                    <div class="card-link-description">
+                                        <span class="description-prefix">พิกัด : </span><span
+                                            class="editable-text"
+                                            id="previewDescription"
+                                        ></span>
                                     </div>
                                 </div>
                                 <div class="card-button-wrapper">
@@ -2503,7 +2533,7 @@
                                         id="previewCardButton"
                                     >
                                         <span id="cardButtonText"
-                                            >Learn More</span
+                                            >Shop Now</span
                                         >
                                     </button>
                                     <div
@@ -2511,13 +2541,13 @@
                                         id="cardButtonDropdown"
                                     >
                                         <div
-                                            class="card-button-option selected"
+                                            class="card-button-option"
                                             data-value="LEARN_MORE"
                                         >
                                             Learn More
                                         </div>
                                         <div
-                                            class="card-button-option"
+                                            class="card-button-option selected"
                                             data-value="SHOP_NOW"
                                         >
                                             Shop Now
@@ -2592,7 +2622,7 @@
                                 <input
                                     type="hidden"
                                     id="description"
-                                    value="Click to learn more"
+                                    value="พิกัด :"
                                 />
                             </div>
                             <div class="form-group">
@@ -2613,7 +2643,7 @@
                                     <option value="LEARN_MORE">
                                         Learn More
                                     </option>
-                                    <option value="SHOP_NOW">Shop Now</option>
+                                    <option value="SHOP_NOW" selected>Shop Now</option>
                                     <option value="SIGN_UP">Sign Up</option>
                                     <option value="BOOK_NOW">Book Now</option>
                                 </select>
@@ -2701,7 +2731,7 @@
                                                 points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
                                             />
                                         </svg>
-                                        Generate 4 Variations
+                                        Generate
                                     </button>
                                 </div>
                                 <div
@@ -2841,7 +2871,7 @@
                                                 points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
                                             />
                                         </svg>
-                                        Generate 4 Variations
+                                        Generate
                                     </button>
                                 </div>
                                 <div
@@ -3029,6 +3059,7 @@
                                     <label class="radio-option"><input type="radio" name="linkImageSize" value="16:9"> 16:9</label>
                                     <label class="radio-option"><input type="radio" name="linkImageSize" value="4:3"> 4:3</label>
                                     <label class="radio-option"><input type="radio" name="linkImageSize" value="9:16"> 9:16</label>
+                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="2:3"> 2:3</label>
                                     <label class="radio-option"><input type="radio" name="linkImageSize" value="3:4"> 3:4</label>
                                 </div>
                             </div>
@@ -3054,8 +3085,31 @@
                                     <label class="radio-option"><input type="radio" name="imageImageSize" value="16:9"> 16:9</label>
                                     <label class="radio-option"><input type="radio" name="imageImageSize" value="4:3"> 4:3</label>
                                     <label class="radio-option"><input type="radio" name="imageImageSize" value="9:16"> 9:16</label>
+                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="2:3"> 2:3</label>
                                     <label class="radio-option"><input type="radio" name="imageImageSize" value="3:4"> 3:4</label>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Model Settings -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">🤖 AI Image Generation</h3>
+                            <div class="setting-group">
+                                <label class="form-label">โมเดล</label>
+                                <select id="aiModelSelect" class="form-input" style="padding: 0.5rem;">
+                                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                                    <option value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash Preview</option>
+                                    <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview (New)</option>
+                                    <option value="imagen-3.0-generate-002">Imagen 3</option>
+                                </select>
+                            </div>
+                            <div class="setting-group" style="margin-top: 1rem;">
+                                <label class="form-label">ความละเอียด</label>
+                                <select id="aiResolutionSelect" class="form-input" style="padding: 0.5rem;">
+                                    <option value="1K">1K (1024px)</option>
+                                    <option value="2K" selected>2K (2048px)</option>
+                                    <option value="4K">4K (4096px)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -3231,7 +3285,7 @@
                 if (!pageId) return "1:1";
 
                 // Check current mode and get from localStorage
-                const isLinkMode = currentMode === "link";
+                const isLinkMode = postMode === "link";
                 const storageKey = isLinkMode ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
                 return localStorage.getItem(storageKey) || "1:1";
             }
@@ -3242,7 +3296,7 @@
                 if (!pageId) return "";
 
                 // Check current mode
-                const isLinkMode = currentMode === "link";
+                const isLinkMode = postMode === "link";
                 const storageKey = isLinkMode ? `linkPrompt_${pageId}` : `imagePrompt_${pageId}`;
                 return localStorage.getItem(storageKey) || "";
             }
@@ -3567,6 +3621,8 @@
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
             const imagePromptInput = document.getElementById("imagePromptInput");
+            const aiModelSelect = document.getElementById("aiModelSelect");
+            const aiResolutionSelect = document.getElementById("aiResolutionSelect");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
 
             // Helper functions for radio buttons
@@ -3635,17 +3691,47 @@
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
 
-                // Load AI prompts from localStorage (per page, separate for link and image)
-                const savedLinkPrompt = localStorage.getItem(`linkPrompt_${pageId}`) || "";
-                const savedImagePrompt = localStorage.getItem(`imagePrompt_${pageId}`) || "";
-                linkPromptInput.value = savedLinkPrompt;
-                imagePromptInput.value = savedImagePrompt;
+                // Load AI prompts from database (with localStorage fallback)
+                try {
+                    const promptsRes = await fetch(`/api/prompts?pageId=${pageId}`);
+                    const promptsData = await promptsRes.json();
+                    if (promptsData.success && promptsData.prompts.length > 0) {
+                        const linkPrompt = promptsData.prompts.find(p => p.prompt_type === 'link_post');
+                        const imagePrompt = promptsData.prompts.find(p => p.prompt_type === 'image_post');
+                        linkPromptInput.value = linkPrompt?.prompt_text || "";
+                        imagePromptInput.value = imagePrompt?.prompt_text || "";
+                    } else {
+                        // Try loading default prompts
+                        const defaultRes = await fetch(`/api/prompts?pageId=_default`);
+                        const defaultData = await defaultRes.json();
+                        if (defaultData.success && defaultData.prompts.length > 0) {
+                            const defaultLinkPrompt = defaultData.prompts.find(p => p.prompt_type === 'link_post');
+                            const defaultImagePrompt = defaultData.prompts.find(p => p.prompt_type === 'image_post');
+                            linkPromptInput.value = defaultLinkPrompt?.prompt_text || localStorage.getItem(`linkPrompt_${pageId}`) || "";
+                            imagePromptInput.value = defaultImagePrompt?.prompt_text || localStorage.getItem(`imagePrompt_${pageId}`) || "";
+                        } else {
+                            // Fallback to localStorage
+                            linkPromptInput.value = localStorage.getItem(`linkPrompt_${pageId}`) || "";
+                            imagePromptInput.value = localStorage.getItem(`imagePrompt_${pageId}`) || "";
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Settings] Failed to load prompts from DB:', e);
+                    linkPromptInput.value = localStorage.getItem(`linkPrompt_${pageId}`) || "";
+                    imagePromptInput.value = localStorage.getItem(`imagePrompt_${pageId}`) || "";
+                }
 
                 // Load image sizes from localStorage (per page)
                 const savedLinkImageSize = localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
                 const savedImageImageSize = localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
                 setLinkImageSize(savedLinkImageSize);
                 setImageImageSize(savedImageImageSize);
+
+                // Load AI settings (global, not per page)
+                const savedAiModel = localStorage.getItem("aiModel") || "gemini-2.0-flash-exp";
+                const savedAiResolution = localStorage.getItem("aiResolution") || "2K";
+                aiModelSelect.value = savedAiModel;
+                aiResolutionSelect.value = savedAiResolution;
             }
 
             // Auto schedule checkbox change handler for panel
@@ -3679,11 +3765,15 @@
                 const linkImageSize = getLinkImageSize();
                 const imageImageSize = getImageImageSize();
 
-                // Save AI prompts and image sizes to localStorage (per page)
+                // Save AI prompts and image sizes to localStorage (per page) as backup
                 localStorage.setItem(`linkPrompt_${pageId}`, linkPrompt);
                 localStorage.setItem(`imagePrompt_${pageId}`, imagePrompt);
                 localStorage.setItem(`linkImageSize_${pageId}`, linkImageSize);
                 localStorage.setItem(`imageImageSize_${pageId}`, imageImageSize);
+
+                // Save AI settings (global)
+                localStorage.setItem("aiModel", aiModelSelect.value);
+                localStorage.setItem("aiResolution", aiResolutionSelect.value);
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -3700,6 +3790,7 @@
 
                 // Save to database via API
                 try {
+                    // Save page settings
                     const response = await fetch('/api/page-settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3710,8 +3801,33 @@
                         })
                     });
                     const data = await response.json();
+
+                    // Save prompts to database
+                    if (linkPrompt) {
+                        await fetch('/api/prompts', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pageId,
+                                promptType: 'link_post',
+                                promptText: linkPrompt
+                            })
+                        });
+                    }
+                    if (imagePrompt) {
+                        await fetch('/api/prompts', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pageId,
+                                promptType: 'image_post',
+                                promptText: imagePrompt
+                            })
+                        });
+                    }
+
                     if (data.success) {
-                        console.log("[FEWFEED] Settings saved to database");
+                        console.log("[FEWFEED] Settings and prompts saved to database");
                         // Show success feedback
                         saveSettingsPanelBtn.textContent = "บันทึกแล้ว ✓";
                         saveSettingsPanelBtn.style.background = "#10b981";
@@ -4301,7 +4417,8 @@
                             </div>
                         `;
                     }
-                    const response = await fetch(`/api/quotes?limit=50&offset=${quotesOffset}`);
+                    const pageId = getCurrentPageId();
+                    const response = await fetch(`/api/quotes?limit=50&offset=${quotesOffset}${pageId ? '&pageId=' + pageId : ''}`);
                     const data = await response.json();
                     if (data.success) {
                         quotesTotal = data.total;
@@ -4343,9 +4460,9 @@
                     table.innerHTML = `
                         <thead>
                             <tr>
-                                <th style="width: 70%;">คำคม</th>
+                                <th style="width: 75%;">คำคม</th>
                                 <th style="width: 20%;">วันที่</th>
-                                <th style="width: 10%;"></th>
+                                <th style="width: 5%;"></th>
                             </tr>
                         </thead>
                     `;
@@ -4358,19 +4475,19 @@
 
                 quotes.forEach(quote => {
                     const tr = document.createElement("tr");
+                    tr.dataset.quoteId = quote.id;
+                    tr.dataset.quoteText = quote.quote_text; // Store raw text in data attribute
+                    if (quote.isUsed) {
+                        tr.classList.add("quote-row-used");
+                    }
                     const date = new Date(quote.created_at);
-                    tr.innerHTML = `
-                        <td style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(quote.quote_text)}</td>
-                        <td style="color: #888; font-size: 0.85rem;">${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td>
-                            <button onclick="deleteQuote(${quote.id}, this)" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                            </button>
-                        </td>
-                    `;
+                    // Build HTML without extra whitespace in quote cell
+                    const quoteHtml = escapeHtml(quote.quote_text.trim());
+                    const badgeHtml = quote.isUsed ? ' <span class="quote-used-badge">ใช้แล้ว</span>' : '';
+                    tr.innerHTML = `<td class="quote-text-cell" style="white-space: pre-wrap; word-break: break-word;" title="ดับเบิลคลิกเพื่อแก้ไข">${quoteHtml}${badgeHtml}</td><td style="color: #888; font-size: 0.85rem;">${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td><td style="text-align: center;"><button onclick="deleteQuote(${quote.id}, this)" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td>`;
+                    // Add double-click handler for editing
+                    const textCell = tr.querySelector('.quote-text-cell');
+                    textCell.addEventListener('dblclick', () => startEditQuote(quote.id, textCell));
                     tbody.appendChild(tr);
                 });
             }
@@ -4409,6 +4526,107 @@
                     alert("ลบไม่สำเร็จ");
                 }
             };
+
+            // Inline quote editing
+            function startEditQuote(quoteId, cell) {
+                // Skip if already editing
+                if (cell.querySelector('textarea')) return;
+
+                // Get original text from data attribute (cleaner than textContent)
+                const row = cell.closest('tr');
+                const originalText = row.dataset.quoteText || cell.textContent.replace(/ใช้แล้ว$/, '').trim();
+                const isUsed = row.classList.contains('quote-row-used');
+                const textarea = document.createElement('textarea');
+                textarea.value = originalText;
+                textarea.style.cssText = `
+                    width: 100%;
+                    min-height: 100px;
+                    max-height: 300px;
+                    padding: 0.75rem;
+                    border: 2px solid #9b59b6;
+                    border-radius: 8px;
+                    font-size: 0.95rem;
+                    line-height: 1.5;
+                    resize: vertical;
+                    font-family: inherit;
+                    background: #fff;
+                    color: #333;
+                    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.2);
+                    outline: none;
+                    box-sizing: border-box;
+                `;
+
+                cell.textContent = '';
+                cell.appendChild(textarea);
+                textarea.focus();
+
+                // Auto-resize textarea to fit content
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(Math.max(textarea.scrollHeight, 100), 300) + 'px';
+                textarea.select();
+
+                // Helper to rebuild cell content
+                const rebuildCell = (text) => {
+                    const badgeHtml = isUsed ? ' <span class="quote-used-badge">ใช้แล้ว</span>' : '';
+                    cell.innerHTML = escapeHtml(text) + badgeHtml;
+                    row.dataset.quoteText = text;
+                };
+
+                // Save on blur or Enter (Shift+Enter for new line)
+                const saveEdit = async () => {
+                    const newText = textarea.value.trim();
+                    if (!newText) {
+                        rebuildCell(originalText);
+                        return;
+                    }
+                    if (newText === originalText.trim()) {
+                        rebuildCell(originalText);
+                        return;
+                    }
+
+                    textarea.disabled = true;
+                    textarea.style.opacity = '0.5';
+
+                    try {
+                        const response = await fetch('/api/quotes', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: quoteId, quoteText: newText })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            rebuildCell(newText);
+                        } else {
+                            rebuildCell(originalText);
+                            alert('แก้ไขไม่สำเร็จ: ' + data.error);
+                        }
+                    } catch (error) {
+                        console.error('[FEWFEED] Failed to update quote:', error);
+                        rebuildCell(originalText);
+                        alert('แก้ไขไม่สำเร็จ');
+                    }
+                };
+
+                let saving = false;
+                textarea.addEventListener('blur', () => {
+                    if (!saving) {
+                        saving = true;
+                        saveEdit();
+                    }
+                });
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!saving) {
+                            saving = true;
+                            saveEdit();
+                        }
+                    }
+                    if (e.key === 'Escape') {
+                        rebuildCell(originalText);
+                    }
+                });
+            }
 
             if (addQuoteBtn) {
                 addQuoteBtn.addEventListener("click", async () => {
@@ -4809,10 +5027,12 @@
                     fileInput.click();
                 });
 
-                els.uploadFromGemini.addEventListener("click", (e) => {
+                els.uploadFromGemini.addEventListener("click", async (e) => {
                     e.stopPropagation();
-                    uploadMode = "gemini";
-                    fileInput.click();
+                    // Directly trigger generate without needing to upload
+                    if (els.generateBtn) {
+                        els.generateBtn.click();
+                    }
                 });
 
                 // Click on card image area (for other areas)
@@ -4940,6 +5160,7 @@
                         body: JSON.stringify({
                             referenceImages: state.referenceImages,
                             aspectRatio: getCurrentAspectRatio(),
+                            model: localStorage.getItem("aiModel") || "gemini-2.0-flash-exp",
                         }),
                     });
 
@@ -4995,38 +5216,138 @@
                 els.generateBtn.addEventListener("click", async (e) => {
                     e.stopPropagation();
                     const state = modeState[mode];
-                    if (state.referenceImages.length === 0) return;
 
                     els.generateBtn.disabled = true;
                     els.generateBtn.innerHTML =
                         '<span class="loading"></span> Generating...';
 
+                    // Show skeleton loading immediately (single card)
+                    state.currentView = "generating";
+                    els.uploadPrompt.style.display = "none";
+                    els.generateOverlay.style.display = "none";
+                    els.refThumbsRow.style.display = "none";
+                    els.generatedGrid.style.display = "none";
+                    els.fullImageView.style.display = "none";
+
+                    // Show single skeleton card
+                    els.skeletonGrid.innerHTML = '<div class="skeleton-card"></div>';
+                    els.skeletonGrid.classList.add('single');
+                    els.skeletonGrid.style.display = "grid";
+
                     try {
-                        // Get aspect ratio based on mode
                         const pageId = getCurrentPageId();
+                        let caption = "";
+
+                        // For link mode: auto-fetch unused quote
+                        if (mode === "link" && pageId) {
+                            // Fetch quotes and find unused one
+                            const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                            const quotesData = await quotesRes.json();
+
+                            if (quotesData.success && quotesData.quotes.length > 0) {
+                                // Find first unused quote
+                                const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
+
+                                if (unusedQuote) {
+                                    caption = unusedQuote.quote_text;
+
+                                    // Mark as used
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: unusedQuote.id, pageId })
+                                    });
+
+                                    state.lastUsedQuoteId = unusedQuote.id;
+                                    console.log('[FEWFEED] Auto-selected quote:', unusedQuote.id);
+                                } else {
+                                    // Use caption field value if no unused quotes
+                                    const captionField = document.getElementById("caption");
+                                    caption = captionField ? captionField.value : "";
+                                    console.log('[FEWFEED] No unused quotes, using caption field');
+                                }
+                            }
+                        } else {
+                            // For other modes, get caption from field
+                            const captionField = document.getElementById("caption");
+                            caption = captionField ? captionField.value : "";
+                        }
+
+                        // Get aspect ratio based on mode
                         const storageKey = mode === "link" ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
                         const aspectRatio = localStorage.getItem(storageKey) || "1:1";
+
+                        // Get AI settings - load prompt from database with fallback to localStorage
+                        const promptType = mode === "link" ? "link_post" : "image_post";
+                        let customPrompt = "";
+                        try {
+                            // Try page-specific prompt first
+                            const promptRes = await fetch(`/api/prompts?pageId=${pageId}&promptType=${promptType}`);
+                            const promptData = await promptRes.json();
+                            if (promptData.success && promptData.prompts.length > 0) {
+                                customPrompt = promptData.prompts[0].prompt_text;
+                            } else {
+                                // Try default prompt
+                                const defaultRes = await fetch(`/api/prompts?pageId=_default&promptType=${promptType}`);
+                                const defaultData = await defaultRes.json();
+                                if (defaultData.success && defaultData.prompts.length > 0) {
+                                    customPrompt = defaultData.prompts[0].prompt_text;
+                                } else {
+                                    // Fallback to localStorage
+                                    const promptKey = mode === "link" ? `linkPrompt_${pageId}` : `imagePrompt_${pageId}`;
+                                    customPrompt = localStorage.getItem(promptKey) || "";
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[FEWFEED] Failed to load prompt from DB, using localStorage');
+                            const promptKey = mode === "link" ? `linkPrompt_${pageId}` : `imagePrompt_${pageId}`;
+                            customPrompt = localStorage.getItem(promptKey) || "";
+                        }
+                        const resolution = localStorage.getItem("aiResolution") || "2K";
+
+                        // Build request body
+                        const requestBody = {
+                            aspectRatio: aspectRatio,
+                            model: localStorage.getItem("aiModel") || "gemini-2.0-flash-exp",
+                            numberOfImages: 1,
+                            caption: caption,
+                            resolution: resolution,
+                            customPrompt: customPrompt,
+                        };
+
+                        // Add reference images if available
+                        if (state.referenceImages.length > 0) {
+                            requestBody.referenceImages = state.referenceImages;
+                        }
 
                         const response = await fetch("/api/generate", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                referenceImages: state.referenceImages,
-                                aspectRatio: aspectRatio,
-                            }),
+                            body: JSON.stringify(requestBody),
                         });
 
                         const data = await response.json();
                         if (data.error) throw new Error(data.error);
 
                         state.generatedImages = data.images;
-                        showGeneratedGrid();
+
+                        // Show single image full-size directly
+                        if (data.images && data.images.length === 1) {
+                            showSingleImage(data.images[0]);
+                        } else {
+                            showGeneratedGrid();
+                        }
                     } catch (err) {
                         alert("Generation failed: " + err.message);
+                        // Go back to upload prompt on error
+                        els.skeletonGrid.style.display = "none";
+                        els.skeletonGrid.classList.remove('single');
+                        els.uploadPrompt.style.display = "flex";
+                        state.currentView = "upload";
                     } finally {
                         els.generateBtn.disabled = false;
                         els.generateBtn.innerHTML =
-                            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate 4 Variations';
+                            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate';
                     }
                 });
             }
@@ -5035,6 +5356,84 @@
             setupGenerateHandler("link");
             setupGenerateHandler("image");
             setupGenerateHandler("reels");
+
+            // Show single generated image full-size
+            function showSingleImage(imgSrc) {
+                const state = getState();
+                const els = getModeElements();
+
+                state.currentView = "single";
+                state.selectedImage = imgSrc;
+                els.uploadPrompt.style.display = "none";
+                els.generateOverlay.style.display = "none";
+                els.refThumbsRow.style.display = "none";
+                els.skeletonGrid.style.display = "none";
+                els.skeletonGrid.classList.remove('single');
+                els.generatedGrid.style.display = "none";
+                els.fullImageView.style.display = "flex";
+
+                // Build the full image view
+                els.fullImageView.textContent = "";
+                els.fullImageView.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    height: 100%;
+                    background: #1a1a1a;
+                    position: relative;
+                `;
+
+                const imgEl = document.createElement("img");
+                imgEl.src = imgSrc;
+                imgEl.alt = "Generated Image";
+                imgEl.style.cssText = `
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                    border-radius: 8px;
+                `;
+                els.fullImageView.appendChild(imgEl);
+
+                // Add buttons at top
+                const btnContainer = document.createElement("div");
+                btnContainer.style.cssText = `
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    display: flex;
+                    gap: 8px;
+                    z-index: 10;
+                `;
+
+                // Delete button
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "btn-regenerate";
+                deleteBtn.style.cssText = "background: #dc3545;";
+                deleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> ลบรูป';
+                deleteBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    state.currentView = "upload";
+                    state.selectedImage = null;
+                    els.fullImageView.style.display = "none";
+                    els.fullImageView.textContent = "";
+                    els.uploadPrompt.style.display = "flex";
+                });
+                btnContainer.appendChild(deleteBtn);
+
+                // Regenerate button
+                const regenBtn = document.createElement("button");
+                regenBtn.className = "btn-regenerate";
+                regenBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> เจนใหม่';
+                regenBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    // Trigger generate again
+                    els.generateBtn.click();
+                });
+                btnContainer.appendChild(regenBtn);
+                els.fullImageView.appendChild(btnContainer);
+            }
 
             // Show generated grid (uses current mode)
             function showGeneratedGrid() {
@@ -5097,13 +5496,27 @@
                 els.skeletonGrid.style.display = "grid";
 
                 try {
+                    // Get caption from field
+                    const captionField = document.getElementById("caption");
+                    const caption = captionField ? captionField.value : "";
+
+                    // Build request body
+                    const requestBody = {
+                        aspectRatio: getCurrentAspectRatio(),
+                        model: localStorage.getItem("aiModel") || "gemini-2.0-flash-exp",
+                        numberOfImages: 1,
+                        caption: caption,
+                    };
+
+                    // Add reference images if available
+                    if (state.referenceImages.length > 0) {
+                        requestBody.referenceImages = state.referenceImages;
+                    }
+
                     const response = await fetch("/api/generate", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            referenceImages: state.referenceImages,
-                            aspectRatio: getCurrentAspectRatio(),
-                        }),
+                        body: JSON.stringify(requestBody),
                     });
 
                     const data = await response.json();
@@ -6187,22 +6600,32 @@
             // Load on startup
             loadSavedData();
 
-            // Lightbox functionality
-            const lightboxOverlay = document.getElementById("lightboxOverlay");
-            const lightboxImage = document.getElementById("lightboxImage");
-
+            // Lightbox functionality - get elements on demand since they're after the script
             window.showLightbox = function (src) {
-                lightboxImage.src = src;
-                lightboxOverlay.classList.add("show");
+                const lightboxOverlay = document.getElementById("lightboxOverlay");
+                const lightboxImage = document.getElementById("lightboxImage");
+                if (lightboxImage && lightboxOverlay) {
+                    lightboxImage.src = src;
+                    lightboxOverlay.classList.add("show");
+                }
             };
 
             window.closeLightbox = function () {
-                lightboxOverlay.classList.remove("show");
+                const lightboxOverlay = document.getElementById("lightboxOverlay");
+                if (lightboxOverlay) {
+                    lightboxOverlay.classList.remove("show");
+                }
             };
 
-            lightboxOverlay.addEventListener("click", (e) => {
-                if (e.target === lightboxOverlay) {
-                    closeLightbox();
+            // Setup lightbox event listeners after DOM ready
+            document.addEventListener("DOMContentLoaded", () => {
+                const lightboxOverlay = document.getElementById("lightboxOverlay");
+                if (lightboxOverlay) {
+                    lightboxOverlay.addEventListener("click", (e) => {
+                        if (e.target === lightboxOverlay) {
+                            closeLightbox();
+                        }
+                    });
                 }
             });
 

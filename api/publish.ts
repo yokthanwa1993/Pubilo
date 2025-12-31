@@ -56,7 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Upload image if it's base64
     let finalImageUrl = imageUrl;
     if (imageUrl.startsWith('data:')) {
+      console.log('[Pubilo] Uploading base64 image to freeimage...');
       finalImageUrl = await uploadToFreeImage(imageUrl);
+      console.log('[Pubilo] Image uploaded to:', finalImageUrl);
     }
 
     // Step 1: Create ad creative
@@ -180,6 +182,8 @@ async function createAdCreative(options: {
 
   const url = `${API_BASE}/${options.adAccountId}/adcreatives?access_token=${options.accessToken}&fields=effective_object_story_id`;
 
+  console.log('[Pubilo] Creating ad creative with payload:', JSON.stringify(payload, null, 2));
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -190,9 +194,11 @@ async function createAdCreative(options: {
   });
 
   const data = await response.json();
+  console.log('[Pubilo] Ad creative response:', JSON.stringify(data, null, 2));
 
   if (data.error) {
-    throw new Error(`Failed to create ad creative: ${data.error.message}`);
+    const errorDetail = data.error.error_user_msg || data.error.error_subcode || data.error.code;
+    throw new Error(`Failed to create ad creative: ${data.error.message} (${errorDetail})`);
   }
 
   return data.id;
