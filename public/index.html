@@ -903,24 +903,34 @@
             }
 
             .description-input {
-                flex: 1;
-                padding: 0.4rem 0.6rem;
+                display: inline-block;
+                padding: 0.3rem 0.5rem;
                 border: 1px solid #ddd;
                 border-radius: 6px;
                 font-size: 0.85rem;
                 color: #374151;
+                background: #f9fafb;
+                min-width: 100px;
+                min-height: 1.2em;
+                max-width: 180px;
+                word-break: break-all;
+                white-space: normal;
+                cursor: pointer;
+            }
+
+            .description-input:empty::after {
+                content: "กดสองครั้งเพื่อพิมพ์";
+                color: #9ca3af;
+            }
+
+            .description-input.editing {
                 background: #fff;
-                min-width: 120px;
-                max-width: 200px;
+                border-color: #1877f2;
+                cursor: text;
             }
 
             .description-input:focus {
                 outline: none;
-                border-color: #1877f2;
-            }
-
-            .description-input::placeholder {
-                color: #9ca3af;
             }
 
             .card-button-wrapper {
@@ -2560,12 +2570,10 @@
                                     </div>
                                     <div class="card-link-title">
                                         <span class="description-prefix">พิกัด :&nbsp;</span>
-                                        <input
-                                            type="text"
+                                        <span
                                             class="description-input"
                                             id="previewDescription"
-                                            placeholder="พิมพ์ข้อความ..."
-                                        />
+                                        ></span>
                                     </div>
                                 </div>
                                 <div class="card-button-wrapper">
@@ -5619,11 +5627,7 @@
             );
             description.addEventListener(
                 "input",
-                () => (previewDescription.value = description.value),
-            );
-            previewDescription.addEventListener(
-                "input",
-                () => (description.value = previewDescription.value),
+                () => (previewDescription.textContent = description.value),
             );
 
             // Double-click to edit preview text
@@ -5659,6 +5663,7 @@
             }
 
             setupEditableText(previewCaption, caption);
+            setupEditableText(previewDescription, description);
 
             // Publish
             let lastPublishedUrl = null;
@@ -6072,7 +6077,7 @@
                         }
                         if (config.defaults.description) {
                             description.value = config.defaults.description;
-                            previewDescription.value =
+                            previewDescription.textContent =
                                 config.defaults.description;
                         }
                     }
