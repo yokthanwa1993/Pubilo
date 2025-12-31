@@ -5868,11 +5868,11 @@
                             body: JSON.stringify({
                                 imageUrl: imageToUpload,
                                 linkUrl: isLinkMode ? linkUrl.value : "",
-                                linkName: "", // Don't send linkName - Facebook will use domain from URL
-                                caption: isLinkMode ? caption.value : "",
-                                description: isLinkMode
+                                linkName: isLinkMode
                                     ? "พิกัด : " + description.value
                                     : "",
+                                caption: isLinkMode ? caption.value : "",
+                                description: "",
                                 primaryText: primaryTextEl
                                     ? primaryTextEl.value
                                     : "",
