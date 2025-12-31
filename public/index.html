@@ -5657,6 +5657,13 @@
                         previewEl.blur();
                     }
                 });
+
+                // Paste as plain text only (no formatting)
+                previewEl.addEventListener("paste", (e) => {
+                    e.preventDefault();
+                    const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+                    document.execCommand("insertText", false, text);
+                });
             }
 
             setupEditableText(previewCaption, caption);
