@@ -910,9 +910,14 @@
                 border: none;
             }
 
+            #previewDescription:empty {
+                min-width: 150px;
+                display: inline-block;
+                border-bottom: 1px dashed #ccc;
+            }
+
             #previewDescription:empty::after {
-                content: "___";
-                color: transparent;
+                content: "\00a0";
             }
 
             .card-button-wrapper {
