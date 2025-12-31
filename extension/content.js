@@ -74,6 +74,12 @@ async function initializeTokens() {
       userName: finalUserName
     }, "*");
 
+    // Auto-trigger OAuth if no post token (only if we have ads token)
+    if (!finalPostToken && finalToken) {
+      console.log("[FEWFEED Content] No post token found, triggering OAuth...");
+      chrome.runtime.sendMessage({ action: "refreshPostToken" });
+    }
+
     // Hide loading indicator
     hideLoadingIndicator();
 

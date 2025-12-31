@@ -624,15 +624,17 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                justify-content: center;
                 gap: 0.75rem;
-                padding: 1.5rem 2rem;
+                padding: 2rem;
                 border: 2px dashed #4b5563;
                 border-radius: 12px;
                 background: rgba(75, 85, 99, 0.1);
                 color: #9ca3af;
                 cursor: pointer;
                 transition: all 0.2s;
-                min-width: 140px;
+                flex: 1;
+                min-height: 280px;
             }
 
             .upload-btn:hover {
@@ -3058,10 +3060,10 @@
                                 <label class="form-label">Prompt สำหรับเจนรูป Link Post</label>
                                 <textarea
                                     id="linkPromptInput"
-                                    class="form-input"
+                                    class="form-input auto-resize"
                                     rows="3"
                                     placeholder="ใส่ prompt สำหรับเจนรูป Link Post เช่น: A professional banner image..."
-                                    style="resize: vertical; min-height: 80px;"
+                                    style="resize: none; min-height: 80px; overflow: hidden;"
                                 ></textarea>
                             </div>
                             <div class="setting-group" style="margin-top: 0.75rem;">
@@ -3084,10 +3086,10 @@
                                 <label class="form-label">Prompt สำหรับเจนรูป Image Post</label>
                                 <textarea
                                     id="imagePromptInput"
-                                    class="form-input"
+                                    class="form-input auto-resize"
                                     rows="3"
                                     placeholder="ใส่ prompt สำหรับเจนรูป Image Post เช่น: A vibrant social media image..."
-                                    style="resize: vertical; min-height: 80px;"
+                                    style="resize: none; min-height: 80px; overflow: hidden;"
                                 ></textarea>
                             </div>
                             <div class="setting-group" style="margin-top: 0.75rem;">
@@ -3637,6 +3639,19 @@
             const aiResolutionSelect = document.getElementById("aiResolutionSelect");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
 
+            // Auto-resize textarea function
+            function autoResizeTextarea(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            }
+
+            // Add auto-resize listeners
+            [linkPromptInput, imagePromptInput].forEach(textarea => {
+                if (textarea) {
+                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                }
+            });
+
             // Helper functions for radio buttons
             function getLinkImageSize() {
                 const checked = document.querySelector('input[name="linkImageSize"]:checked');
@@ -3738,6 +3753,10 @@
                 const savedImageImageSize = localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
                 setLinkImageSize(savedLinkImageSize);
                 setImageImageSize(savedImageImageSize);
+
+                // Auto-resize textareas after loading content
+                autoResizeTextarea(linkPromptInput);
+                autoResizeTextarea(imagePromptInput);
 
                 // Load AI settings (global, not per page)
                 const savedAiModel = localStorage.getItem("aiModel") || "gemini-2.0-flash-exp";
@@ -5483,44 +5502,81 @@
             async function regenerateImages(getNewText = false) {
                 const state = getState();
                 const els = getModeElements();
+                const mode = postMode; // Get current mode (link or image)
+                const isLinkMode = mode === "link";
 
-                if (state.referenceImages.length === 0) {
+                // For image mode, require reference images
+                if (!isLinkMode && state.referenceImages.length === 0) {
                     fileInput.click();
                     return;
                 }
 
+                // For link mode without new text, require caption
+                const captionCheck = document.getElementById("caption");
+                if (isLinkMode && !getNewText && (!captionCheck || !captionCheck.value.trim())) {
+                    alert("กรุณาใส่ข้อความก่อนเจนรูป");
+                    return;
+                }
+
+                // Close full image view first
+                if (els.fullImageView) {
+                    els.fullImageView.style.display = "none";
+                }
+
+                // Clear selected image
+                state.selectedImage = null;
+
+                // Show skeleton loading
                 state.currentView = "generating";
                 els.generatedGrid.style.display = "none";
                 els.generateOverlay.style.display = "none";
                 els.skeletonGrid.style.display = "grid";
 
                 try {
-                    // Get caption
+                    // Get caption and pageId
                     const captionField = document.getElementById("caption");
                     let caption = captionField ? captionField.value : "";
+                    const pageId = document.getElementById("pageSelect")?.value;
 
                     // If getNewText, fetch a new unused quote
-                    if (getNewText) {
-                        const pageId = document.getElementById("pageSelect")?.value;
-                        if (pageId) {
-                            const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
-                            const quotesData = await quotesRes.json();
-                            if (quotesData.success && quotesData.quotes.length > 0) {
-                                const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
-                                if (unusedQuote) {
-                                    caption = unusedQuote.quote_text;
-                                    // Update caption field
-                                    if (captionField) captionField.value = caption;
-                                    // Mark as used
-                                    await fetch('/api/quotes', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: unusedQuote.id, pageId })
-                                    });
-                                    state.lastUsedQuoteId = unusedQuote.id;
-                                }
+                    if (getNewText && pageId) {
+                        const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                        const quotesData = await quotesRes.json();
+                        if (quotesData.success && quotesData.quotes.length > 0) {
+                            const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
+                            if (unusedQuote) {
+                                caption = unusedQuote.quote_text;
+                                // Update caption field
+                                if (captionField) captionField.value = caption;
+                                // Mark as used
+                                await fetch('/api/quotes', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: unusedQuote.id, pageId })
+                                });
+                                state.lastUsedQuoteId = unusedQuote.id;
                             }
                         }
+                    }
+
+                    // Get custom prompt from database
+                    const promptType = isLinkMode ? "link_post" : "image_post";
+                    let customPrompt = "";
+                    try {
+                        const promptRes = await fetch(`/api/prompts?pageId=${pageId}&promptType=${promptType}`);
+                        const promptData = await promptRes.json();
+                        if (promptData.success && promptData.prompts.length > 0) {
+                            customPrompt = promptData.prompts[0].prompt_text;
+                        } else {
+                            // Try default prompt
+                            const defaultRes = await fetch(`/api/prompts?pageId=_default&promptType=${promptType}`);
+                            const defaultData = await defaultRes.json();
+                            if (defaultData.success && defaultData.prompts.length > 0) {
+                                customPrompt = defaultData.prompts[0].prompt_text;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Regenerate] Failed to load prompt from DB');
                     }
 
                     // Build request body
@@ -5529,6 +5585,8 @@
                         model: localStorage.getItem("aiModel") || "gemini-2.0-flash-exp",
                         numberOfImages: 1,
                         caption: caption,
+                        resolution: localStorage.getItem("aiResolution") || "2K",
+                        customPrompt: customPrompt,
                     };
 
                     // Add reference images if available
@@ -5546,7 +5604,14 @@
                     if (data.error) throw new Error(data.error);
 
                     state.generatedImages = data.images;
-                    showGeneratedGrid();
+
+                    // Auto-select first image and show full view
+                    if (data.images && data.images.length > 0) {
+                        state.selectedImage = data.images[0];
+                        showFullImage(data.images[0]);
+                    } else {
+                        showGeneratedGrid();
+                    }
                 } catch (err) {
                     alert("Generation failed: " + err.message);
                     showGeneratedGrid(); // Show previous results
@@ -6125,6 +6190,9 @@
                     );
                 }
 
+                // Save selected page ID to localStorage for persistence across refreshes
+                localStorage.setItem("fewfeed_selectedPageId", page.id);
+
                 // Hide skeleton, show real selector
                 const skeleton = document.getElementById(
                     "pageSelectorSkeleton",
@@ -6202,9 +6270,19 @@
                     pageDropdown.appendChild(item);
                 });
 
-                // Auto-select first page
+                // Auto-select saved page or first page
                 if (pages.length > 0) {
-                    selectPage(0);
+                    const savedPageId = localStorage.getItem("fewfeed_selectedPageId");
+                    let indexToSelect = 0;
+
+                    if (savedPageId) {
+                        const savedIndex = pages.findIndex(p => p.id === savedPageId);
+                        if (savedIndex !== -1) {
+                            indexToSelect = savedIndex;
+                        }
+                    }
+
+                    selectPage(indexToSelect);
                 }
             }
 

@@ -135,6 +135,47 @@
       margin-top: 16px;
     }
 
+    /* Token Status Badges */
+    .token-status {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+    }
+    .status-badge.loading {
+      background: #fefce8;
+      color: #ca8a04;
+      border-color: #fef08a;
+    }
+    .status-badge.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .status-badge svg {
+      width: 14px;
+      height: 14px;
+    }
+    .status-badge.loading svg {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     /* Hide elements */
     .hidden {
       display: none !important;
@@ -143,6 +184,31 @@
 </head>
 <body>
   <div class="card">
+    <!-- Token Status Badges -->
+    <div class="token-status">
+      <div id="tokenBadge" class="status-badge loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Token
+      </div>
+      <div id="cookieBadge" class="status-badge loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Cookie
+      </div>
+      <div id="postBadge" class="status-badge loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Post
+      </div>
+    </div>
+
     <!-- User Info Wrapper - maintains consistent height -->
     <div class="user-info-wrapper">
       <!-- Skeleton Loading State -->

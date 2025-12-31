@@ -8,7 +8,81 @@ const userIdEl = document.getElementById("userId");
 const openBtn = document.getElementById("openBtn");
 const loginBtn = document.getElementById("loginBtn");
 
+// Status badges
+const tokenBadge = document.getElementById("tokenBadge");
+const cookieBadge = document.getElementById("cookieBadge");
+const postBadge = document.getElementById("postBadge");
+
 let cookieData = null;
+
+function createSvgIcon(type) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+
+  if (type === "check") {
+    const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path1.setAttribute("d", "M22 11.08V12a10 10 0 1 1-5.93-9.14");
+    const path2 = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    path2.setAttribute("points", "22 4 12 14.01 9 11.01");
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+  } else if (type === "error") {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", "12");
+    circle.setAttribute("cy", "12");
+    circle.setAttribute("r", "10");
+    const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line1.setAttribute("x1", "15");
+    line1.setAttribute("y1", "9");
+    line1.setAttribute("x2", "9");
+    line1.setAttribute("y2", "15");
+    const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line2.setAttribute("x1", "9");
+    line2.setAttribute("y1", "9");
+    line2.setAttribute("x2", "15");
+    line2.setAttribute("y2", "15");
+    svg.appendChild(circle);
+    svg.appendChild(line1);
+    svg.appendChild(line2);
+  } else {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", "12");
+    circle.setAttribute("cy", "12");
+    circle.setAttribute("r", "10");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M12 6v6l4 2");
+    svg.appendChild(circle);
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
+function updateBadge(badge, status, label) {
+  badge.className = "status-badge " + status;
+  badge.textContent = "";
+  const iconType = status === "loading" ? "loading" : status === "" ? "check" : "error";
+  badge.appendChild(createSvgIcon(iconType));
+  badge.appendChild(document.createTextNode(" " + label));
+}
+
+// Wait for post token with polling
+async function waitForPostToken() {
+  const maxAttempts = 30; // 30 seconds max
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const data = await chrome.storage.local.get(["fewfeed_postToken"]);
+    console.log("[Popup] Checking post token... attempt", i + 1, data.fewfeed_postToken ? "found!" : "not yet");
+    if (data.fewfeed_postToken) {
+      updateBadge(postBadge, "", "Post");
+      return true;
+    }
+  }
+  updateBadge(postBadge, "error", "Post");
+  return false;
+}
 
 function showUserInfo() {
   skeletonLoader.classList.add("hidden");
@@ -26,6 +100,33 @@ async function checkStatus() {
     // First trigger token fetch to ensure we have latest data
     const tokenResponse = await chrome.runtime.sendMessage({ action: "fetchToken" });
     console.log("[Popup] Token fetch result:", tokenResponse);
+
+    // Update token badge
+    if (tokenResponse && tokenResponse.fewfeed_accessToken) {
+      updateBadge(tokenBadge, "", "Token");
+    } else {
+      updateBadge(tokenBadge, "error", "Token");
+    }
+
+    // Update cookie badge
+    if (tokenResponse && tokenResponse.fewfeed_cookie) {
+      updateBadge(cookieBadge, "", "Cookie");
+    } else {
+      updateBadge(cookieBadge, "error", "Cookie");
+    }
+
+    // Update post token badge
+    if (tokenResponse && tokenResponse.fewfeed_postToken) {
+      updateBadge(postBadge, "", "Post");
+    } else {
+      // Auto-trigger OAuth to get post token
+      updateBadge(postBadge, "loading", "Post");
+      console.log("[Popup] No post token, triggering OAuth...");
+      chrome.runtime.sendMessage({ action: "refreshPostToken" });
+
+      // Wait and check again
+      await waitForPostToken();
+    }
 
     const response = await chrome.runtime.sendMessage({ action: "getFacebookCookies" });
 
@@ -60,6 +161,10 @@ async function checkStatus() {
       loginBtn.classList.remove("hidden");
     }
   } catch (error) {
+    console.error("[Popup] Error:", error);
+    updateBadge(tokenBadge, "error", "Token");
+    updateBadge(cookieBadge, "error", "Cookie");
+    updateBadge(postBadge, "error", "Post");
     hideUserInfo();
     loginBtn.classList.remove("hidden");
   }

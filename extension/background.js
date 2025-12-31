@@ -145,13 +145,12 @@ function startPostcronOAuthBackground() {
   let oauthWindowId = null;
   let oauthTabId = null;
 
-  // Create small window (will auto-click so user doesn't need to interact)
+  // Create popup window for OAuth (shows when token needed, lasts 3 months)
   chrome.windows.create({
     url: POSTCRON_OAUTH_URL,
     type: 'popup',
-    width: 400,
-    height: 500,
-    focused: false
+    width: 500,
+    height: 600
   }, (window) => {
     if (!window || !window.tabs || !window.tabs[0]) {
       console.log("[FEWFEED] OAuth window creation failed");
@@ -722,11 +721,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const data = await chrome.storage.local.get([
         "fewfeed_accessToken",
         "fewfeed_postToken",
+        "fewfeed_postTokenExpiry",
         "fewfeed_fbDtsg",
         "fewfeed_userId",
         "fewfeed_userName",
         "fewfeed_cookie"
       ]);
+
+      // Check if post token is expired
+      const postTokenValid = data.fewfeed_postToken && data.fewfeed_postTokenExpiry > Date.now();
+      if (!postTokenValid) {
+        data.fewfeed_postToken = ""; // Clear expired token
+      }
+
       sendResponse(data);
     })();
     return true;
