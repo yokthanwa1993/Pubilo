@@ -554,11 +554,16 @@
                 height: calc(100% - 80px); /* Leave space for link info */
             }
 
+            #linkModeContainer .card-preview {
+                width: fit-content;
+            }
+
             #linkModeContainer .card-link-info {
                 height: 80px;
                 width: 100%;
                 flex-shrink: 0;
                 box-sizing: border-box;
+                max-width: calc(min(560px, calc(100vh - 240px)) - 80px);
             }
             
             /* Image mode: 2:3 - full height image */
