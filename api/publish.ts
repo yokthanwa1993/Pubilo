@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!imageUrl) {
       return res.status(400).json({ success: false, error: 'No image provided' });
     }
-    if (!linkUrl || !linkName) {
-      return res.status(400).json({ success: false, error: 'Missing linkUrl or linkName' });
+    if (!linkUrl) {
+      return res.status(400).json({ success: false, error: 'Missing linkUrl' });
     }
     if (!accessToken) {
       return res.status(400).json({ success: false, error: 'No access token' });
@@ -156,7 +156,7 @@ async function uploadToFreeImage(base64Data: string): Promise<string> {
 async function createAdCreative(options: {
   imageUrl: string;
   linkUrl: string;
-  linkName: string;
+  linkName?: string;
   caption: string;
   description: string;
   pageId: string;
@@ -164,18 +164,24 @@ async function createAdCreative(options: {
   accessToken: string;
   cookie?: string;
 }): Promise<string> {
+  const linkData: Record<string, any> = {
+    picture: options.imageUrl,
+    description: options.description,
+    link: options.linkUrl,
+    multi_share_optimized: true,
+    multi_share_end_card: false,
+    caption: options.caption,
+    call_to_action: { type: "LEARN_MORE" },
+  };
+
+  // Only include name if linkName is provided
+  if (options.linkName) {
+    linkData.name = options.linkName;
+  }
+
   const payload = {
     object_story_spec: {
-      link_data: {
-        picture: options.imageUrl,
-        description: options.description,
-        link: options.linkUrl,
-        name: options.linkName,
-        multi_share_optimized: true,
-        multi_share_end_card: false,
-        caption: options.caption,
-        call_to_action: { type: "LEARN_MORE" },
-      },
+      link_data: linkData,
       page_id: options.pageId,
     },
   };

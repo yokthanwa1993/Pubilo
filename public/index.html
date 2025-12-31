@@ -905,7 +905,8 @@
 
             .description-input {
                 flex: 1;
-                min-width: 50px;
+                min-width: 100px;
+                min-height: 1.4em;
                 font-size: 0.9rem;
                 color: #6b7280;
                 word-break: break-all;
@@ -914,6 +915,7 @@
                 line-height: 1.4em;
                 max-height: 2.8em;
                 overflow: hidden;
+                display: inline-block;
             }
 
             .description-input.editing {
@@ -5859,7 +5861,7 @@
                             body: JSON.stringify({
                                 imageUrl: imageToUpload,
                                 linkUrl: isLinkMode ? linkUrl.value : "",
-                                linkName: isLinkMode ? linkName.value : "",
+                                linkName: "", // Don't send linkName - Facebook will use domain from URL
                                 caption: isLinkMode ? caption.value : "",
                                 description: isLinkMode
                                     ? "พิกัด : " + description.value
