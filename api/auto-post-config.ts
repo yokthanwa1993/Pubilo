@@ -159,7 +159,7 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
   }
 
   const now = new Date();
-  const minTime = new Date(now.getTime() + 20 * 60 * 1000); // Facebook requires 10+ minutes, we use 20 for buffer
+  const minTime = new Date(now.getTime() + 30 * 60 * 1000); // Schedule 30 minutes ahead
 
   for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
     for (const minute of scheduledMinutes) {
