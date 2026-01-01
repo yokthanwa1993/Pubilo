@@ -2756,7 +2756,7 @@
                         <div class="card-preview">
                             <div class="card-content">
                                 <div class="card-title">Text Post Preview</div>
-                                <div class="card-description" id="textPreviewContent">
+                                <div class="card-description" id="textPreviewContent" style="white-space: pre-wrap; min-height: 100px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                                     พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...
                                 </div>
                             </div>
@@ -2766,17 +2766,17 @@
                     <!-- Input Panel -->
                     <div class="input-panel">
                         <div class="input-group">
-                            <label for="textMessageTextarea">ข้อความ</label>
+                            <label for="textMessageTextarea" style="display: block; margin-bottom: 8px; font-weight: 500;">ข้อความ</label>
                             <textarea
                                 id="textMessageTextarea"
                                 placeholder="พิมพ์ข้อความที่ต้องการโพสต์..."
                                 rows="8"
-                                style="min-height: 200px;"
+                                style="width: 100%; min-height: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.5; resize: vertical; box-sizing: border-box;"
                             ></textarea>
                         </div>
 
-                        <div class="publish-section">
-                            <button class="publish-btn" id="textPublishBtn">
+                        <div class="publish-section" style="margin-top: 20px;">
+                            <button class="publish-btn" id="textPublishBtn" style="width: 100%; padding: 12px 20px; background: #1877f2; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span class="publish-icon">📝</span>
                                 Publish Text Post
                             </button>
