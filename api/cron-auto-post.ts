@@ -66,9 +66,9 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
       // Skip if in the past or too soon
       if (candidate.getTime() < minTime.getTime()) continue;
 
-      // Check if this slot is already taken
+      // Check if this slot is already taken (within 2-minute window)
       const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
-      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 60);
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
 
       if (!isTaken) {
         console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()}`);
@@ -235,6 +235,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Update config state - find next available time (add just-scheduled time to avoid picking same slot)
         scheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
+        
+        // Add small buffer to avoid exact same time conflicts
+        const bufferTime = new Date(scheduledTime.getTime() + 60 * 1000); // +1 minute buffer
+        scheduledTimestamps.push(Math.floor(bufferTime.getTime() / 1000));
+        
         const nextAvailable = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
         const nextPostAt = nextAvailable.toISOString();
         await sql`
