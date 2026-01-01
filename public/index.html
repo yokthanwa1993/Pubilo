@@ -7353,7 +7353,7 @@
                 }
             });
 
-            // Auto-sync with Extension every 5 seconds
+            // Auto-sync with Extension every 30 seconds (avoid Facebook rate limit)
             setInterval(async () => {
                 try {
                     if (typeof window.pubiloExtension !== 'undefined') {
@@ -7385,7 +7385,45 @@
                 } catch (error) {
                     // Extension not available
                 }
-            }, 5000);
+            }, 30000); // 30 seconds instead of 5
+
+            // Manual sync function for immediate updates
+            async function syncWithExtensionNow() {
+                try {
+                    if (typeof window.pubiloExtension !== 'undefined') {
+                        const extensionData = await window.pubiloExtension.getStatus();
+                        if (extensionData && extensionData.connected) {
+                            localStorage.setItem("fewfeed_userId", extensionData.userId || '');
+                            localStorage.setItem("fewfeed_userName", extensionData.userName || '');
+                            localStorage.setItem("fewfeed_accessToken", extensionData.token || '');
+                            localStorage.setItem("fewfeed_postToken", extensionData.postToken || '');
+                            localStorage.setItem("fewfeed_cookie", extensionData.cookie || '');
+                            
+                            showCookieStatus(
+                                true,
+                                extensionData.userId,
+                                extensionData.userName,
+                                !!extensionData.token,
+                                !!extensionData.cookie,
+                                !!extensionData.postToken
+                            );
+                            
+                            console.log('[manual-sync] Updated from Extension');
+                            return true;
+                        }
+                    }
+                } catch (error) {
+                    console.log('[manual-sync] Extension not available');
+                }
+                return false;
+            }
+
+            // Sync when page becomes visible (user switches back to tab)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    syncWithExtensionNow();
+                }
+            });
 
             // Fetch pages from Facebook API via extension or direct call
             function fetchPages(accessToken) {
