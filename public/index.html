@@ -3879,10 +3879,10 @@
                 }
             }
 
-            // Calculate next schedule for panel (fetch from database)
+            // Calculate next schedule for panel (fetch from database with auto-refresh)
             async function calculateNextScheduleForPanel() {
                 try {
-                    const response = await fetch('/api/auto-post-config');
+                    const response = await fetch('/api/auto-post-config?pageId=' + pageId);
                     const data = await response.json();
                     
                     if (data.success && data.config && data.config.next_post_at) {
@@ -3919,6 +3919,18 @@
 
                 return result.toLocaleString("th-TH");
             }
+
+            // Auto-refresh next scheduled time every 30 seconds
+            setInterval(async () => {
+                if (autoScheduleEnabledPanel.checked && nextScheduleDisplayPanel) {
+                    try {
+                        const result = await calculateNextScheduleForPanel();
+                        nextScheduleDisplayPanel.textContent = result;
+                    } catch (error) {
+                        console.error('Auto-refresh failed:', error);
+                    }
+                }
+            }, 30000);
 
             // Settings modal is now deprecated - using settings panel instead
             // The settingsNavBtn click is handled in the navigation section below
