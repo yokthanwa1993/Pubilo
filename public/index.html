@@ -7353,67 +7353,69 @@
                 }
             });
 
-            // Auto-sync with Extension every 30 seconds (avoid Facebook rate limit)
+            // Auto-sync with Extension cached data every 30 seconds
             setInterval(async () => {
                 try {
                     if (typeof window.pubiloExtension !== 'undefined') {
-                        const extensionData = await window.pubiloExtension.getStatus();
-                        if (extensionData && extensionData.connected) {
+                        // Get cached tokens (no Facebook API calls)
+                        const cachedData = await window.pubiloExtension.getCachedTokens();
+                        if (cachedData && cachedData.success) {
                             const currentUserId = localStorage.getItem("fewfeed_userId");
                             
-                            // Update if Extension has different data
-                            if (extensionData.userId && extensionData.userId !== currentUserId) {
-                                localStorage.setItem("fewfeed_userId", extensionData.userId);
-                                localStorage.setItem("fewfeed_userName", extensionData.userName || '');
-                                localStorage.setItem("fewfeed_accessToken", extensionData.token || '');
-                                localStorage.setItem("fewfeed_postToken", extensionData.postToken || '');
-                                localStorage.setItem("fewfeed_cookie", extensionData.cookie || '');
+                            // Update if Extension has different cached data
+                            if (cachedData.userId && cachedData.userId !== currentUserId) {
+                                localStorage.setItem("fewfeed_userId", cachedData.userId);
+                                localStorage.setItem("fewfeed_userName", cachedData.userName || '');
+                                localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
+                                localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
+                                localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
                                 
                                 showCookieStatus(
                                     true,
-                                    extensionData.userId,
-                                    extensionData.userName,
-                                    !!extensionData.token,
-                                    !!extensionData.cookie,
-                                    !!extensionData.postToken
+                                    cachedData.userId,
+                                    cachedData.userName,
+                                    !!cachedData.adsToken,
+                                    !!cachedData.cookie,
+                                    !!cachedData.postToken
                                 );
                                 
-                                console.log('[auto-sync] Updated from Extension');
+                                console.log('[auto-sync] Updated from Extension cache');
                             }
                         }
                     }
                 } catch (error) {
                     // Extension not available
                 }
-            }, 30000); // 30 seconds instead of 5
+            }, 30000);
 
-            // Manual sync function for immediate updates
+            // Manual sync function for cached data only
             async function syncWithExtensionNow() {
                 try {
                     if (typeof window.pubiloExtension !== 'undefined') {
-                        const extensionData = await window.pubiloExtension.getStatus();
-                        if (extensionData && extensionData.connected) {
-                            localStorage.setItem("fewfeed_userId", extensionData.userId || '');
-                            localStorage.setItem("fewfeed_userName", extensionData.userName || '');
-                            localStorage.setItem("fewfeed_accessToken", extensionData.token || '');
-                            localStorage.setItem("fewfeed_postToken", extensionData.postToken || '');
-                            localStorage.setItem("fewfeed_cookie", extensionData.cookie || '');
+                        // Get cached tokens only (no Facebook API calls)
+                        const cachedData = await window.pubiloExtension.getCachedTokens();
+                        if (cachedData && cachedData.success) {
+                            localStorage.setItem("fewfeed_userId", cachedData.userId || '');
+                            localStorage.setItem("fewfeed_userName", cachedData.userName || '');
+                            localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
+                            localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
+                            localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
                             
                             showCookieStatus(
                                 true,
-                                extensionData.userId,
-                                extensionData.userName,
-                                !!extensionData.token,
-                                !!extensionData.cookie,
-                                !!extensionData.postToken
+                                cachedData.userId,
+                                cachedData.userName,
+                                !!cachedData.adsToken,
+                                !!cachedData.cookie,
+                                !!cachedData.postToken
                             );
                             
-                            console.log('[manual-sync] Updated from Extension');
+                            console.log('[manual-sync] Updated from Extension cache');
                             return true;
                         }
                     }
                 } catch (error) {
-                    console.log('[manual-sync] Extension not available');
+                    console.log('[manual-sync] Extension cache not available');
                 }
                 return false;
             }
