@@ -54,8 +54,8 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
   }
 
   const now = new Date();
-  // Schedule 30 minutes ahead
-  const minTime = new Date(now.getTime() + 30 * 60 * 1000);
+  // Schedule 10 minutes ahead (Facebook minimum requirement)
+  const minTime = new Date(now.getTime() + 10 * 60 * 1000);
 
   // Check slots for next 24 hours
   for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
@@ -109,15 +109,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const now = new Date();
     const nowStr = now.toISOString();
-    // Schedule 15 minutes early to allow Facebook's 10-minute minimum
-    const scheduleWindowEnd = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
-    console.log('[cron-auto-post] Running at', nowStr, '- looking for posts due before', scheduleWindowEnd);
-
-    // Query configs where enabled=true AND next_post_at is within 15 minutes
-    const dueConfigs = await sql<AutoPostConfig[]>`
-      SELECT * FROM auto_post_config
-      WHERE enabled = true AND next_post_at <= ${scheduleWindowEnd}
-    `;
+    const forcePost = req.query.force === 'true' || isTest;
+    
+    let dueConfigs: AutoPostConfig[];
+    
+    if (forcePost) {
+      console.log('[cron-auto-post] FORCE MODE - processing all enabled configs');
+      dueConfigs = await sql<AutoPostConfig[]>`
+        SELECT * FROM auto_post_config WHERE enabled = true
+      `;
+    } else {
+      // Schedule 15 minutes early to allow Facebook's 10-minute minimum
+      const scheduleWindowEnd = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+      console.log('[cron-auto-post] Running at', nowStr, '- looking for posts due before', scheduleWindowEnd);
+      
+      dueConfigs = await sql<AutoPostConfig[]>`
+        SELECT * FROM auto_post_config
+        WHERE enabled = true AND next_post_at <= ${scheduleWindowEnd}
+      `;
+    }
 
     if (!dueConfigs || dueConfigs.length === 0) {
       await sql.end();
@@ -175,13 +185,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const aiResolution = settings?.ai_resolution || '2K';
         const imageSize = settings?.image_image_size || '1:1';
 
-        // Get scheduled posts from Facebook to find available time slot
+        // Get scheduled posts from Facebook to check conflicts
         const scheduledTimestamps = await getScheduledPosts(config.page_id, config.post_token);
         console.log(`[cron-auto-post] Found ${scheduledTimestamps.length} existing scheduled posts on Facebook`);
 
-        // Find next available time slot that's not taken
-        const scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
-        console.log(`[cron-auto-post] Scheduling post for: ${scheduledTime.toISOString()}`);
+        // Use next_post_at from database if available and valid
+        let scheduledTime: Date;
+        if (config.next_post_at && !forcePost) {
+          scheduledTime = new Date(config.next_post_at);
+          console.log(`[cron-auto-post] Using scheduled time from database: ${scheduledTime.toISOString()}`);
+        } else {
+          // Fallback: calculate next available time slot
+          scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
+          console.log(`[cron-auto-post] Calculated new scheduled time: ${scheduledTime.toISOString()}`);
+        }
 
         let facebookPostId: string;
 
@@ -347,33 +364,58 @@ async function generateAIImage(
   aiModel?: string,
   aiResolution?: string
 ): Promise<string> {
+  // Use settings from database, fallback to manual defaults
   const model = aiModel || 'gemini-2.0-flash-exp';
-  const resolution = aiResolution || '2K';
-  console.log(`[cron-auto-post] Generating AI image - model: ${model}, resolution: ${resolution}, aspectRatio: ${aspectRatio}`);
+  const finalAspectRatio = aspectRatio || '1:1';
+  const finalResolution = aiResolution || '2K';
+  
+  console.log(`[cron-auto-post] Generating AI image - model: ${model}, resolution: ${finalResolution}, aspectRatio: ${finalAspectRatio}`);
 
   let textPrompt: string;
-  const finalAspectRatio = aspectRatio || '1:1';
-
-  // Resolution dimensions
-  const resolutionDimensions: Record<string, Record<string, string>> = {
-    '2K': { '1:1': '1024x1024', '2:3': '1024x1536', '3:2': '1536x1024', '16:9': '1920x1080', '9:16': '1080x1920' },
-    '4K': { '1:1': '2048x2048', '2:3': '2048x3072', '3:2': '3072x2048', '16:9': '3840x2160', '9:16': '2160x3840' },
-  };
-  const dimensions = resolutionDimensions[resolution]?.[finalAspectRatio] || resolutionDimensions['2K'][finalAspectRatio] || '1024x1024';
 
   if (customPrompt && customPrompt.trim()) {
     textPrompt = customPrompt
       .replace(/\{\{QUOTE\}\}/g, quoteText)
       .replace(/\{\{PAGE_NAME\}\}/g, pageName || '');
 
-    textPrompt += `\n\n**CRITICAL IMAGE DIMENSIONS:**
-- **Aspect Ratio: ${finalAspectRatio}** → Generate image with ${dimensions} pixels
-- สร้างแค่ 1 รูปเดียว ห้ามสร้าง grid, collage`;
+    // Same dimension mapping as manual
+    const aspectDimensions: Record<string, string> = {
+      '1:1': '1024x1024 pixels (square)',
+      '2:3': '1024x1536 pixels (portrait/vertical)',
+      '3:2': '1536x1024 pixels (landscape/horizontal)',
+      '4:5': '1024x1280 pixels (portrait)',
+      '5:4': '1280x1024 pixels (landscape)',
+      '9:16': '1024x1820 pixels (vertical story)',
+      '16:9': '1820x1024 pixels (horizontal widescreen)',
+    };
+    const dimensionDesc = aspectDimensions[finalAspectRatio] || `${finalAspectRatio} ratio`;
+
+    textPrompt += `\n\n**CRITICAL IMAGE DIMENSIONS (MUST FOLLOW):**
+- **Aspect Ratio: ${finalAspectRatio}** → Generate image with ${dimensionDesc}
+- This is a ${finalAspectRatio.includes(':') && parseInt(finalAspectRatio.split(':')[0]) < parseInt(finalAspectRatio.split(':')[1]) ? 'PORTRAIT/VERTICAL' : finalAspectRatio === '1:1' ? 'SQUARE' : 'LANDSCAPE/HORIZONTAL'} image
+- Resolution: ${finalResolution}
+- สร้างแค่ 1 รูปเดียว ห้ามสร้าง grid, collage, 2x2, 4 รูปใน 1 ภาพ`;
   } else {
-    textPrompt = `สร้างรูปภาพ 1 รูป สำหรับโพสต์ Facebook:
-**ข้อความภาษาไทย:** "${quoteText}"
-**สไตล์:** Quote/คำคม สำหรับ Social Media ไทย
-**ขนาด:** ${dimensions} pixels`;
+    // Use exact same default prompt as manual
+    textPrompt = `สร้างรูปภาพ 1 รูป สำหรับโพสต์ Facebook ที่มีลักษณะดังนี้:
+
+**สำคัญมาก - ข้อห้าม:**
+- ห้ามสร้างรูปแบบ grid, collage หรือหลายรูปใน 1 ภาพ
+- ต้องเป็นรูปเดียวเท่านั้น ไม่ใช่ 2x2, 4 รูป หรือ split screen
+
+**พื้นหลัง:**
+- ภาพถ่ายธรรมชาติสวยงาม เช่น พระอาทิตย์ตก/ขึ้น ภูเขา ทะเล ท้องฟ้า หมอก ทุ่งหญ้า
+- สีโทนอบอุ่น gradient จากส้มทอง เหลือง ไปฟ้าอ่อน
+
+**ข้อความภาษาไทย:**
+"${quoteText}"
+
+**การจัดวางข้อความ:**
+- ข้อความอยู่ตรงกลางรูป
+- ฟอนต์หนา ตัวใหญ่ อ่านง่าย
+- สีข้อความเป็นสีเข้ม มีเงาเล็กน้อย
+
+**สไตล์:** Quote/คำคม สำหรับ Social Media ไทย`;
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;

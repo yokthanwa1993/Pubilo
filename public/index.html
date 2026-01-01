@@ -1109,8 +1109,13 @@
             }
 
             .form-textarea {
-                resize: vertical;
+                resize: none;
                 min-height: 80px;
+                overflow-y: hidden;
+            }
+
+            .form-textarea.auto-resize {
+                height: auto;
             }
 
             .form-select {
@@ -1341,7 +1346,49 @@
                 font-size: 0.75rem;
                 color: #6b7280;
                 margin-top: 0.25rem;
-                margin-left: 1.625rem;
+            }
+
+            .minute-grid {
+                display: grid;
+                grid-template-columns: repeat(10, 1fr);
+                gap: 0.25rem;
+                margin-top: 0.5rem;
+            }
+
+            .minute-checkbox {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.25rem 0.35rem;
+                border: 1px solid #e5e7eb;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: white;
+            }
+
+            .minute-checkbox:hover {
+                border-color: #a78bfa;
+                background: #f5f3ff;
+            }
+
+            .minute-checkbox input {
+                display: none;
+            }
+
+            .minute-checkbox input:checked + span {
+                color: white;
+            }
+
+            .minute-checkbox:has(input:checked) {
+                background: #7c3aed;
+                border-color: #7c3aed;
+                color: white;
+            }
+
+            .minute-checkbox span {
+                font-weight: 500;
+                font-size: 0.7rem;
             }
 
             .radio-group {
@@ -1542,6 +1589,24 @@
 
             #settingsPanel .pending-panel-header {
                 flex-shrink: 0;
+            }
+
+            #textPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #textPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            .text-post-form {
+                padding: 1rem 0;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
             }
 
             .settings-content {
@@ -2351,6 +2416,19 @@
                             </svg>
                             Image
                         </a>
+                        <a href="#" class="nav-item" id="textNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <polyline points="4 7 4 4 20 4 20 7" />
+                                <line x1="9" y1="20" x2="15" y2="20" />
+                                <line x1="12" y1="4" x2="12" y2="20" />
+                            </svg>
+                            Text
+                        </a>
                         <a href="#" class="nav-item" id="reelsNavItem">
                             <svg
                                 viewBox="0 0 24 24"
@@ -2951,6 +3029,41 @@
                 </div>
                 <!-- End reelsModeContainer -->
 
+                <!-- Text Panel - For adding new quotes -->
+                <div
+                    class="pending-panel"
+                    id="textPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>เพิ่มข้อความ</h2>
+                    </div>
+                    <div class="text-form-container" style="padding: 1rem;">
+                        <textarea
+                            id="textQuoteInput"
+                            placeholder="พิมพ์ข้อความหรือคำคมที่ต้องการเพิ่ม..."
+                            style="width: 100%; min-height: 150px; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"
+                        ></textarea>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                            <button
+                                id="textQuoteClearBtn"
+                                type="button"
+                                style="padding: 0.75rem 1.5rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                            >
+                                ล้าง
+                            </button>
+                            <button
+                                id="textQuoteSubmitBtn"
+                                type="button"
+                                style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                            >
+                                บันทึกไป Quotes
+                            </button>
+                        </div>
+                        <div id="textQuoteStatus" style="margin-top: 1rem; text-align: center; color: #666;"></div>
+                    </div>
+                </div>
+
                 <!-- Pending Panel (replaces preview + form) -->
                 <div
                     class="pending-panel"
@@ -2972,7 +3085,7 @@
                     </div>
                 </div>
 
-                <!-- Quotes Panel -->
+                <!-- Quotes Panel - List only (add via #text) -->
                 <div
                     class="pending-panel"
                     id="quotesPanel"
@@ -2980,20 +3093,9 @@
                 >
                     <div class="pending-panel-header">
                         <h2>Quotes</h2>
-                    </div>
-                    <div class="quotes-form" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
-                        <input
-                            type="text"
-                            id="quoteInput"
-                            placeholder="เพิ่มคำคมใหม่..."
-                            style="flex: 1; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;"
-                        />
-                        <button
-                            id="addQuoteBtn"
-                            style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
-                        >
-                            เพิ่ม
-                        </button>
+                        <a href="#text" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; text-decoration: none; font-size: 0.9rem;">
+                            + เพิ่มใหม่
+                        </a>
                     </div>
                     <div
                         class="quotes-table-container"
@@ -3031,15 +3133,71 @@
                                 style="display: none"
                             >
                                 <label class="form-label">นาทีที่ต้องการโพสต์</label>
-                                <input
-                                    type="text"
-                                    class="form-input"
-                                    id="scheduleMinutesPanel"
-                                    value="00, 15, 30, 45"
-                                    placeholder="00, 15, 30, 45"
-                                />
+                                <div class="minute-grid" id="scheduleMinutesGridPanel">
+                                    <label class="minute-checkbox"><input type="checkbox" value="00" checked><span>00</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="01"><span>01</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="02"><span>02</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="03"><span>03</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="04"><span>04</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="05"><span>05</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="06"><span>06</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="07"><span>07</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="08"><span>08</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="09"><span>09</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="10"><span>10</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="11"><span>11</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="12"><span>12</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="13"><span>13</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="14"><span>14</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="15" checked><span>15</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="16"><span>16</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="17"><span>17</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="18"><span>18</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="19"><span>19</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="20"><span>20</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="21"><span>21</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="22"><span>22</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="23"><span>23</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="24"><span>24</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="25"><span>25</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="26"><span>26</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="27"><span>27</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="28"><span>28</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="29"><span>29</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="30" checked><span>30</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="31"><span>31</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="32"><span>32</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="33"><span>33</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="34"><span>34</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="35"><span>35</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="36"><span>36</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="37"><span>37</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="38"><span>38</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="39"><span>39</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="40"><span>40</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="41"><span>41</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="42"><span>42</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="43"><span>43</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="44"><span>44</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="45" checked><span>45</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="46"><span>46</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="47"><span>47</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="48"><span>48</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="49"><span>49</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="50"><span>50</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="51"><span>51</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="52"><span>52</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="53"><span>53</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="54"><span>54</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="55"><span>55</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="56"><span>56</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="57"><span>57</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="58"><span>58</span></label>
+                                    <label class="minute-checkbox"><input type="checkbox" value="59"><span>59</span></label>
+                                </div>
+                                <input type="hidden" id="scheduleMinutesPanel" value="00, 15, 30, 45" />
                                 <p class="setting-desc">
-                                    ใส่นาทีที่ต้องการโพสต์ คั่นด้วยคอมม่า เช่น 00, 15, 30, 45 = โพสต์ทุก 15 นาที
+                                    เลือกนาทีที่ต้องการโพสต์ (ทุกชั่วโมง)
                                 </p>
                             </div>
                             <div
@@ -3054,6 +3212,35 @@
                                 >
                                     -
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Post Alternating Section -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">🔄 Auto-Post Alternating</h3>
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="autoPostEnabled" />
+                                    <span>สลับโพสต์ Text / Image</span>
+                                </label>
+                                <p class="setting-desc">
+                                    ใช้เวลาร่วมกับ Auto Schedule Posts - สลับระหว่าง Text (ข้อความ) กับ Image (รูป AI)
+                                </p>
+                            </div>
+                            <div class="setting-group" id="autoPostStatusGroup" style="display: none;">
+                                <div class="auto-post-status" style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+                                    <span>โพสต์ถัดไป: </span>
+                                    <span id="autoPostNextType" style="font-weight: 600;">-</span>
+                                </div>
+                            </div>
+                            <div class="setting-group" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <button type="button" id="syncTokenBtn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                                    🔄 Sync Token
+                                </button>
+                                <button type="button" id="triggerCronBtn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                                    ⚡ ทดสอบ Cron ทันที
+                                </button>
+                                <span id="cronResult" style="font-size: 0.8rem;"></span>
                             </div>
                         </div>
 
@@ -3172,15 +3359,71 @@
                         style="display: none"
                     >
                         <label class="form-label">นาทีที่ต้องการโพสต์</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            id="scheduleMinutes"
-                            value="00, 15, 30, 45"
-                            placeholder="00, 15, 30, 45"
-                        />
+                        <div class="minute-grid" id="scheduleMinutesGrid">
+                            <label class="minute-checkbox"><input type="checkbox" value="00" checked><span>00</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="01"><span>01</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="02"><span>02</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="03"><span>03</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="04"><span>04</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="05"><span>05</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="06"><span>06</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="07"><span>07</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="08"><span>08</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="09"><span>09</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="10"><span>10</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="11"><span>11</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="12"><span>12</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="13"><span>13</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="14"><span>14</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="15" checked><span>15</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="16"><span>16</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="17"><span>17</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="18"><span>18</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="19"><span>19</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="20"><span>20</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="21"><span>21</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="22"><span>22</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="23"><span>23</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="24"><span>24</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="25"><span>25</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="26"><span>26</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="27"><span>27</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="28"><span>28</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="29"><span>29</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="30" checked><span>30</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="31"><span>31</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="32"><span>32</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="33"><span>33</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="34"><span>34</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="35"><span>35</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="36"><span>36</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="37"><span>37</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="38"><span>38</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="39"><span>39</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="40"><span>40</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="41"><span>41</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="42"><span>42</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="43"><span>43</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="44"><span>44</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="45" checked><span>45</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="46"><span>46</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="47"><span>47</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="48"><span>48</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="49"><span>49</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="50"><span>50</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="51"><span>51</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="52"><span>52</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="53"><span>53</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="54"><span>54</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="55"><span>55</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="56"><span>56</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="57"><span>57</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="58"><span>58</span></label>
+                            <label class="minute-checkbox"><input type="checkbox" value="59"><span>59</span></label>
+                        </div>
+                        <input type="hidden" id="scheduleMinutes" value="00, 15, 30, 45" />
                         <p class="setting-desc">
-                            ใส่นาทีที่ต้องการโพสต์ คั่นด้วยคอมม่า เช่น 00, 15, 30, 45 = โพสต์ทุก 15 นาที
+                            เลือกนาทีที่ต้องการโพสต์ (ทุกชั่วโมง)
                         </p>
                     </div>
                     <div
@@ -3330,9 +3573,37 @@
             );
             const scheduleMinutes =
                 document.getElementById("scheduleMinutes");
+            const scheduleMinutesGrid =
+                document.getElementById("scheduleMinutesGrid");
             const scheduleIntervalGroup = document.getElementById(
                 "scheduleIntervalGroup",
             );
+
+            // Sync minute checkboxes with hidden input
+            function syncMinuteGridToInput(grid, input) {
+                const checked = Array.from(grid.querySelectorAll('input:checked'))
+                    .map(cb => cb.value)
+                    .sort((a, b) => parseInt(a) - parseInt(b));
+                input.value = checked.join(', ');
+            }
+
+            function syncInputToMinuteGrid(input, grid) {
+                const values = (input.value || '00, 15, 30, 45')
+                    .split(',')
+                    .map(v => v.trim());
+                grid.querySelectorAll('input').forEach(cb => {
+                    cb.checked = values.includes(cb.value);
+                });
+            }
+
+            // Add event listeners to minute grid checkboxes
+            if (scheduleMinutesGrid) {
+                scheduleMinutesGrid.querySelectorAll('input').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        syncMinuteGridToInput(scheduleMinutesGrid, scheduleMinutes);
+                    });
+                });
+            }
             const nextScheduleInfo =
                 document.getElementById("nextScheduleInfo");
             const nextScheduleDisplay = document.getElementById(
@@ -3346,6 +3617,22 @@
             function getCurrentPageId() {
                 const pageSelect = document.getElementById("pageSelect");
                 return pageSelect ? pageSelect.value : null;
+            }
+
+            // Auto-resize textarea to fit content
+            function autoResizeTextarea(textarea) {
+                if (!textarea) return;
+                textarea.classList.add('auto-resize');
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(80, textarea.scrollHeight) + 'px';
+            }
+
+            // Setup auto-resize for all textareas
+            function setupTextareaAutoResize() {
+                const textareas = document.querySelectorAll('.form-textarea');
+                textareas.forEach(textarea => {
+                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                });
             }
 
             // Get current aspect ratio based on mode (link or image)
@@ -3468,6 +3755,7 @@
 
                         autoScheduleEnabled.checked = enabled;
                         scheduleMinutes.value = mins;
+                        if (scheduleMinutesGrid) syncInputToMinuteGrid(scheduleMinutes, scheduleMinutesGrid);
                         scheduleIntervalGroup.style.display = enabled ? "block" : "none";
                         nextScheduleInfo.style.display = enabled ? "block" : "none";
                     }
@@ -3591,8 +3879,20 @@
                 }
             }
 
-            // Calculate next schedule for panel (uses panel's input value)
-            function calculateNextScheduleForPanel() {
+            // Calculate next schedule for panel (fetch from database)
+            async function calculateNextScheduleForPanel() {
+                try {
+                    const response = await fetch('/api/auto-post-config');
+                    const data = await response.json();
+                    
+                    if (data.success && data.config && data.config.next_post_at) {
+                        return new Date(data.config.next_post_at).toLocaleString("th-TH");
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch next_post_at:', error);
+                }
+                
+                // Fallback to client-side calculation
                 const str = scheduleMinutesPanel.value || "00, 15, 30, 45";
                 const minutesArr = str.split(",")
                     .map(s => parseInt(s.trim()))
@@ -3685,7 +3985,17 @@
             // Settings Panel functionality
             const autoScheduleEnabledPanel = document.getElementById("autoScheduleEnabledPanel");
             const scheduleMinutesPanel = document.getElementById("scheduleMinutesPanel");
+            const scheduleMinutesGridPanel = document.getElementById("scheduleMinutesGridPanel");
             const scheduleIntervalGroupPanel = document.getElementById("scheduleIntervalGroupPanel");
+
+            // Add event listeners to Settings Panel minute grid
+            if (scheduleMinutesGridPanel) {
+                scheduleMinutesGridPanel.querySelectorAll('input').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        syncMinuteGridToInput(scheduleMinutesGridPanel, scheduleMinutesPanel);
+                    });
+                });
+            }
             const nextScheduleInfoPanel = document.getElementById("nextScheduleInfoPanel");
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
@@ -3693,6 +4003,11 @@
             const aiModelSelect = document.getElementById("aiModelSelect");
             const aiResolutionSelect = document.getElementById("aiResolutionSelect");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
+
+            // Auto-Post Alternating elements
+            const autoPostEnabled = document.getElementById("autoPostEnabled");
+            const autoPostStatusGroup = document.getElementById("autoPostStatusGroup");
+            const autoPostNextType = document.getElementById("autoPostNextType");
 
             // Auto-resize textarea function
             function autoResizeTextarea(textarea) {
@@ -3724,6 +4039,190 @@
                 const radio = document.querySelector(`input[name="imageImageSize"][value="${value}"]`);
                 if (radio) radio.checked = true;
             }
+
+            // Auto-Post Alternating Functions
+            function formatAutoPostTime(isoString) {
+                if (!isoString) return "-";
+                const date = new Date(isoString);
+                return date.toLocaleString('th-TH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function getNextPostType(lastType) {
+                if (!lastType) return "Text";
+                return lastType === "text" ? "Image" : "Text";
+            }
+
+            async function loadAutoPostConfig() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return;
+
+                try {
+                    const response = await fetch(`/api/auto-post-config?pageId=${pageId}`);
+                    const data = await response.json();
+                    if (data.success && data.config) {
+                        const config = data.config;
+                        autoPostEnabled.checked = config.enabled || false;
+
+                        // Update visibility and status
+                        autoPostStatusGroup.style.display = config.enabled ? "block" : "none";
+                        autoPostNextType.textContent = getNextPostType(config.last_post_type);
+
+                        // Auto-sync PAGE token to database if enabled
+                        // This ensures cron uses the correct token
+                        if (config.enabled) {
+                            const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                            if (pageToken && pageToken !== config.post_token) {
+                                console.log("[Auto-Post] Syncing page token to database...");
+                                fetch('/api/auto-post-config', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
+                                });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("[Auto-Post] Failed to load config:", err);
+                }
+            }
+
+            async function saveAutoPostConfig() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return;
+
+                // Get PAGE token from localStorage (set when selecting a page)
+                // This is the page-specific token needed for posting, NOT the user token
+                const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                if (!pageToken) {
+                    console.warn("[Auto-Post] No page token in localStorage - please select a page first");
+                } else {
+                    console.log("[Auto-Post] Using pageToken from localStorage:", pageToken.substring(0, 15) + "...");
+                }
+
+                try {
+                    const response = await fetch('/api/auto-post-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pageId,
+                            enabled: autoPostEnabled.checked,
+                            postToken: pageToken  // Use the PAGE token, not user token
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log("[Auto-Post] Config saved:", data.config);
+                        // Reload config to update UI
+                        await loadAutoPostConfig();
+                    } else {
+                        console.error("[Auto-Post] Failed to save config:", data.error);
+                    }
+                } catch (err) {
+                    console.error("[Auto-Post] Failed to save config:", err);
+                }
+            }
+
+            // Auto-post enabled checkbox change handler
+            autoPostEnabled.addEventListener("change", () => {
+                autoPostStatusGroup.style.display = autoPostEnabled.checked ? "block" : "none";
+            });
+
+            // Sync Token button handler - force sync PAGE token to database
+            const syncTokenBtn = document.getElementById("syncTokenBtn");
+            syncTokenBtn.addEventListener("click", async () => {
+                const cronResult = document.getElementById("cronResult");
+                syncTokenBtn.disabled = true;
+                syncTokenBtn.textContent = "⏳ Syncing...";
+                cronResult.textContent = "";
+
+                try {
+                    const pageId = getCurrentPageId();
+                    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+
+                    if (!pageId || !pageToken) {
+                        cronResult.textContent = "❌ ไม่มี Page Token - กรุณาเลือก Page ก่อน";
+                        cronResult.style.color = "#ef4444";
+                    } else {
+                        console.log("[Sync Token] Syncing page token to database...");
+                        const response = await fetch('/api/auto-post-config', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
+                        });
+                        const result = await response.json();
+
+                        if (result.success) {
+                            cronResult.textContent = "✅ Sync Token สำเร็จ!";
+                            cronResult.style.color = "#22c55e";
+                        } else {
+                            cronResult.textContent = `❌ ${result.error}`;
+                            cronResult.style.color = "#ef4444";
+                        }
+                    }
+                } catch (err) {
+                    cronResult.textContent = `❌ ${err.message}`;
+                    cronResult.style.color = "#ef4444";
+                }
+
+                syncTokenBtn.disabled = false;
+                syncTokenBtn.textContent = "🔄 Sync Token";
+            });
+
+            // Trigger Cron button handler
+            const triggerCronBtn = document.getElementById("triggerCronBtn");
+            const cronResult = document.getElementById("cronResult");
+            triggerCronBtn.addEventListener("click", async () => {
+                triggerCronBtn.disabled = true;
+                triggerCronBtn.textContent = "⏳ กำลังรัน...";
+                cronResult.textContent = "";
+                cronResult.style.color = "";
+
+                try {
+                    // First sync PAGE token to database before testing
+                    const pageId = getCurrentPageId();
+                    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                    if (pageId && pageToken) {
+                        console.log("[Cron Test] Syncing page token first...");
+                        await fetch('/api/auto-post-config', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
+                        });
+                    }
+
+                    const response = await fetch("/api/cron-auto-post", {
+                        method: "GET",
+                        headers: { "Authorization": "Bearer test" }
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        cronResult.textContent = `✅ สำเร็จ: ${result.processed} โพสต์`;
+                        cronResult.style.color = "#22c55e";
+                        if (result.results) {
+                            console.log("[Cron Test] Results:", result.results);
+                        }
+                    } else {
+                        cronResult.textContent = `❌ ${result.error || result.message || "Error"}`;
+                        cronResult.style.color = "#ef4444";
+                    }
+                } catch (err) {
+                    cronResult.textContent = `❌ ${err.message}`;
+                    cronResult.style.color = "#ef4444";
+                }
+
+                triggerCronBtn.disabled = false;
+                triggerCronBtn.textContent = "⚡ ทดสอบ Cron ทันที";
+
+                // Reload auto-post config to see updated next_post_at
+                await loadAutoPostConfig();
+            });
 
             // Load settings into the panel
             async function loadSettingsPanel() {
@@ -3769,12 +4268,16 @@
                     autoScheduleEnabledPanel.checked = false;
                     scheduleMinutesPanel.value = "00, 15, 30, 45";
                 }
+                // Sync minute grid with hidden input
+                if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
                 // Update visibility
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
+                    calculateNextScheduleForPanel().then(result => {
+                        nextScheduleDisplayPanel.textContent = result;
+                    });
                 }
 
                 // Load AI prompts from database (with localStorage fallback)
@@ -3828,6 +4331,9 @@
                 localStorage.setItem(`imageImageSize_${pageId}`, savedImageImageSize);
                 localStorage.setItem("aiModel", savedAiModel);
                 localStorage.setItem("aiResolution", savedAiResolution);
+
+                // Load Auto-Post Alternating config
+                await loadAutoPostConfig();
             }
 
             // Auto schedule checkbox change handler for panel
@@ -3835,14 +4341,18 @@
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
+                    calculateNextScheduleForPanel().then(result => {
+                        nextScheduleDisplayPanel.textContent = result;
+                    });
                 }
             });
 
             // Schedule minutes change handler for panel
             scheduleMinutesPanel.addEventListener("input", () => {
                 if (autoScheduleEnabledPanel.checked) {
-                    nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
+                    calculateNextScheduleForPanel().then(result => {
+                        nextScheduleDisplayPanel.textContent = result;
+                    });
                 }
             });
 
@@ -3885,6 +4395,7 @@
                 // Also update the modal settings (keep in sync)
                 autoScheduleEnabled.checked = autoSchedule;
                 scheduleMinutes.value = mins;
+                if (scheduleMinutesGrid) syncInputToMinuteGrid(scheduleMinutes, scheduleMinutesGrid);
                 scheduleIntervalGroup.style.display = autoSchedule ? "block" : "none";
                 nextScheduleInfo.style.display = autoSchedule ? "block" : "none";
 
@@ -3930,6 +4441,9 @@
                         });
                     }
 
+                    // Save Auto-Post Alternating config
+                    await saveAutoPostConfig();
+
                     if (data.success) {
                         console.log("[FEWFEED] Settings and prompts saved to database");
                         // Show success feedback
@@ -3958,6 +4472,7 @@
             const dashboardNavItem =
                 document.getElementById("dashboardNavItem");
             const imageNavItem = document.getElementById("imageNavItem");
+            const textNavItem = document.getElementById("textNavItem");
             const reelsNavItem = document.getElementById("reelsNavItem");
             const pendingNavItem = document.getElementById("pendingNavItem");
             const quotesNavItem = document.getElementById("quotesNavItem");
@@ -4106,7 +4621,7 @@
 
                 const thead = document.createElement("thead");
                 const headerRow = document.createElement("tr");
-                ["Type", "Image", "Message", "Scheduled", "Status", "Edit", "Delete"].forEach((text) => {
+                ["Type", "Image", "Message", "Time", "Status", "Edit", "Delete"].forEach((text) => {
                     const th = document.createElement("th");
                     th.textContent = text;
                     headerRow.appendChild(th);
@@ -4123,14 +4638,26 @@
                     const typeTd = document.createElement("td");
                     const typeSpan = document.createElement("span");
                     const pType = post.postType || 'link';
-                    typeSpan.className = `post-type-badge post-type-${pType}`;
+                    typeSpan.className = `post-type-badge post-type-${pType.replace('auto-', '')}`;
                     const typeIcons = {
                         link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
                         image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
-                        reels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>'
+                        reels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>',
+                        'auto-text': '📝',
+                        'auto-image': '🖼️',
+                        text: '📝'
                     };
-                    typeSpan.innerHTML = typeIcons[pType] || typeIcons.link;
-                    typeSpan.title = pType.charAt(0).toUpperCase() + pType.slice(1);
+                    const iconKey = pType.startsWith('auto-') ? pType : pType;
+                    typeSpan.innerHTML = typeIcons[iconKey] || typeIcons.link;
+                    const typeLabels = {
+                        link: 'Link',
+                        image: 'Image',
+                        reels: 'Reels',
+                        'auto-text': 'Auto Text',
+                        'auto-image': 'Auto Image',
+                        text: 'Text'
+                    };
+                    typeSpan.title = typeLabels[pType] || pType;
                     typeTd.appendChild(typeSpan);
                     tr.appendChild(typeTd);
 
@@ -4221,7 +4748,7 @@
                     const deleteBtn = document.createElement("button");
                     deleteBtn.className = "pending-table-delete";
                     deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
-                    deleteBtn.title = "Delete post";
+                    deleteBtn.title = "Delete";
                     deleteBtn.onclick = () => deleteScheduledPost(post.id);
                     deleteTd.appendChild(deleteBtn);
                     tr.appendChild(deleteTd);
@@ -4390,9 +4917,11 @@
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
                 });
-                // Hide quotes and settings panels
+                // Hide quotes, settings and text panels
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                const tp = document.getElementById("textPanel");
+                if (tp) tp.style.display = "none";
                 // Lock body scroll
                 document.body.style.overflow = "hidden";
                 // Show pending panel (full width)
@@ -4401,71 +4930,41 @@
                 appLayout.classList.add("pending-mode");
 
                 const pageId = getCurrentPageId();
-                const cachedPosts = !forceRefresh ? getCachedPosts(pageId) : null;
 
-                // Step 1: Show cached data immediately if available
-                if (cachedPosts) {
-                    console.log("[FEWFEED] Showing cached posts:", cachedPosts.length);
-                    renderPendingPosts(cachedPosts);
+                // Show skeleton while loading
+                pendingTableContainer.innerHTML = `
+                    <div class="pending-skeleton">
+                      <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+                      <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+                      <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
+                    </div>
+                `;
 
-                    // Step 2: Fetch fresh data in background
-                    fetchScheduledPostsFromFacebook().then(result => {
-                        if (result && result.loading) return;
-                        if (result && result.error) {
-                            console.error("[FEWFEED] Background refresh error:", result.error);
-                            return;
-                        }
-                        const freshPosts = Array.isArray(result) ? result : [];
+                try {
+                    // Fetch scheduled posts from Facebook
+                    const scheduledResult = await fetchScheduledPostsFromFacebook();
 
-                        // Step 3: Update UI only if data changed
-                        if (postsChanged(cachedPosts, freshPosts)) {
-                            console.log("[FEWFEED] Posts changed, updating UI");
-                            setCachedPosts(pageId, freshPosts);
-                            renderPendingPosts(freshPosts);
-                            updatePendingCount();
-                        } else {
-                            console.log("[FEWFEED] Posts unchanged, keeping cache");
-                            // Update timestamp even if unchanged
-                            setCachedPosts(pageId, freshPosts);
-                        }
-                    }).catch(err => {
-                        console.error("[FEWFEED] Background refresh failed:", err);
-                    });
-                } else {
-                    // No cache - show skeleton and fetch
-                    pendingTableContainer.innerHTML = `
-                        <div class="pending-skeleton">
-                          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
-                          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
-                          <div class="pending-skeleton-row"><div class="sk-img"></div><div class="sk-text"></div><div class="sk-date"></div><div class="sk-badge"></div></div>
-                        </div>
-                    `;
-
-                    try {
-                        const result = await fetchScheduledPostsFromFacebook();
-
-                        if (result && result.loading) return;
-
-                        if (result && result.error) {
-                            pendingTableContainer.textContent = "";
-                            const errorDiv = document.createElement("div");
-                            errorDiv.className = "pending-empty";
-                            errorDiv.textContent = result.error;
-                            pendingTableContainer.appendChild(errorDiv);
-                            return;
-                        }
-
-                        const scheduledPosts = Array.isArray(result) ? result : [];
-                        setCachedPosts(pageId, scheduledPosts);
-                        renderPendingPosts(scheduledPosts);
-                    } catch (err) {
-                        console.error("Failed to fetch scheduled posts:", err);
-                        pendingTableContainer.textContent = "";
-                        const errorDiv = document.createElement("div");
-                        errorDiv.className = "pending-empty";
-                        errorDiv.textContent = "Failed to load from Facebook";
-                        pendingTableContainer.appendChild(errorDiv);
+                    // Process scheduled posts
+                    let scheduledPosts = [];
+                    if (scheduledResult && !scheduledResult.loading && !scheduledResult.error) {
+                        scheduledPosts = Array.isArray(scheduledResult) ? scheduledResult : [];
                     }
+
+                    // Cache for pending count
+                    if (scheduledPosts.length > 0) {
+                        setCachedPosts(pageId, scheduledPosts);
+                    }
+
+                    // Render list
+                    renderPendingPosts(scheduledPosts);
+
+                } catch (err) {
+                    console.error("Failed to fetch posts:", err);
+                    pendingTableContainer.textContent = "";
+                    const errorDiv = document.createElement("div");
+                    errorDiv.className = "pending-empty";
+                    errorDiv.textContent = "Failed to load posts";
+                    pendingTableContainer.appendChild(errorDiv);
                 }
             }
 
@@ -4474,6 +4973,8 @@
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                const tp = document.getElementById("textPanel");
+                if (tp) tp.style.display = "none";
                 // Restore body scroll
                 document.body.style.overflow = "";
                 // Remove pending mode class
@@ -4488,6 +4989,8 @@
                 });
                 pendingPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                const tp = document.getElementById("textPanel");
+                if (tp) tp.style.display = "none";
                 quotesPanel.style.display = "flex";
                 appLayout.classList.add("pending-mode");
                 // Lock body scroll
@@ -4504,6 +5007,7 @@
                 });
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
+                textPanel.style.display = "none";
                 settingsPanel.style.display = "flex";
                 appLayout.classList.add("pending-mode");
                 // Lock body scroll
@@ -4512,10 +5016,89 @@
                 loadSettingsPanel();
             }
 
+            // Show text panel (for adding quotes)
+            const textPanel = document.getElementById("textPanel");
+
+            function showTextPanel() {
+                // Hide all mode containers
+                document.querySelectorAll(".mode-container").forEach((c) => {
+                    c.classList.remove("active");
+                });
+                pendingPanel.style.display = "none";
+                quotesPanel.style.display = "none";
+                settingsPanel.style.display = "none";
+                textPanel.style.display = "flex";
+                appLayout.classList.add("pending-mode");
+                // Lock body scroll
+                document.body.style.overflow = "hidden";
+
+                // Focus on textarea
+                const textInput = document.getElementById("textQuoteInput");
+                if (textInput) {
+                    textInput.focus();
+                }
+            }
+
+            // Text Quote Form Handlers
+            const textQuoteInput = document.getElementById("textQuoteInput");
+            const textQuoteClearBtn = document.getElementById("textQuoteClearBtn");
+            const textQuoteSubmitBtn = document.getElementById("textQuoteSubmitBtn");
+            const textQuoteStatus = document.getElementById("textQuoteStatus");
+
+            if (textQuoteClearBtn) {
+                textQuoteClearBtn.addEventListener("click", () => {
+                    textQuoteInput.value = "";
+                    textQuoteStatus.textContent = "";
+                    textQuoteInput.focus();
+                });
+            }
+
+            if (textQuoteSubmitBtn) {
+                textQuoteSubmitBtn.addEventListener("click", async () => {
+                    const text = textQuoteInput.value.trim();
+                    if (!text) {
+                        textQuoteStatus.textContent = "กรุณาใส่ข้อความ";
+                        textQuoteStatus.style.color = "#dc3545";
+                        return;
+                    }
+
+                    textQuoteSubmitBtn.disabled = true;
+                    textQuoteStatus.textContent = "กำลังบันทึก...";
+                    textQuoteStatus.style.color = "#666";
+
+                    try {
+                        const response = await fetch("/api/quotes", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ quoteText: text })
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            textQuoteStatus.textContent = "✓ บันทึกสำเร็จ กำลังไปหน้า Quotes...";
+                            textQuoteStatus.style.color = "#28a745";
+                            textQuoteInput.value = "";
+                            // Navigate to quotes page after brief delay
+                            setTimeout(() => {
+                                window.location.hash = "quotes";
+                                handleNavigation();
+                            }, 500);
+                        } else {
+                            textQuoteStatus.textContent = data.error || "บันทึกไม่สำเร็จ";
+                            textQuoteStatus.style.color = "#dc3545";
+                        }
+                    } catch (error) {
+                        console.error("Failed to save quote:", error);
+                        textQuoteStatus.textContent = "เกิดข้อผิดพลาด";
+                        textQuoteStatus.style.color = "#dc3545";
+                    } finally {
+                        textQuoteSubmitBtn.disabled = false;
+                    }
+                });
+            }
+
             // Quotes functionality
             const quotesTableContainer = document.getElementById("quotesTableContainer");
-            const quoteInput = document.getElementById("quoteInput");
-            const addQuoteBtn = document.getElementById("addQuoteBtn");
 
             let quotesOffset = 0;
             let quotesTotal = 0;
@@ -4757,47 +5340,6 @@
                 });
             }
 
-            if (addQuoteBtn) {
-                addQuoteBtn.addEventListener("click", async () => {
-                    const text = quoteInput.value.trim();
-                    if (!text) {
-                        alert("กรุณาใส่คำคม");
-                        return;
-                    }
-                    try {
-                        addQuoteBtn.disabled = true;
-                        addQuoteBtn.textContent = "...";
-                        const response = await fetch("/api/quotes", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ quoteText: text }),
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            quoteInput.value = "";
-                            loadQuotes();
-                        } else {
-                            alert("เพิ่มไม่สำเร็จ: " + data.error);
-                        }
-                    } catch (error) {
-                        console.error("[FEWFEED] Failed to add quote:", error);
-                        alert("เพิ่มไม่สำเร็จ");
-                    } finally {
-                        addQuoteBtn.disabled = false;
-                        addQuoteBtn.textContent = "เพิ่ม";
-                    }
-                });
-            }
-
-            // Enter key to add quote
-            if (quoteInput) {
-                quoteInput.addEventListener("keydown", (e) => {
-                    if (e.key === "Enter") {
-                        addQuoteBtn.click();
-                    }
-                });
-            }
-
             // Delete pending item
             window.deletePendingItem = async function (id) {
                 try {
@@ -4840,6 +5382,9 @@
                     reelsNavItem.classList.add("active");
                     setPostMode("reels");
                     showDashboard();
+                } else if (hash === "text") {
+                    textNavItem.classList.add("active");
+                    showTextPanel();
                 } else {
                     // Default: link
                     dashboardNavItem.classList.add("active");
@@ -4889,6 +5434,12 @@
             reelsNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
                 navigateTo("reels");
+            });
+
+            // Text nav item click
+            textNavItem.addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo("text");
             });
 
             // Set post mode (link, image, or reels) - toggle mode containers
@@ -5230,8 +5781,53 @@
                 state.referenceImages = await Promise.all(readPromises);
                 fileInput.value = "";
 
-                // Generate immediately
+                // Generate immediately with proper quote and prompt
                 try {
+                    const pageId = getCurrentPageId();
+                    let caption = "";
+
+                    // For image mode: fetch quote from DB
+                    if (postMode === "image" && pageId) {
+                        const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                        const quotesData = await quotesRes.json();
+
+                        if (quotesData.success && quotesData.quotes.length > 0) {
+                            let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
+                            if (!selectedQuote) {
+                                selectedQuote = quotesData.quotes.find(
+                                    (q) => q.id !== state.lastUsedQuoteId,
+                                ) || quotesData.quotes[0];
+                            }
+
+                            if (selectedQuote) {
+                                caption = selectedQuote.quote_text;
+                                if (!selectedQuote.isUsed) {
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                    });
+                                }
+                                state.lastUsedQuoteId = selectedQuote.id;
+                                state.lastCaption = caption;
+                                console.log('[FEWFEED] Reference upload: Auto-selected quote:', selectedQuote.id);
+                            }
+                        }
+                    }
+
+                    // Get prompt from database
+                    const promptType = postMode === "link" ? "link_post" : "image_post";
+                    let customPrompt = "";
+                    try {
+                        const promptRes = await fetch(`/api/prompts?pageId=${pageId}&promptType=${promptType}`);
+                        const promptData = await promptRes.json();
+                        if (promptData.success && promptData.prompts.length > 0) {
+                            customPrompt = promptData.prompts[0].prompt_text;
+                        }
+                    } catch (e) {
+                        console.warn('[FEWFEED] Failed to load prompt for reference upload');
+                    }
+
                     const response = await fetch("/api/generate", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -5239,6 +5835,10 @@
                             referenceImages: state.referenceImages,
                             aspectRatio: getCurrentAspectRatio(),
                             model: localStorage.getItem("aiModel") || "gemini-2.0-flash-exp",
+                            caption: caption,
+                            customPrompt: customPrompt,
+                            resolution: localStorage.getItem("aiResolution") || "2K",
+                            pageName: localStorage.getItem("fewfeed_selectedPageName") || "",
                         }),
                     });
 
@@ -5359,8 +5959,57 @@
                                     }
                                 }
                             }
+                        } else if (mode === "image") {
+                            // For image mode: check Primary Text field first, then fetch quote from DB
+                            const primaryTextField = els.primaryText;
+                            const userText = primaryTextField ? primaryTextField.value.trim() : "";
+
+                            if (userText) {
+                                // User entered text - use it directly
+                                caption = userText;
+                                console.log('[FEWFEED] Image mode: Using user-entered Primary Text:', caption.substring(0, 50) + '...');
+                            } else if (pageId) {
+                                // Primary Text is empty - fetch unused quote from database
+                                const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                                const quotesData = await quotesRes.json();
+
+                                if (quotesData.success && quotesData.quotes.length > 0) {
+                                    // Find first unused quote
+                                    let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
+                                    if (!selectedQuote) {
+                                        selectedQuote = quotesData.quotes.find(
+                                            (q) => q.id !== state.lastUsedQuoteId,
+                                        ) || quotesData.quotes[0];
+                                    }
+
+                                    if (selectedQuote) {
+                                        caption = selectedQuote.quote_text;
+
+                                        if (!selectedQuote.isUsed) {
+                                            // Mark as used only if it was unused
+                                            await fetch('/api/quotes', {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                            });
+                                        }
+
+                                        state.lastUsedQuoteId = selectedQuote.id;
+                                        console.log('[FEWFEED] Image mode: Auto-selected quote:', selectedQuote.id);
+
+                                        // Update Primary Text field with the quote for caption use
+                                        if (primaryTextField) {
+                                            primaryTextField.value = caption;
+                                            autoResizeTextarea(primaryTextField);
+                                            console.log('[FEWFEED] Image mode: Updated Primary Text with quote');
+                                        }
+                                    } else {
+                                        console.log('[FEWFEED] Image mode: No quotes available');
+                                    }
+                                }
+                            }
                         } else {
-                            // For other modes, get caption from field
+                            // For other modes (reels, etc.), get caption from field
                             const captionField = document.getElementById("caption");
                             caption = captionField ? captionField.value : "";
                         }
@@ -5368,9 +6017,11 @@
                         // Get aspect ratio based on mode
                         const storageKey = mode === "link" ? `linkImageSize_${pageId}` : `imageImageSize_${pageId}`;
                         const aspectRatio = localStorage.getItem(storageKey) || "1:1";
+                        console.log('[Generate] Mode:', mode, 'storageKey:', storageKey, 'aspectRatio:', aspectRatio);
 
                         // Get AI settings - load prompt from database with fallback to localStorage
                         const promptType = mode === "link" ? "link_post" : "image_post";
+                        console.log('[Generate] Fetching prompt with promptType:', promptType, 'pageId:', pageId);
                         let customPrompt = "";
                         try {
                             // Try page-specific prompt first
@@ -5395,6 +6046,9 @@
                             const promptKey = mode === "link" ? `linkPrompt_${pageId}` : `imagePrompt_${pageId}`;
                             customPrompt = localStorage.getItem(promptKey) || "";
                         }
+                        console.log('[Generate] Loaded customPrompt (first 100 chars):', customPrompt?.substring(0, 100));
+                        const pageName = localStorage.getItem("fewfeed_selectedPageName") || "";
+                        console.log('[Generate] pageName from localStorage:', pageName);
                         const resolution = localStorage.getItem("aiResolution") || "2K";
 
                         // Save caption to state for future regeneration
@@ -5410,7 +6064,9 @@
                             caption: caption,
                             resolution: resolution,
                             customPrompt: customPrompt,
+                            pageName: pageName,
                         };
+                        console.log('[Generate] Request body:', { aspectRatio, pageName, hasPrompt: !!customPrompt, promptType });
 
                         // Add reference images if available
                         if (state.referenceImages.length > 0) {
@@ -5765,8 +6421,12 @@
                             }
                             if (selectedQuote) {
                                 caption = selectedQuote.quote_text;
-                                // Update caption field
-                                if (captionField) captionField.value = caption;
+                                // Update Primary Text field for image mode (for caption use when posting)
+                                if (els.primaryText) {
+                                    els.primaryText.value = caption;
+                                    autoResizeTextarea(els.primaryText);
+                                    console.log('[Regenerate] Image mode: Updated Primary Text with quote');
+                                }
                                 if (!selectedQuote.isUsed) {
                                     // Mark as used only if it was unused
                                     await fetch('/api/quotes', {
@@ -5821,7 +6481,14 @@
                         caption: caption,
                         resolution: localStorage.getItem("aiResolution") || "2K",
                         customPrompt: customPrompt,
+                        pageName: localStorage.getItem("fewfeed_selectedPageName") || "",
                     };
+
+                    console.log('[Generate] Sending request with:', {
+                        aspectRatio: requestBody.aspectRatio,
+                        pageName: requestBody.pageName,
+                        hasCustomPrompt: !!requestBody.customPrompt
+                    });
 
                     // Add reference images if available
                     if (state.referenceImages.length > 0) {
@@ -6432,38 +7099,7 @@
             setupPublishHandler("image");
             setupPublishHandler("reels");
 
-            // Load config
-            fetch("/api/config")
-                .then((res) => res.json())
-                .then((config) => {
-                    if (config.defaults) {
-                        // linkUrl stays empty - user will paste
-                        if (config.defaults.caption) {
-                            caption.value = config.defaults.caption;
-                            previewCaption.textContent =
-                                config.defaults.caption;
-                        }
-                        if (config.defaults.description) {
-                            description.value = config.defaults.description;
-                            previewDescription.textContent =
-                                config.defaults.description;
-                        }
-                        // Re-validate after loading defaults
-                        validateLinkMode();
-                    }
-                    // Set page and ad account from server config
-                    if (config.pageId) {
-                        document.getElementById("pageSelect").value =
-                            config.pageId;
-                        document.getElementById("previewPageId").textContent =
-                            config.pageId;
-                    }
-                    if (config.adAccountId) {
-                        document.getElementById("adAccountSelect").value =
-                            config.adAccountId;
-                    }
-                })
-                .catch(() => {});
+            // Config loaded from localStorage via extension
 
             // ===== FEWFEED Extension Integration =====
             let fbCookie = null;
@@ -6513,8 +7149,9 @@
                     );
                 }
 
-                // Save selected page ID to localStorage for persistence across refreshes
+                // Save selected page ID and name to localStorage for persistence across refreshes
                 localStorage.setItem("fewfeed_selectedPageId", page.id);
+                localStorage.setItem("fewfeed_selectedPageName", page.name || "Page");
 
                 // Hide skeleton, show real selector
                 const skeleton = document.getElementById(
@@ -7053,6 +7690,9 @@
                         }
                     });
                 }
+
+                // Setup auto-resize for textareas
+                setupTextareaAutoResize();
             });
 
             document.addEventListener("keydown", (e) => {
