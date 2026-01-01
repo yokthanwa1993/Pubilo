@@ -496,10 +496,43 @@ async function getImagePrompt(sql: any, pageId: string): Promise<string | null> 
 
 async function getPageName(sql: any, pageId: string): Promise<string | null> {
   try {
+    // First try to get from auto_post_config
     const result = await sql`
-      SELECT page_name FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+      SELECT page_name, post_token FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
     `;
-    return result[0]?.page_name || null;
+    
+    if (result[0]?.page_name) {
+      return result[0].page_name;
+    }
+    
+    // If no page_name stored, fetch from Facebook Graph API
+    const postToken = result[0]?.post_token;
+    if (postToken) {
+      try {
+        const response = await fetch(
+          `https://graph.facebook.com/v21.0/${pageId}?fields=name&access_token=${postToken}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const pageName = data.name;
+          
+          // Update database with fetched name
+          if (pageName) {
+            await sql`
+              UPDATE auto_post_config 
+              SET page_name = ${pageName}, updated_at = ${new Date().toISOString()}
+              WHERE page_id = ${pageId}
+            `;
+            console.log(`[cron-auto-post] Updated page_name for ${pageId}: ${pageName}`);
+            return pageName;
+          }
+        }
+      } catch (error) {
+        console.error(`[cron-auto-post] Failed to fetch page name from Facebook:`, error);
+      }
+    }
+    
+    return null;
   } catch {
     return null;
   }
