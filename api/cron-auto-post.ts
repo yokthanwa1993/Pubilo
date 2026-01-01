@@ -233,14 +233,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           );
         }
 
-        // Update config state - find next available time (add just-scheduled time to avoid picking same slot)
-        scheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
+        // Update config state - refresh scheduled posts and find next available time
+        const updatedScheduledTimestamps = await getScheduledPosts(config.page_id, config.post_token);
+        console.log(`[cron-auto-post] Refreshed scheduled posts: ${updatedScheduledTimestamps.length} found`);
+        
+        // Add just-scheduled time to avoid picking same slot
+        updatedScheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
         
         // Add small buffer to avoid exact same time conflicts
         const bufferTime = new Date(scheduledTime.getTime() + 60 * 1000); // +1 minute buffer
-        scheduledTimestamps.push(Math.floor(bufferTime.getTime() / 1000));
+        updatedScheduledTimestamps.push(Math.floor(bufferTime.getTime() / 1000));
         
-        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
+        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, updatedScheduledTimestamps);
         const nextPostAt = nextAvailable.toISOString();
         await sql`
           UPDATE auto_post_config
