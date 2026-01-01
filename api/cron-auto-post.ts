@@ -137,13 +137,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           continue;
         }
 
-        // Debounce: skip if last post was less than 1 minute ago
-        if (config.last_post_at) {
-          const lastPostTime = new Date(config.last_post_at).getTime();
-          const timeSinceLastPost = Date.now() - lastPostTime;
-          if (timeSinceLastPost < 60 * 1000) {
-            console.log(`[cron-auto-post] Skipping page ${config.page_id} - posted ${Math.round(timeSinceLastPost/1000)}s ago`);
-            results.push({ page_id: config.page_id, status: 'skipped', reason: 'debounce' });
+        // Skip if next_post_at is more than 15 minutes in the future (not due yet)
+        if (config.next_post_at) {
+          const nextPostTime = new Date(config.next_post_at).getTime();
+          const timeUntilPost = nextPostTime - Date.now();
+          if (timeUntilPost > 15 * 60 * 1000) {
+            console.log(`[cron-auto-post] Skipping page ${config.page_id} - next post in ${Math.round(timeUntilPost/60000)} mins`);
+            results.push({ page_id: config.page_id, status: 'skipped', reason: 'not_due' });
             continue;
           }
         }
