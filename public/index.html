@@ -2749,6 +2749,42 @@
                 </div>
                 <!-- End linkModeContainer -->
 
+                <!-- ========== TEXT MODE ========== -->
+                <div class="mode-container" id="textModeContainer">
+                    <!-- Preview Panel -->
+                    <div class="preview-panel">
+                        <div class="card-preview">
+                            <div class="card-content">
+                                <div class="card-title">Text Post Preview</div>
+                                <div class="card-description" id="textPreviewContent">
+                                    พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Panel -->
+                    <div class="input-panel">
+                        <div class="input-group">
+                            <label for="textMessageTextarea">ข้อความ</label>
+                            <textarea
+                                id="textMessageTextarea"
+                                placeholder="พิมพ์ข้อความที่ต้องการโพสต์..."
+                                rows="8"
+                                style="min-height: 200px;"
+                            ></textarea>
+                        </div>
+
+                        <div class="publish-section">
+                            <button class="publish-btn" id="textPublishBtn">
+                                <span class="publish-icon">📝</span>
+                                Publish Text Post
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- End textModeContainer -->
+
                 <!-- ========== IMAGE MODE ========== -->
                 <div class="mode-container" id="imageModeContainer">
                     <!-- Preview Panel -->
@@ -5034,7 +5070,7 @@
             const textPanel = document.getElementById("textPanel");
 
             function showTextPanel() {
-                // Hide all mode containers
+                // Hide all panels
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
                 });
@@ -5042,15 +5078,42 @@
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
                 
-                // Show text posting mode instead of quote adding
+                // Show dashboard and text mode
                 setPostMode("text");
                 showDashboard();
                 
-                // Focus on message textarea
+                // Show text mode container
+                const textContainer = document.getElementById("textModeContainer");
+                if (textContainer) {
+                    textContainer.classList.add("active");
+                }
+                
+                // Focus on text textarea
                 setTimeout(() => {
-                    const messageTextarea = document.getElementById("messageTextarea");
-                    if (messageTextarea) {
-                        messageTextarea.focus();
+                    const textTextarea = document.getElementById("textMessageTextarea");
+                    if (textTextarea) {
+                        textTextarea.focus();
+                        
+                        // Add preview functionality
+                        textTextarea.addEventListener('input', () => {
+                            const previewContent = document.getElementById("textPreviewContent");
+                            if (previewContent) {
+                                previewContent.textContent = textTextarea.value || "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
+                            }
+                        });
+                    }
+                    
+                    // Add publish button handler
+                    const textPublishBtn = document.getElementById("textPublishBtn");
+                    if (textPublishBtn) {
+                        textPublishBtn.onclick = () => {
+                            const message = document.getElementById("textMessageTextarea").value;
+                            if (message.trim()) {
+                                publishPost("text", { message });
+                            } else {
+                                alert("กรุณาพิมพ์ข้อความก่อนโพสต์");
+                            }
+                        };
                     }
                 }, 100);
             }
