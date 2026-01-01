@@ -1,7 +1,61 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import postgres from 'postgres';
 
 const API_VERSION = "v21.0";
 const API_BASE = `https://graph.facebook.com/${API_VERSION}`;
+
+const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
+              process.env.SUPABASE_POSTGRES_URL ||
+              process.env.POSTGRES_URL ||
+              process.env.DATABASE_URL || "";
+
+// Get scheduled posts from Facebook API
+async function getScheduledPostsFromFacebook(pageId: string, pageToken: string): Promise<number[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE}/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.data || []).map((post: any) => parseInt(post.scheduled_publish_time));
+  } catch {
+    return [];
+  }
+}
+
+// Find next available time slot (same logic as auto-post-config)
+function findNextAvailableTimeSlot(scheduleMinutesStr: string, scheduledTimestamps: number[]): Date {
+  const scheduledMinutes = scheduleMinutesStr
+    .split(',')
+    .map(m => parseInt(m.trim()))
+    .filter(m => !isNaN(m) && m >= 0 && m < 60)
+    .sort((a, b) => a - b);
+
+  if (scheduledMinutes.length === 0) {
+    return new Date(Date.now() + 60 * 60 * 1000);
+  }
+
+  const now = new Date();
+  const minTime = new Date(now.getTime() + 10 * 60 * 1000);
+
+  for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
+    for (const minute of scheduledMinutes) {
+      const candidate = new Date(now);
+      candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
+
+      if (candidate.getTime() < minTime.getTime()) continue;
+
+      const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
+
+      if (!isTaken) {
+        return candidate;
+      }
+    }
+  }
+
+  return new Date(Date.now() + 60 * 60 * 1000);
+}
 
 // CORS headers
 const corsHeaders = {
@@ -84,7 +138,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Only schedule if we have proper Page Token
       if (scheduled && !isAdsToken) {
-        const scheduleTime = new Date(Date.now() + 15 * 60 * 1000);
+        // Use Auto Schedule time from page_settings
+        let scheduleTime: Date;
+
+        if (dbUrl) {
+          const sql = postgres(dbUrl, { ssl: 'require' });
+          try {
+            // Get schedule_minutes from page_settings
+            const settingsResult = await sql`
+              SELECT schedule_minutes FROM page_settings WHERE page_id = ${pageId} LIMIT 1
+            `;
+            const scheduleMinutesStr = settingsResult[0]?.schedule_minutes || '00, 15, 30, 45';
+
+            // Get current scheduled posts from Facebook to avoid conflicts
+            const scheduledTimestamps = await getScheduledPostsFromFacebook(pageId, pageToken);
+
+            // Find next available time slot
+            scheduleTime = findNextAvailableTimeSlot(scheduleMinutesStr, scheduledTimestamps);
+
+            console.log(`[publish] Using Auto Schedule time from page_settings: ${scheduleMinutesStr}`);
+          } catch (dbError) {
+            console.error(`[publish] DB error, fallback to 15min:`, dbError);
+            scheduleTime = new Date(Date.now() + 15 * 60 * 1000);
+          } finally {
+            await sql.end();
+          }
+        } else {
+          // Fallback if no database
+          scheduleTime = new Date(Date.now() + 15 * 60 * 1000);
+        }
+
         fbBody.scheduled_publish_time = Math.floor(scheduleTime.getTime() / 1000);
         fbBody.published = false;
         console.log(`[publish] Scheduling text post for: ${scheduleTime.toISOString()}`);
