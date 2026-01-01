@@ -3094,7 +3094,7 @@
                     <div class="pending-panel-header">
                         <h2>Quotes</h2>
                         <a href="#text" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; text-decoration: none; font-size: 0.9rem;">
-                            + เพิ่มใหม่
+                            + โพสต์ Text
                         </a>
                     </div>
                     <div
@@ -5041,13 +5041,19 @@
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
-                textPanel.style.display = "flex";
-                appLayout.classList.add("pending-mode");
-                // Lock body scroll
-                document.body.style.overflow = "hidden";
-
-                // Focus on textarea
-                const textInput = document.getElementById("textQuoteInput");
+                
+                // Show text posting mode instead of quote adding
+                setPostMode("text");
+                showDashboard();
+                
+                // Focus on message textarea
+                setTimeout(() => {
+                    const messageTextarea = document.getElementById("messageTextarea");
+                    if (messageTextarea) {
+                        messageTextarea.focus();
+                    }
+                }, 100);
+            }
                 if (textInput) {
                     textInput.focus();
                 }
