@@ -68,11 +68,16 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
 
       // Check if this slot is already taken (within 2-minute window)
       const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
-      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
+      // Increase conflict detection window to 5 minutes (300 seconds)
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 300);
 
       if (!isTaken) {
         console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()}`);
-        return candidate;
+        // Add small random offset (0-59 seconds) to prevent exact collisions
+        const randomOffset = Math.floor(Math.random() * 60) * 1000;
+        const finalTime = new Date(candidate.getTime() + randomOffset);
+        console.log(`[cron-auto-post] Final time with random offset: ${finalTime.toISOString()}`);
+        return finalTime;
       }
     }
   }
@@ -141,6 +146,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const config of dueConfigs) {
       try {
+        // Add small delay between processing to prevent race conditions
+        if (processed > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        }
+
         if (!config.post_token) {
           console.log(`[cron-auto-post] No post_token for page ${config.page_id}, skipping`);
           results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_token' });
@@ -240,9 +250,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Add just-scheduled time to avoid picking same slot
         updatedScheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
         
-        // Add small buffer to avoid exact same time conflicts
-        const bufferTime = new Date(scheduledTime.getTime() + 60 * 1000); // +1 minute buffer
-        updatedScheduledTimestamps.push(Math.floor(bufferTime.getTime() / 1000));
+        // Add buffer times around the scheduled time (±2 minutes)
+        const bufferTime1 = new Date(scheduledTime.getTime() - 2 * 60 * 1000);
+        const bufferTime2 = new Date(scheduledTime.getTime() + 2 * 60 * 1000);
+        updatedScheduledTimestamps.push(Math.floor(bufferTime1.getTime() / 1000));
+        updatedScheduledTimestamps.push(Math.floor(bufferTime2.getTime() / 1000));
         
         const nextAvailable = findNextAvailableTime(scheduleMinutesStr, updatedScheduledTimestamps);
         const nextPostAt = nextAvailable.toISOString();
