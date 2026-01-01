@@ -54,8 +54,8 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
   }
 
   const now = new Date();
-  // Facebook requires at least 10 minutes - we use 15 for safety buffer
-  const minTime = new Date(now.getTime() + 15 * 60 * 1000);
+  // Facebook requires at least 10 minutes - we use 20 for image generation buffer
+  const minTime = new Date(now.getTime() + 20 * 60 * 1000);
 
   // Check slots for next 24 hours
   for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
