@@ -20,33 +20,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
-      const pageId = req.query.pageId as string; // Optional: filter context for showing used status
+      const pageId = req.query.pageId as string;
+      const filter = req.query.filter as string || 'all'; // 'unused', 'used', or 'all'
 
-      // Get total count
-      const { count } = await supabase
-        .from('quotes')
-        .select('*', { count: 'exact', head: true });
+      // Get all quotes to calculate counts (need to fetch all, Supabase default limit is 1000)
+      let allQuotes: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      
+      while (true) {
+        const { data: batch, error: batchError } = await supabase
+          .from('quotes')
+          .select('id, used_by_pages, created_at')
+          .range(from, from + batchSize - 1);
+        
+        if (batchError) throw batchError;
+        if (!batch || batch.length === 0) break;
+        
+        allQuotes = allQuotes.concat(batch);
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
 
-      // Get paginated quotes including used_by_pages
-      const { data: quotes, error } = await supabase
+      // Calculate counts - GLOBAL mode
+      // "ยังไม่ใช้" = quotes that NO page has used yet
+      // "ใช้แล้ว" = quotes used by THIS page
+      let unusedCount = 0;
+      let usedCount = 0;
+      
+      (allQuotes || []).forEach(q => {
+        const usedByPages = q.used_by_pages || [];
+        if (usedByPages.length === 0) {
+          // Not used by anyone
+          unusedCount++;
+        } else if (pageId && usedByPages.includes(pageId)) {
+          // Used by this page
+          usedCount++;
+        }
+      });
+
+      // Filter all quotes first, then paginate
+      let allFiltered = (allQuotes || []).map(q => ({
+        ...q,
+        isUsed: (q.used_by_pages || []).length > 0,
+        isUsedByThisPage: pageId ? (q.used_by_pages || []).includes(pageId) : false
+      }));
+
+      // Apply filter
+      // "unused" = quotes NOT used by ANY page (global)
+      // "used" = quotes used by THIS page only
+      if (filter === 'unused') {
+        allFiltered = allFiltered.filter(q => !q.isUsed);
+      } else if (filter === 'used') {
+        allFiltered = allFiltered.filter(q => q.isUsedByThisPage);
+      }
+
+      // Sort - newest first (new quotes on top)
+      allFiltered.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
+
+      // Paginate
+      const paginatedQuotes = allFiltered.slice(offset, offset + limit);
+
+      // Get full quote data for paginated results
+      const quoteIds = paginatedQuotes.map(q => q.id);
+      const { data: fullQuotes, error } = await supabase
         .from('quotes')
         .select('id, quote_text, created_at, used_by_pages')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+        .in('id', quoteIds);
 
       if (error) throw error;
 
-      // Add isUsed flag if pageId is provided
-      const quotesWithUsage = (quotes || []).map(q => ({
-        ...q,
-        isUsed: pageId ? (q.used_by_pages || []).includes(pageId) : false
-      }));
+      // Merge and maintain order
+      const quotesMap = new Map((fullQuotes || []).map(q => [q.id, q]));
+      const finalQuotes = paginatedQuotes.map(q => ({
+        ...quotesMap.get(q.id),
+        isUsed: q.isUsed
+      })).filter(q => q.id);
+
+      const total = filter === 'used' ? usedCount : unusedCount;
 
       return res.status(200).json({
         success: true,
-        quotes: quotesWithUsage,
-        total: count || 0,
-        hasMore: offset + (quotes?.length || 0) < (count || 0),
+        quotes: finalQuotes,
+        total,
+        hasMore: offset + finalQuotes.length < allFiltered.length,
+        unusedCount,
+        usedCount,
       });
     } catch (error) {
       console.error('[quotes] GET error:', error);

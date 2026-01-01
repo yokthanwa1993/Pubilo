@@ -57,13 +57,71 @@ function findNextAvailableTimeSlot(scheduleMinutesStr: string, scheduledTimestam
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  if (!dbUrl) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
+  // POST - Save auto-post config
+  if (req.method === 'POST') {
+    const { pageId, enabled, postToken } = req.body;
+    
+    if (!pageId) {
+      return res.status(400).json({ error: 'Missing pageId' });
+    }
+
+    const sql = postgres(dbUrl, { ssl: 'require' });
+
+    try {
+      // Check if config exists
+      const existing = await sql`
+        SELECT id FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+      `;
+
+      const now = new Date().toISOString();
+
+      if (existing.length > 0) {
+        // Update existing
+        await sql`
+          UPDATE auto_post_config
+          SET enabled = ${enabled}, 
+              post_token = COALESCE(${postToken}, post_token),
+              updated_at = ${now}
+          WHERE page_id = ${pageId}
+        `;
+      } else {
+        // Insert new
+        await sql`
+          INSERT INTO auto_post_config (page_id, enabled, post_token, created_at, updated_at)
+          VALUES (${pageId}, ${enabled}, ${postToken}, ${now}, ${now})
+        `;
+      }
+
+      // Get updated config
+      const configs = await sql`
+        SELECT * FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+      `;
+
+      await sql.end();
+      return res.status(200).json({ success: true, config: configs[0] });
+
+    } catch (error) {
+      await sql.end();
+      console.error('[auto-post-config] POST error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  // GET - Read auto-post config
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

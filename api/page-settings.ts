@@ -11,6 +11,10 @@ interface PageSettings {
   page_id: string;
   auto_schedule: boolean;
   schedule_minutes: string;
+  ai_model: string;
+  ai_resolution: string;
+  link_image_size: string;
+  image_image_size: string;
   updated_at?: string;
 }
 
@@ -49,6 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           page_id: pageId,
           auto_schedule: false,
           schedule_minutes: '00, 15, 30, 45',
+          ai_model: 'gemini-2.0-flash-exp',
+          ai_resolution: '2K',
+          link_image_size: '1:1',
+          image_image_size: '1:1',
         },
       });
     } catch (error) {
@@ -63,7 +71,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST - Save settings for a page
   if (req.method === 'POST') {
     try {
-      const { pageId, autoSchedule, scheduleMinutes } = req.body;
+      const {
+        pageId,
+        autoSchedule,
+        scheduleMinutes,
+        aiModel,
+        aiResolution,
+        linkImageSize,
+        imageImageSize
+      } = req.body;
 
       if (!pageId) {
         return res.status(400).json({ success: false, error: 'Missing pageId' });
@@ -76,6 +92,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         page_id: pageId,
         auto_schedule: autoScheduleBool,
         schedule_minutes: mins,
+        ai_model: aiModel || 'gemini-2.0-flash-exp',
+        ai_resolution: aiResolution || '2K',
+        link_image_size: linkImageSize || '1:1',
+        image_image_size: imageImageSize || '1:1',
         updated_at: new Date().toISOString(),
       };
 

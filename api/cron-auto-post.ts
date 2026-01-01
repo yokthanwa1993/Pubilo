@@ -28,17 +28,27 @@ interface Quote {
 
 // Get scheduled posts from Facebook to check which time slots are taken
 async function getScheduledPosts(pageId: string, pageToken: string): Promise<number[]> {
+  const timestamps: number[] = [];
+  
   try {
+    // Get scheduled feed posts (includes both text and photo posts)
     const response = await fetch(
       `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
     );
-    if (!response.ok) return [];
-    const data = await response.json();
-    // Return array of scheduled timestamps (in seconds)
-    return (data.data || []).map((post: any) => parseInt(post.scheduled_publish_time));
-  } catch {
-    return [];
+    if (response.ok) {
+      const data = await response.json();
+      (data.data || []).forEach((post: any) => {
+        if (post.scheduled_publish_time) {
+          timestamps.push(parseInt(post.scheduled_publish_time));
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[cron-auto-post] Error fetching scheduled posts:', err);
   }
+  
+  console.log(`[cron-auto-post] Found ${timestamps.length} scheduled posts from Facebook`);
+  return timestamps;
 }
 
 // Find next available time slot from schedule that's not already taken on Facebook
@@ -68,8 +78,7 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
 
       // Check if this slot is already taken (within 2-minute window)
       const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
-      // Increase conflict detection window to 5 minutes (300 seconds)
-      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 300);
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
 
       if (!isTaken) {
         console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()}`);
@@ -124,8 +133,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT * FROM auto_post_config WHERE enabled = true
       `;
     } else {
-      // Schedule 15 minutes early to allow Facebook's 10-minute minimum
-      const scheduleWindowEnd = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+      // Schedule 30 minutes early to allow time for image generation + Facebook's 10-minute minimum
+      const scheduleWindowEnd = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
       console.log('[cron-auto-post] Running at', nowStr, '- looking for posts due before', scheduleWindowEnd);
       
       dueConfigs = await sql<AutoPostConfig[]>`
@@ -156,8 +165,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_token' });
           continue;
         }
-
-        // No debounce - process all due posts
 
         // Determine next post type (alternate from last)
         const nextPostType = config.last_post_type === 'text' ? 'image' : 'text';

@@ -3129,9 +3129,27 @@
                 >
                     <div class="pending-panel-header">
                         <h2>Quotes</h2>
-                        <a href="#text" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; text-decoration: none; font-size: 0.9rem;">
-                            + โพสต์ Text
-                        </a>
+                        <button id="addQuoteBtn" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                            + เพิ่มคำคม
+                        </button>
+                    </div>
+                    <!-- Add Quote Modal -->
+                    <div id="addQuoteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+                        <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 500px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0;">เพิ่มคำคม</h3>
+                                <button id="closeQuoteModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                            </div>
+                            <textarea id="newQuoteText" placeholder="พิมพ์คำคมที่ต้องการเพิ่ม..." style="width: 100%; min-height: 120px; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit; box-sizing: border-box;"></textarea>
+                            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                                <button id="cancelQuoteBtn" style="padding: 0.75rem 1.5rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer;">ยกเลิก</button>
+                                <button id="saveQuoteBtn" style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">บันทึก</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="quotes-tabs" style="display: flex; gap: 0; border-bottom: 1px solid #ddd; margin-bottom: 1rem;">
+                        <button id="quotesTabUnused" class="quotes-tab active" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; color: #1877f2; border-bottom: 2px solid #1877f2;">ยังไม่ใช้ <span id="quotesCountUnused" style="background: #e3f2fd; color: #1877f2; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.8rem; margin-left: 0.3rem;">0</span></button>
+                        <button id="quotesTabUsed" class="quotes-tab" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent;">ใช้แล้ว <span id="quotesCountUsed" style="background: #f5f5f5; color: #666; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.8rem; margin-left: 0.3rem;">0</span></button>
                     </div>
                     <div
                         class="quotes-table-container"
@@ -3340,6 +3358,7 @@
                                 <select id="aiModelSelect" class="form-input" style="padding: 0.5rem;">
                                     <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
                                     <option value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash Preview</option>
+                                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
                                     <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview (New)</option>
                                     <option value="imagen-3.0-generate-002">Imagen 3</option>
                                 </select>
@@ -3915,22 +3934,12 @@
                 }
             }
 
-            // Calculate next schedule for panel (fetch from database with auto-refresh)
+            // Calculate next schedule for panel (uses same logic as getNextScheduleTime)
             async function calculateNextScheduleForPanel() {
-                try {
-                    // Use hardcoded pageId for now - should get from pageSelect
-                    const pageId = getCurrentPageId() || '168440993027073';
-                    const response = await fetch('/api/auto-post-config?pageId=' + pageId);
-                    const data = await response.json();
-                    
-                    if (data.success && data.config && data.config.next_post_at) {
-                        return new Date(data.config.next_post_at).toLocaleString("th-TH");
-                    }
-                } catch (error) {
-                    console.error('Failed to fetch next_post_at:', error);
-                }
+                // Refresh scheduled times from Facebook first
+                await refreshScheduledPostTimes();
                 
-                // Fallback to client-side calculation
+                // Use same logic as getNextScheduleTime
                 const str = scheduleMinutesPanel.value || "00, 15, 30, 45";
                 const minutesArr = str.split(",")
                     .map(s => parseInt(s.trim()))
@@ -3941,21 +3950,20 @@
                     return new Date(Date.now() + 15 * 60 * 1000).toLocaleString("th-TH");
                 }
 
+                // Facebook requires at least 10 min in the future
                 const minTime = new Date(Date.now() + 10 * 60 * 1000);
-                const result = new Date(minTime);
-                result.setSeconds(0, 0);
 
-                const currentMinute = result.getMinutes();
-                const nextMinute = minutesArr.find(m => m > currentMinute);
+                // Find first available slot
+                let candidate = findNextSlot(minTime, minutesArr);
 
-                if (nextMinute !== undefined) {
-                    result.setMinutes(nextMinute, 0, 0);
-                } else {
-                    result.setHours(result.getHours() + 1);
-                    result.setMinutes(minutesArr[0], 0, 0);
+                // Keep looking until we find a free slot
+                let iterations = 0;
+                while (isSlotTaken(candidate) && iterations < 100) {
+                    candidate = findNextSlot(new Date(candidate.getTime() + 60 * 1000), minutesArr);
+                    iterations++;
                 }
 
-                return result.toLocaleString("th-TH");
+                return candidate.toLocaleString("th-TH");
             }
 
             // Auto-refresh next scheduled time every 30 seconds
@@ -4146,6 +4154,9 @@
                 const pageId = getCurrentPageId();
                 if (!pageId) return;
 
+                const enabled = autoPostEnabled.checked;
+                console.log("[Auto-Post] Saving config - pageId:", pageId, "enabled:", enabled);
+
                 // Get PAGE token from localStorage (set when selecting a page)
                 // This is the page-specific token needed for posting, NOT the user token
                 const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
@@ -4161,7 +4172,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             pageId,
-                            enabled: autoPostEnabled.checked,
+                            enabled: enabled,
                             postToken: pageToken  // Use the PAGE token, not user token
                         })
                     });
@@ -5123,16 +5134,18 @@
                                     return;
                                 }
 
-                                // Get Page Token (same as image posts)
-                                const pageToken = localStorage.getItem(`pageToken_${pageId}`);
-                                const accessToken = localStorage.getItem("fewfeed_accessToken");
-                                const cookieData = localStorage.getItem("fewfeed_cookie");
+                                // Get Page Token (NOT Ads Token)
+                                const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                                
+                                if (!pageToken) {
+                                    alert("ไม่มี Page Token กรุณาเลือก Page ใหม่");
+                                    return;
+                                }
 
                                 console.log(`[text-post] pageId: ${pageId}`);
-                                console.log(`[text-post] pageToken: ${pageToken ? pageToken.substring(0, 20) + '...' : 'null'}`);
-                                console.log(`[text-post] accessToken: ${accessToken ? accessToken.substring(0, 20) + '...' : 'null'}`);
+                                console.log(`[text-post] pageToken: ${pageToken.substring(0, 20)}...`);
 
-                                // Use server API like image posts (handles tokens correctly)
+                                // Use server API with Page Token only
                                 const response = await fetch("/api/publish", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -5140,9 +5153,8 @@
                                         pageId: pageId,
                                         message: message,
                                         postType: "text",
-                                        scheduled: true, // Request scheduled posting
-                                        accessToken: pageToken || accessToken, // Use Page Token first
-                                        cookieData: cookieData
+                                        scheduled: true,
+                                        accessToken: pageToken
                                     }),
                                 });
 
@@ -5154,6 +5166,10 @@
                                     // Clear form
                                     document.getElementById("textMessageTextarea").value = "";
                                     document.getElementById("textPreviewContent").textContent = "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
+                                    
+                                    // Refresh scheduled times and update display
+                                    await refreshScheduledPostTimes();
+                                    updateNextScheduleDisplay();
                                     
                                     // Refresh pending posts
                                     if (typeof loadScheduledPosts === 'function') {
@@ -5240,6 +5256,99 @@
             let quotesTotal = 0;
             let quotesHasMore = false;
             let quotesLoading = false;
+            let quotesFilter = 'unused'; // 'unused' or 'used'
+
+            // Tabs click handlers
+            const quotesTabUnused = document.getElementById("quotesTabUnused");
+            const quotesTabUsed = document.getElementById("quotesTabUsed");
+            
+            quotesTabUnused.addEventListener("click", () => {
+                quotesFilter = 'unused';
+                quotesTabUnused.style.color = '#1877f2';
+                quotesTabUnused.style.borderBottom = '2px solid #1877f2';
+                quotesTabUsed.style.color = '#666';
+                quotesTabUsed.style.borderBottom = '2px solid transparent';
+                loadQuotes();
+            });
+            
+            quotesTabUsed.addEventListener("click", () => {
+                quotesFilter = 'used';
+                quotesTabUsed.style.color = '#1877f2';
+                quotesTabUsed.style.borderBottom = '2px solid #1877f2';
+                quotesTabUnused.style.color = '#666';
+                quotesTabUnused.style.borderBottom = '2px solid transparent';
+                loadQuotes();
+            });
+
+            // Add Quote Modal
+            const addQuoteModal = document.getElementById("addQuoteModal");
+            const addQuoteBtn = document.getElementById("addQuoteBtn");
+            const closeQuoteModal = document.getElementById("closeQuoteModal");
+            const cancelQuoteBtn = document.getElementById("cancelQuoteBtn");
+            const saveQuoteBtn = document.getElementById("saveQuoteBtn");
+            const newQuoteText = document.getElementById("newQuoteText");
+
+            if (addQuoteBtn) {
+                addQuoteBtn.addEventListener("click", () => {
+                    addQuoteModal.style.display = "flex";
+                    newQuoteText.value = "";
+                    newQuoteText.focus();
+                });
+            }
+
+            if (closeQuoteModal) {
+                closeQuoteModal.addEventListener("click", () => {
+                    addQuoteModal.style.display = "none";
+                });
+            }
+
+            if (cancelQuoteBtn) {
+                cancelQuoteBtn.addEventListener("click", () => {
+                    addQuoteModal.style.display = "none";
+                });
+            }
+
+            if (addQuoteModal) {
+                addQuoteModal.addEventListener("click", (e) => {
+                    if (e.target === addQuoteModal) {
+                        addQuoteModal.style.display = "none";
+                    }
+                });
+            }
+
+            if (saveQuoteBtn) {
+                saveQuoteBtn.addEventListener("click", async () => {
+                    const text = newQuoteText.value.trim();
+                    if (!text) {
+                        alert("กรุณาพิมพ์คำคม");
+                        return;
+                    }
+
+                    saveQuoteBtn.disabled = true;
+                    saveQuoteBtn.textContent = "กำลังบันทึก...";
+
+                    try {
+                        const response = await fetch("/api/quotes", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ quoteText: text })
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            addQuoteModal.style.display = "none";
+                            loadQuotes();
+                        } else {
+                            alert("เกิดข้อผิดพลาด: " + data.error);
+                        }
+                    } catch (error) {
+                        alert("เกิดข้อผิดพลาด: " + error.message);
+                    } finally {
+                        saveQuoteBtn.disabled = false;
+                        saveQuoteBtn.textContent = "บันทึก";
+                    }
+                });
+            }
 
             // Infinite scroll for quotes (using container scroll)
             quotesTableContainer.addEventListener("scroll", () => {
@@ -5266,13 +5375,20 @@
                         `;
                     }
                     const pageId = getCurrentPageId();
-                    const response = await fetch(`/api/quotes?limit=50&offset=${quotesOffset}${pageId ? '&pageId=' + pageId : ''}`);
+                    const response = await fetch(`/api/quotes?limit=50&offset=${quotesOffset}&filter=${quotesFilter}${pageId ? '&pageId=' + pageId : ''}`);
                     const data = await response.json();
                     if (data.success) {
                         quotesTotal = data.total;
                         quotesHasMore = data.hasMore;
                         quotesOffset += data.quotes.length;
                         renderQuotes(data.quotes, append);
+                        // Update counts
+                        if (data.unusedCount !== undefined) {
+                            document.getElementById("quotesCountUnused").textContent = data.unusedCount;
+                        }
+                        if (data.usedCount !== undefined) {
+                            document.getElementById("quotesCountUsed").textContent = data.usedCount;
+                        }
                     } else {
                         quotesTableContainer.innerHTML = `<div class="pending-empty">${data.error}</div>`;
                     }
@@ -5325,13 +5441,14 @@
                     const tr = document.createElement("tr");
                     tr.dataset.quoteId = quote.id;
                     tr.dataset.quoteText = quote.quote_text; // Store raw text in data attribute
-                    if (quote.isUsed) {
+                    if (quote.isUsed && quotesFilter === 'used') {
                         tr.classList.add("quote-row-used");
                     }
                     const date = new Date(quote.created_at);
                     // Build HTML without extra whitespace in quote cell
                     const quoteHtml = escapeHtml(quote.quote_text.trim());
-                    const badgeHtml = quote.isUsed ? ' <span class="quote-used-badge">ใช้แล้ว</span>' : '';
+                    // Only show badge in "used" tab
+                    const badgeHtml = (quote.isUsed && quotesFilter === 'used') ? ' <span class="quote-used-badge">ใช้แล้ว</span>' : '';
                     tr.innerHTML = `<td class="quote-text-cell" style="white-space: pre-wrap; word-break: break-word;" title="ดับเบิลคลิกเพื่อแก้ไข">${quoteHtml}${badgeHtml}</td><td style="color: #888; font-size: 0.85rem;">${date.toLocaleDateString('th-TH')} ${date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td><td style="text-align: center;"><button onclick="deleteQuote(${quote.id}, this)" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0.5rem;" title="ลบ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td>`;
                     // Add double-click handler for editing
                     const textCell = tr.querySelector('.quote-text-cell');
@@ -6064,35 +6181,24 @@
                                 console.log('[FEWFEED] Using user-entered Primary Text:', caption.substring(0, 50) + '...');
                             } else if (pageId) {
                                 // Primary Text is empty - fetch unused quote from system
-                                const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                                const quotesRes = await fetch(`/api/quotes?limit=1&filter=unused&pageId=${pageId}`);
                                 const quotesData = await quotesRes.json();
 
                                 if (quotesData.success && quotesData.quotes.length > 0) {
-                                    // Find first unused quote
-                                    let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
-                                    if (!selectedQuote) {
-                                        selectedQuote = quotesData.quotes.find(
-                                            (q) => q.id !== state.lastUsedQuoteId,
-                                        ) || quotesData.quotes[0];
-                                    }
+                                    const selectedQuote = quotesData.quotes[0];
+                                    caption = selectedQuote.quote_text;
 
-                                    if (selectedQuote) {
-                                        caption = selectedQuote.quote_text;
+                                    // Mark as used
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                    });
 
-                                        if (!selectedQuote.isUsed) {
-                                            // Mark as used only if it was unused
-                                            await fetch('/api/quotes', {
-                                                method: 'PATCH',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ id: selectedQuote.id, pageId })
-                                            });
-                                        }
-
-                                        state.lastUsedQuoteId = selectedQuote.id;
-                                        console.log('[FEWFEED] Auto-selected quote:', selectedQuote.id);
-                                    } else {
-                                        console.log('[FEWFEED] No quotes available');
-                                    }
+                                    state.lastUsedQuoteId = selectedQuote.id;
+                                    console.log('[FEWFEED] Auto-selected quote:', selectedQuote.id);
+                                } else {
+                                    console.log('[FEWFEED] No unused quotes available');
                                 }
                             }
                         } else if (mode === "image") {
@@ -6106,42 +6212,31 @@
                                 console.log('[FEWFEED] Image mode: Using user-entered Primary Text:', caption.substring(0, 50) + '...');
                             } else if (pageId) {
                                 // Primary Text is empty - fetch unused quote from database
-                                const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                                const quotesRes = await fetch(`/api/quotes?limit=1&filter=unused&pageId=${pageId}`);
                                 const quotesData = await quotesRes.json();
 
                                 if (quotesData.success && quotesData.quotes.length > 0) {
-                                    // Find first unused quote
-                                    let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
-                                    if (!selectedQuote) {
-                                        selectedQuote = quotesData.quotes.find(
-                                            (q) => q.id !== state.lastUsedQuoteId,
-                                        ) || quotesData.quotes[0];
+                                    const selectedQuote = quotesData.quotes[0];
+                                    caption = selectedQuote.quote_text;
+
+                                    // Mark as used
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                    });
+
+                                    state.lastUsedQuoteId = selectedQuote.id;
+                                    console.log('[FEWFEED] Image mode: Auto-selected quote:', selectedQuote.id);
+
+                                    // Update Primary Text field with the quote for caption use
+                                    if (primaryTextField) {
+                                        primaryTextField.value = caption;
+                                        autoResizeTextarea(primaryTextField);
+                                        console.log('[FEWFEED] Image mode: Updated Primary Text with quote');
                                     }
-
-                                    if (selectedQuote) {
-                                        caption = selectedQuote.quote_text;
-
-                                        if (!selectedQuote.isUsed) {
-                                            // Mark as used only if it was unused
-                                            await fetch('/api/quotes', {
-                                                method: 'PATCH',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ id: selectedQuote.id, pageId })
-                                            });
-                                        }
-
-                                        state.lastUsedQuoteId = selectedQuote.id;
-                                        console.log('[FEWFEED] Image mode: Auto-selected quote:', selectedQuote.id);
-
-                                        // Update Primary Text field with the quote for caption use
-                                        if (primaryTextField) {
-                                            primaryTextField.value = caption;
-                                            autoResizeTextarea(primaryTextField);
-                                            console.log('[FEWFEED] Image mode: Updated Primary Text with quote');
-                                        }
-                                    } else {
-                                        console.log('[FEWFEED] Image mode: No quotes available');
-                                    }
+                                } else {
+                                    console.log('[FEWFEED] Image mode: No unused quotes available');
                                 }
                             }
                         } else {

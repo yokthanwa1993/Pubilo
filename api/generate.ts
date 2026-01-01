@@ -268,7 +268,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log('[Pubilo] Request body keys:', Object.keys(req.body || {}));
-    const { referenceImage, referenceImages, aspectRatio, model, prompt, caption, numberOfImages, resolution, customPrompt } = req.body;
+    const { referenceImage, referenceImages, aspectRatio, model, prompt, caption, numberOfImages, resolution, customPrompt, pageName } = req.body;
 
     // Support both single referenceImage and array referenceImages
     let images: ReferenceImage[] = [];
@@ -298,15 +298,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const quoteText = caption || prompt;
 
       if (customPrompt && customPrompt.trim()) {
+        console.log('[Pubilo] Received pageName:', pageName);
+        console.log('[Pubilo] Received aspectRatio:', finalAspectRatio);
+
         // Use custom prompt template - replace placeholders
         textPrompt = customPrompt
           .replace(/\{\{QUOTE\}\}/g, quoteText)
-          .replace(/\{\{ASPECT_RATIO\}\}/g, finalAspectRatio)
-          .replace(/\{\{RESOLUTION\}\}/g, finalResolution);
-        console.log('[Pubilo] Using custom prompt template');
+          .replace(/\{\{PAGE_NAME\}\}/g, pageName || '');
+
+        // Append technical parameters automatically (user doesn't need to add these to prompt)
+        // Convert aspect ratio to explicit dimensions for better AI understanding
+        const aspectDimensions: Record<string, string> = {
+          '1:1': '1024x1024 pixels (square)',
+          '2:3': '1024x1536 pixels (portrait/vertical)',
+          '3:2': '1536x1024 pixels (landscape/horizontal)',
+          '4:5': '1024x1280 pixels (portrait)',
+          '5:4': '1280x1024 pixels (landscape)',
+          '9:16': '1024x1820 pixels (vertical story)',
+          '16:9': '1820x1024 pixels (horizontal widescreen)',
+        };
+        const dimensionDesc = aspectDimensions[finalAspectRatio] || `${finalAspectRatio} ratio`;
+
+        textPrompt += `\n\n**CRITICAL IMAGE DIMENSIONS (MUST FOLLOW):**
+- **Aspect Ratio: ${finalAspectRatio}** → Generate image with ${dimensionDesc}
+- This is a ${finalAspectRatio.includes(':') && parseInt(finalAspectRatio.split(':')[0]) < parseInt(finalAspectRatio.split(':')[1]) ? 'PORTRAIT/VERTICAL' : finalAspectRatio === '1:1' ? 'SQUARE' : 'LANDSCAPE/HORIZONTAL'} image
+- Resolution: ${finalResolution}
+- สร้างแค่ 1 รูปเดียว ห้ามสร้าง grid, collage, 2x2, 4 รูปใน 1 ภาพ`;
+        console.log('[Pubilo] Using custom prompt with auto-appended aspect ratio:', finalAspectRatio, dimensionDesc);
+        console.log('[Pubilo] Final prompt preview (first 500 chars):', textPrompt.substring(0, 500));
       } else {
         // Use default prompt
-        textPrompt = `สร้างรูปภาพสำหรับโพสต์ Facebook ที่มีลักษณะดังนี้:
+        textPrompt = `สร้างรูปภาพ 1 รูป สำหรับโพสต์ Facebook ที่มีลักษณะดังนี้:
+
+**สำคัญมาก - ข้อห้าม:**
+- ห้ามสร้างรูปแบบ grid, collage หรือหลายรูปใน 1 ภาพ
+- ต้องเป็นรูปเดียวเท่านั้น ไม่ใช่ 2x2, 4 รูป หรือ split screen
+- สร้างแค่ 1 scene เท่านั้น
 
 **พื้นหลัง:**
 - ภาพถ่ายธรรมชาติสวยงาม เช่น พระอาทิตย์ตก/ขึ้น ภูเขา ทะเล ท้องฟ้า หมอก ทุ่งหญ้า
@@ -326,7 +353,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 **สไตล์โดยรวม:**
 - ดูเป็นมืออาชีพ เหมาะโพสต์ Facebook
 - รูปแบบ Quote/คำคม ที่นิยมใน Social Media ไทย
-- ขนาดรูป: ${finalAspectRatio}`;
+- ขนาดรูป: ${finalAspectRatio}
+- จำไว้: สร้างแค่ 1 รูปเดียว ห้าม grid`;
       }
 
       try {

@@ -99,45 +99,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!pageId) {
         return res.status(400).json({ success: false, error: 'No page selected' });
       }
-
-      // For text posts, we need Page Token (not Post Token)
-      // Extract page token from cookie data
-      let pageToken = null;
-      
-      if (cookieData) {
-        try {
-          // Try to parse cookie data and find page token
-          const cookieStr = typeof cookieData === 'string' ? cookieData : JSON.stringify(cookieData);
-          const pageTokenMatch = cookieStr.match(new RegExp(`"${pageId}"[^}]*"access_token":"([^"]+)"`));
-          if (pageTokenMatch) {
-            pageToken = pageTokenMatch[1];
-          }
-        } catch (e) {
-          console.error('Error parsing cookie data:', e);
-        }
+      if (!accessToken) {
+        return res.status(400).json({ success: false, error: 'No Page Token provided' });
       }
 
-      // If no page token found, use access token (might be Ads Token)
-      if (!pageToken) {
-        pageToken = accessToken;
-      }
+      // Use the Page Token sent from frontend directly (NOT Ads Token)
+      const pageToken = accessToken;
 
-      if (!pageToken) {
-        return res.status(400).json({ success: false, error: 'No valid token found for text posting' });
-      }
-
-      console.log(`[publish] Text post - pageId: ${pageId}, token type: ${pageToken.startsWith('EAABsbCS') ? 'Ads Token' : 'Page Token'}, token: ${pageToken.substring(0, 20)}...`);
-
-      // For Ads Token, we need to post as immediate (not scheduled)
-      const isAdsToken = pageToken.startsWith('EAABsbCS');
+      console.log(`[publish] Text post - pageId: ${pageId}, token: ${pageToken.substring(0, 20)}...`);
       
       let fbBody: any = {
         message,
         access_token: pageToken,
       };
 
-      // Only schedule if we have proper Page Token
-      if (scheduled && !isAdsToken) {
+      // Schedule post
+      if (scheduled) {
         // Use Auto Schedule time from page_settings
         let scheduleTime: Date;
 
@@ -171,8 +148,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         fbBody.scheduled_publish_time = Math.floor(scheduleTime.getTime() / 1000);
         fbBody.published = false;
         console.log(`[publish] Scheduling text post for: ${scheduleTime.toISOString()}`);
-      } else if (scheduled && isAdsToken) {
-        console.log(`[publish] Cannot schedule with Ads Token, posting immediately`);
       }
 
       // Post to Facebook
@@ -209,14 +184,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!accessToken) {
       return res.status(400).json({ success: false, error: 'No access token' });
     }
-    if (!adAccountId) {
-      return res.status(400).json({ success: false, error: 'No ad account selected' });
-    }
     if (!pageId) {
       return res.status(400).json({ success: false, error: 'No page selected' });
     }
 
-    const formattedAdAccountId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+    // Use AD_ACCOUNT_ID from env, fallback to request body
+    const finalAdAccountId = adAccountId || process.env.AD_ACCOUNT_ID;
+    if (!finalAdAccountId) {
+      return res.status(400).json({ success: false, error: 'No ad account configured' });
+    }
+
+    const formattedAdAccountId = finalAdAccountId.startsWith("act_") ? finalAdAccountId : `act_${finalAdAccountId}`;
 
     // Upload image if it's base64
     let finalImageUrl = imageUrl;

@@ -4,6 +4,12 @@
   "installCommand": "echo 'Skip install'",
   "outputDirectory": "public",
   "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron-auto-post",
+      "schedule": "* * * * *"
+    }
+  ],
   "functions": {
     "api/upload-image.ts": {
       "maxDuration": 60
@@ -13,6 +19,9 @@
     },
     "api/page-settings.ts": {
       "memory": 128
+    },
+    "api/cron-auto-post.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
