@@ -5123,6 +5123,15 @@
                                     return;
                                 }
 
+                                // Get Page Token (same as image posts)
+                                const pageToken = localStorage.getItem(`pageToken_${pageId}`);
+                                const accessToken = localStorage.getItem("fewfeed_accessToken");
+                                const cookieData = localStorage.getItem("fewfeed_cookie");
+
+                                console.log(`[text-post] pageId: ${pageId}`);
+                                console.log(`[text-post] pageToken: ${pageToken ? pageToken.substring(0, 20) + '...' : 'null'}`);
+                                console.log(`[text-post] accessToken: ${accessToken ? accessToken.substring(0, 20) + '...' : 'null'}`);
+
                                 // Use server API like image posts (handles tokens correctly)
                                 const response = await fetch("/api/publish", {
                                     method: "POST",
@@ -5132,8 +5141,8 @@
                                         message: message,
                                         postType: "text",
                                         scheduled: true, // Request scheduled posting
-                                        accessToken: localStorage.getItem("fewfeed_accessToken"),
-                                        cookieData: localStorage.getItem("fewfeed_cookie")
+                                        accessToken: pageToken || accessToken, // Use Page Token first
+                                        cookieData: cookieData
                                     }),
                                 });
 
