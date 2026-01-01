@@ -3,6 +3,9 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
         <title>FewFeed - Facebook One Card Link Image Post</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -314,15 +317,15 @@
             /* Main Content */
             .main-content {
                 display: flex;
-                gap: 1rem;
+                gap: 0.5rem;
                 align-items: stretch;
                 min-height: 0;
-                height: min(560px, calc(100vh - 240px));
+                height: min(850px, calc(100vh - 140px));
             }
 
             /* Preview Panel - Center */
             .preview-panel {
-                height: min(560px, calc(100vh - 240px));
+                height: min(850px, calc(100vh - 140px));
                 display: flex;
                 flex-direction: column;
                 flex-shrink: 0;
@@ -334,6 +337,7 @@
                 justify-content: flex-end;
                 padding: 1rem;
                 gap: 0.75rem;
+                width: 100%;
             }
 
             .preview-avatar {
@@ -516,7 +520,7 @@
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                height: min(560px, calc(100vh - 240px));
+                height: 100%;
                 display: flex;
                 flex-direction: column;
             }
@@ -563,7 +567,7 @@
                 width: 100%;
                 flex-shrink: 0;
                 box-sizing: border-box;
-                max-width: calc(min(560px, calc(100vh - 240px)) - 80px);
+                max-width: calc(min(800px, calc(100vh - 100px)) - 80px);
             }
             
             /* Image mode: 2:3 - full height image */
@@ -626,15 +630,15 @@
                 align-items: center;
                 justify-content: center;
                 gap: 0.75rem;
-                padding: 2rem;
+                padding: 1.5rem;
                 border: 2px dashed #4b5563;
                 border-radius: 12px;
                 background: rgba(75, 85, 99, 0.1);
                 color: #9ca3af;
                 cursor: pointer;
                 transition: all 0.2s;
-                flex: 1;
-                min-height: 280px;
+                width: 160px;
+                height: 160px;
             }
 
             .upload-btn:hover {
@@ -3205,6 +3209,19 @@
         <img class="thumb-preview-popup" id="thumbPreviewPopup" src="" alt="" />
 
         <script>
+            // DEBUG: Global click listener to see what's being clicked
+            document.addEventListener('click', (e) => {
+                const target = e.target;
+                const id = target.id || '(no id)';
+                const className = target.className || '(no class)';
+                const tagName = target.tagName;
+                console.log('[DEBUG CLICK]', tagName, 'id:', id, 'class:', className);
+                // Check if it's the regenNewBtn or inside it
+                if (target.closest('#regenNewBtn')) {
+                    console.log('[DEBUG CLICK] Clicked inside #regenNewBtn!');
+                }
+            }, true);
+
             // Thumb hover preview functions (must be at top)
             const thumbPreviewPopup = document.getElementById("thumbPreviewPopup");
             window.showThumbPreview = function (src, e) {
@@ -3239,19 +3256,55 @@
             const description = document.getElementById("description");
             const linkUrl = document.getElementById("linkUrl");
 
-            // Validate Link URL - disable SCHEDULE button if empty in link mode
+            // Validate Link URL, Description, and Image - disable SCHEDULE button if not ready
+            // Track if image is ready (set by showFullImage, cleared by clearImages)
+            let linkModeImageReady = false;
+
             function validateLinkMode() {
-                const currentMode = document.querySelector('.nav-item.active')?.dataset?.mode || 'link';
+                // Determine current mode - default to 'link'
+                const currentMode = postMode || 'link';
+                
                 if (currentMode === 'link') {
                     const hasUrl = linkUrl && linkUrl.value.trim().length > 0;
-                    publishBtn.disabled = !hasUrl;
-                    publishBtn.style.opacity = hasUrl ? '1' : '0.5';
-                    publishBtn.style.cursor = hasUrl ? 'pointer' : 'not-allowed';
+                    // Check both hidden input and preview element (in case blur hasn't synced yet)
+                    const previewDesc = document.getElementById("previewDescription");
+                    const descValue = description?.value?.trim() || previewDesc?.textContent?.trim() || '';
+                    const hasDescription = descValue.length > 0;
+
+                    // Use linkModeImageReady flag (set by showSingleImage/showFullImage, cleared by delete/regenerate)
+                    const hasImage = linkModeImageReady;
+
+                    const isValid = hasUrl && hasDescription && hasImage;
+
+                    console.log('[validateLinkMode]', {
+                        hasUrl,
+                        urlLen: linkUrl?.value?.length,
+                        hasDescription,
+                        descLen: descValue.length,
+                        hasImage,
+                        linkModeImageReady,
+                        isValid
+                    });
+                    
+                    if (publishBtn) {
+                        publishBtn.disabled = !isValid;
+                        publishBtn.style.opacity = isValid ? '1' : '0.5';
+                        publishBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+                        
+                        // Update button text if it was showing success state but now invalid (e.g. cleared image)
+                        if (!isValid && publishBtn.classList.contains('published')) {
+                            publishBtn.classList.remove('published');
+                            publishBtn.textContent = 'SCHEDULE';
+                        }
+                    }
                 } else {
-                    // Other modes don't require link URL
-                    publishBtn.disabled = false;
-                    publishBtn.style.opacity = '1';
-                    publishBtn.style.cursor = 'pointer';
+                    // Other modes don't require link URL/Description validation here
+                    // (They have their own validation or are always enabled for now)
+                    if (publishBtn) {
+                        publishBtn.disabled = false;
+                        publishBtn.style.opacity = '1';
+                        publishBtn.style.cursor = 'pointer';
+                    }
                 }
             }
 
@@ -3259,6 +3312,8 @@
             if (linkUrl) {
                 linkUrl.addEventListener("input", validateLinkMode);
             }
+            // Note: description validation is triggered from setupEditableText blur handler
+            // and after config loading/form clearing
 
             // Initial validation
             setTimeout(validateLinkMode, 500);
@@ -3691,7 +3746,11 @@
                             settings = {
                                 pageId,
                                 autoSchedule: data.settings.auto_schedule,
-                                scheduleMinutes: data.settings.schedule_minutes
+                                scheduleMinutes: data.settings.schedule_minutes,
+                                aiModel: data.settings.ai_model,
+                                aiResolution: data.settings.ai_resolution,
+                                linkImageSize: data.settings.link_image_size,
+                                imageImageSize: data.settings.image_image_size
                             };
                             // Update cache
                             cachedPageSettings = settings;
@@ -3748,9 +3807,9 @@
                     imagePromptInput.value = localStorage.getItem(`imagePrompt_${pageId}`) || "";
                 }
 
-                // Load image sizes from localStorage (per page)
-                const savedLinkImageSize = localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
-                const savedImageImageSize = localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
+                // Load image sizes from database (with localStorage fallback)
+                const savedLinkImageSize = (settings && settings.linkImageSize) || localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
+                const savedImageImageSize = (settings && settings.imageImageSize) || localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
                 setLinkImageSize(savedLinkImageSize);
                 setImageImageSize(savedImageImageSize);
 
@@ -3758,11 +3817,17 @@
                 autoResizeTextarea(linkPromptInput);
                 autoResizeTextarea(imagePromptInput);
 
-                // Load AI settings (global, not per page)
-                const savedAiModel = localStorage.getItem("aiModel") || "gemini-2.0-flash-exp";
-                const savedAiResolution = localStorage.getItem("aiResolution") || "2K";
+                // Load AI settings from database (per page, with localStorage fallback)
+                const savedAiModel = (settings && settings.aiModel) || localStorage.getItem("aiModel") || "gemini-2.0-flash-exp";
+                const savedAiResolution = (settings && settings.aiResolution) || localStorage.getItem("aiResolution") || "2K";
                 aiModelSelect.value = savedAiModel;
                 aiResolutionSelect.value = savedAiResolution;
+
+                // Also update localStorage for immediate use in other parts of the app
+                localStorage.setItem(`linkImageSize_${pageId}`, savedLinkImageSize);
+                localStorage.setItem(`imageImageSize_${pageId}`, savedImageImageSize);
+                localStorage.setItem("aiModel", savedAiModel);
+                localStorage.setItem("aiResolution", savedAiResolution);
             }
 
             // Auto schedule checkbox change handler for panel
@@ -3810,7 +3875,11 @@
                 cachedPageSettings = {
                     pageId,
                     autoSchedule,
-                    scheduleMinutes: mins
+                    scheduleMinutes: mins,
+                    aiModel: aiModelSelect.value,
+                    aiResolution: aiResolutionSelect.value,
+                    linkImageSize,
+                    imageImageSize
                 };
 
                 // Also update the modal settings (keep in sync)
@@ -3821,14 +3890,18 @@
 
                 // Save to database via API
                 try {
-                    // Save page settings
+                    // Save page settings to database
                     const response = await fetch('/api/page-settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             pageId,
                             autoSchedule,
-                            scheduleMinutes: mins
+                            scheduleMinutes: mins,
+                            aiModel: aiModelSelect.value,
+                            aiResolution: aiResolutionSelect.value,
+                            linkImageSize,
+                            imageImageSize
                         })
                     });
                     const data = await response.json();
@@ -3935,6 +4008,31 @@
 
             // Current post mode: 'link' or 'image'
             let postMode = "link";
+
+            // State per mode - each mode has independent state
+            const modeState = {
+                link: {
+                    referenceImages: [],
+                    generatedImages: [],
+                    selectedImage: null,
+                    currentView: "upload",
+                    lastCaption: "", // Store last used caption for regeneration
+                },
+                image: {
+                    referenceImages: [],
+                    generatedImages: [],
+                    selectedImage: null,
+                    currentView: "upload",
+                    lastCaption: "",
+                },
+                reels: {
+                    referenceImages: [],
+                    generatedImages: [],
+                    selectedImage: null,
+                    currentView: "upload",
+                    lastCaption: "",
+                },
+            };
 
             // Update pending count from Facebook API
             async function updatePendingCount() {
@@ -4808,6 +4906,9 @@
                 if (container) {
                     container.classList.add("active");
                 }
+
+                // Validate link mode when switching modes
+                validateLinkMode();
             }
 
             // Update pending count on load
@@ -4821,27 +4922,7 @@
                 document.getElementById("previewDescription");
             const previewCardButton =
                 document.getElementById("previewCardButton");
-            // State per mode - each mode has independent state
-            const modeState = {
-                link: {
-                    referenceImages: [],
-                    generatedImages: [],
-                    selectedImage: null,
-                    currentView: "upload",
-                },
-                image: {
-                    referenceImages: [],
-                    generatedImages: [],
-                    selectedImage: null,
-                    currentView: "upload",
-                },
-                reels: {
-                    referenceImages: [],
-                    generatedImages: [],
-                    selectedImage: null,
-                    currentView: "upload",
-                },
-            };
+
 
             // Helper to get current mode state
             function getState() {
@@ -5066,6 +5147,9 @@
                     const reader = new FileReader();
                     reader.onload = (ev) => {
                         state.selectedImage = ev.target.result;
+                        if (postMode === "link") {
+                            linkModeImageReady = true;
+                        }
 
                         // Show image in full view
                         state.currentView = "full";
@@ -5102,11 +5186,16 @@
                             s.currentView = "upload";
                             e.fullImageView.style.display = "none";
                             e.uploadPrompt.style.display = "flex";
+                            if (currentMode === "link") {
+                                linkModeImageReady = false;
+                            }
+                            validateLinkMode(); // Re-validate when image is cleared
                         });
 
                         // Update preview
                         els.publishBtn.classList.remove("published");
                         lastPublishedUrl = null;
+                        validateLinkMode(); // Enable SCHEDULE when image is ready
                     };
                     reader.readAsDataURL(file);
                     fileInput.value = "";
@@ -5121,6 +5210,7 @@
                 els.generateOverlay.style.display = "none";
                 els.generatedGrid.style.display = "none";
                 els.skeletonGrid.style.display = "grid";
+                validateLinkMode(); // Disable SCHEDULE while generating
 
                 // Read all files first
                 state.referenceImages = [];
@@ -5164,6 +5254,7 @@
                     els.uploadPrompt.style.display = "flex";
                     els.generateOverlay.style.display = "none";
                     els.skeletonGrid.style.display = "none";
+                    validateLinkMode(); // Re-validate after generation fails
                 }
             });
 
@@ -5226,33 +5317,46 @@
                         const pageId = getCurrentPageId();
                         let caption = "";
 
-                        // For link mode: auto-fetch unused quote
-                        if (mode === "link" && pageId) {
-                            // Fetch quotes and find unused one
-                            const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
-                            const quotesData = await quotesRes.json();
+                        // For link mode: check Primary Text first, then fetch quote
+                        if (mode === "link") {
+                            const primaryTextField = els.primaryText;
+                            const userText = primaryTextField ? primaryTextField.value.trim() : "";
 
-                            if (quotesData.success && quotesData.quotes.length > 0) {
-                                // Find first unused quote
-                                const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
+                            if (userText) {
+                                // User entered text - use it directly
+                                caption = userText;
+                                console.log('[FEWFEED] Using user-entered Primary Text:', caption.substring(0, 50) + '...');
+                            } else if (pageId) {
+                                // Primary Text is empty - fetch unused quote from system
+                                const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                                const quotesData = await quotesRes.json();
 
-                                if (unusedQuote) {
-                                    caption = unusedQuote.quote_text;
+                                if (quotesData.success && quotesData.quotes.length > 0) {
+                                    // Find first unused quote
+                                    let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
+                                    if (!selectedQuote) {
+                                        selectedQuote = quotesData.quotes.find(
+                                            (q) => q.id !== state.lastUsedQuoteId,
+                                        ) || quotesData.quotes[0];
+                                    }
 
-                                    // Mark as used
-                                    await fetch('/api/quotes', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: unusedQuote.id, pageId })
-                                    });
+                                    if (selectedQuote) {
+                                        caption = selectedQuote.quote_text;
 
-                                    state.lastUsedQuoteId = unusedQuote.id;
-                                    console.log('[FEWFEED] Auto-selected quote:', unusedQuote.id);
-                                } else {
-                                    // Use caption field value if no unused quotes
-                                    const captionField = document.getElementById("caption");
-                                    caption = captionField ? captionField.value : "";
-                                    console.log('[FEWFEED] No unused quotes, using caption field');
+                                        if (!selectedQuote.isUsed) {
+                                            // Mark as used only if it was unused
+                                            await fetch('/api/quotes', {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                            });
+                                        }
+
+                                        state.lastUsedQuoteId = selectedQuote.id;
+                                        console.log('[FEWFEED] Auto-selected quote:', selectedQuote.id);
+                                    } else {
+                                        console.log('[FEWFEED] No quotes available');
+                                    }
                                 }
                             }
                         } else {
@@ -5292,6 +5396,11 @@
                             customPrompt = localStorage.getItem(promptKey) || "";
                         }
                         const resolution = localStorage.getItem("aiResolution") || "2K";
+
+                        // Save caption to state for future regeneration
+                        if (caption) {
+                            state.lastCaption = caption;
+                        }
 
                         // Build request body
                         const requestBody = {
@@ -5360,6 +5469,13 @@
                 els.generatedGrid.style.display = "none";
                 els.fullImageView.style.display = "flex";
 
+                // Mark image as ready for link mode validation
+                if (postMode === 'link') {
+                    linkModeImageReady = true;
+                    console.log('[showSingleImage] Set linkModeImageReady = true');
+                    validateLinkMode();
+                }
+
                 // Build the full image view
                 els.fullImageView.textContent = "";
                 els.fullImageView.style.cssText = `
@@ -5397,6 +5513,7 @@
 
                 // Delete button (leftmost)
                 const deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
                 deleteBtn.className = "btn-action delete";
                 deleteBtn.title = "ลบรูป";
                 const deleteIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -5413,11 +5530,17 @@
                     els.fullImageView.style.display = "none";
                     els.fullImageView.textContent = "";
                     els.uploadPrompt.style.display = "flex";
+                    // Reset image ready flag
+                    if (postMode === 'link') {
+                        linkModeImageReady = false;
+                    }
+                    validateLinkMode(); // Re-validate when image is deleted
                 });
                 btnContainer.appendChild(deleteBtn);
 
                 // Regenerate with same text button
                 const regenSameBtn = document.createElement("button");
+                regenSameBtn.type = "button";
                 regenSameBtn.className = "btn-action";
                 regenSameBtn.title = "เจนใหม่ข้อความเดิม";
                 const regenSameIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -5433,23 +5556,34 @@
                 });
                 btnContainer.appendChild(regenSameBtn);
 
-                // Regenerate with new text button
+                // Regenerate with new text button (plus icon for "new quote")
                 const regenNewBtn = document.createElement("button");
+                regenNewBtn.type = "button";
+                regenNewBtn.id = "regenNewBtn";
                 regenNewBtn.className = "btn-action";
-                regenNewBtn.title = "เจนใหม่ข้อความใหม่";
+                regenNewBtn.title = "เจนใหม่ + Quote ใหม่";
                 const regenNewIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 regenNewIcon.setAttribute("viewBox", "0 0 24 24");
                 regenNewIcon.setAttribute("fill", "none");
                 regenNewIcon.setAttribute("stroke", "currentColor");
                 regenNewIcon.setAttribute("stroke-width", "2");
-                regenNewIcon.innerHTML = '<path d="M12 3v3m0 12v3m-9-9h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1m0-12.8l-2.1 2.1m-8.6 8.6l-2.1 2.1"/>';
+                // Plus icon - represents "new content"
+                regenNewIcon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
                 regenNewBtn.appendChild(regenNewIcon);
-                regenNewBtn.addEventListener("click", (e) => {
+                regenNewBtn.onclick = function(e) {
+                    console.log('[regenNewBtn] + button ONCLICK fired!');
                     e.stopPropagation();
+                    e.preventDefault();
                     regenerateImages(true);
-                });
+                    return false;
+                };
+                console.log('[showSingleImage] Created regenNewBtn with onclick handler');
                 btnContainer.appendChild(regenNewBtn);
                 els.fullImageView.appendChild(btnContainer);
+                console.log('[showSingleImage] Buttons appended to fullImageView');
+
+                // Validate to enable SCHEDULE button
+                validateLinkMode();
             }
 
             // Show generated grid (uses current mode)
@@ -5478,6 +5612,7 @@
                 });
                 els.generatedGrid.appendChild(regenBtn);
 
+                let firstItem = null;
                 state.generatedImages.forEach((img, i) => {
                     const item = document.createElement("div");
                     item.className = "generated-item";
@@ -5494,12 +5629,21 @@
                         selectImage(img, item);
                     });
                     els.generatedGrid.appendChild(item);
+                    if (i === 0) firstItem = { img, item };
                 });
+
+                // Auto-select first image if only 1 image generated
+                if (state.generatedImages.length === 1 && firstItem) {
+                    selectImage(firstItem.img, firstItem.item);
+                } else {
+                    validateLinkMode(); // Re-validate after generation complete (still disabled until image selected)
+                }
             }
 
             // Regenerate images (uses current mode)
             // getNewText: true = fetch new quote, false = use current caption
             async function regenerateImages(getNewText = false) {
+                console.log('[regenerateImages] CALLED with getNewText:', getNewText);
                 const state = getState();
                 const els = getModeElements();
                 const mode = postMode; // Get current mode (link or image)
@@ -5511,9 +5655,15 @@
                     return;
                 }
 
-                // For link mode without new text, require caption
+                // For link mode without new text, require caption OR already have generated images (regenerating)
                 const captionCheck = document.getElementById("caption");
-                if (isLinkMode && !getNewText && (!captionCheck || !captionCheck.value.trim())) {
+                const hasGeneratedImages = state.generatedImages && state.generatedImages.length > 0;
+                console.log('[DEBUG regenerateImages] mode:', mode, 'isLinkMode:', isLinkMode, 'getNewText:', getNewText);
+                console.log('[DEBUG regenerateImages] state.generatedImages:', state.generatedImages);
+                console.log('[DEBUG regenerateImages] hasGeneratedImages:', hasGeneratedImages);
+                console.log('[DEBUG regenerateImages] state.lastCaption:', state.lastCaption);
+                console.log('[DEBUG regenerateImages] caption field:', captionCheck?.value);
+                if (isLinkMode && !getNewText && !hasGeneratedImages && !state.lastCaption && (!captionCheck || !captionCheck.value.trim())) {
                     alert("กรุณาใส่ข้อความก่อนเจนรูป");
                     return;
                 }
@@ -5526,36 +5676,115 @@
                 // Clear selected image
                 state.selectedImage = null;
 
-                // Show skeleton loading
+                // Reset image ready flag for link mode
+                if (postMode === 'link') {
+                    linkModeImageReady = false;
+                }
+
+                // Show skeleton loading (same as initial generation)
                 state.currentView = "generating";
                 els.generatedGrid.style.display = "none";
                 els.generateOverlay.style.display = "none";
+                els.uploadPrompt.style.display = "none";
+                els.refThumbsRow.style.display = "none";
+
+                // Show single skeleton card (same style as initial generation)
+                els.skeletonGrid.innerHTML = '<div class="skeleton-card"></div>';
+                els.skeletonGrid.classList.add('single');
                 els.skeletonGrid.style.display = "grid";
+                validateLinkMode(); // Disable SCHEDULE while generating
 
                 try {
+                    console.log('[regenerateImages] Starting try block');
                     // Get caption and pageId
                     const captionField = document.getElementById("caption");
                     let caption = captionField ? captionField.value : "";
                     const pageId = document.getElementById("pageSelect")?.value;
+                    console.log('[regenerateImages] pageId:', pageId, 'caption:', caption?.substring(0, 30));
 
-                    // If getNewText, fetch a new unused quote
-                    if (getNewText && pageId) {
+                    if (getNewText && !pageId) {
+                        throw new Error("กรุณาเลือก Page ก่อนเจนข้อความใหม่");
+                    }
+
+                    // For link mode: check Primary Text first before fetching quotes
+                    if (isLinkMode) {
+                        const primaryTextField = els.primaryText;
+                        const userText = primaryTextField ? primaryTextField.value.trim() : "";
+
+                        if (userText) {
+                            // User entered text - use it directly (skip quote fetching)
+                            caption = userText;
+                            console.log('[Regenerate] Using user-entered Primary Text:', caption.substring(0, 50) + '...');
+                        } else if (state.lastCaption && !getNewText) {
+                            // Regenerate same text - always use last caption
+                            caption = state.lastCaption;
+                            console.log('[Regenerate] Using lastCaption:', caption.substring(0, 50) + '...');
+                        } else if (getNewText && pageId) {
+                            // No user text, fetch new quote from database
+                            const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
+                            const quotesData = await quotesRes.json();
+                            if (quotesData.success && quotesData.quotes.length > 0) {
+                                let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
+                                if (!selectedQuote) {
+                                    selectedQuote = quotesData.quotes.find(
+                                        (q) => q.id !== state.lastUsedQuoteId,
+                                    ) || quotesData.quotes[0];
+                                }
+                                if (selectedQuote) {
+                                    caption = selectedQuote.quote_text;
+                                    if (!selectedQuote.isUsed) {
+                                        // Mark as used only if it was unused
+                                        await fetch('/api/quotes', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                        });
+                                    }
+                                    state.lastUsedQuoteId = selectedQuote.id;
+                                }
+                            } else {
+                                throw new Error("ไม่พบคำคมในระบบ กรุณาเพิ่มคำคมก่อน");
+                            }
+                        }
+
+                        const isDefaultCaption = !caption || caption === "S.LAZADA.CO.TH";
+                        if (isDefaultCaption && state.lastCaption) {
+                            caption = state.lastCaption;
+                            console.log('[Regenerate] No new quote found, using lastCaption');
+                        }
+                    } else if (getNewText && pageId) {
+                        // Image mode: fetch new quote if requested
                         const quotesRes = await fetch(`/api/quotes?limit=100&pageId=${pageId}`);
                         const quotesData = await quotesRes.json();
                         if (quotesData.success && quotesData.quotes.length > 0) {
-                            const unusedQuote = quotesData.quotes.find(q => !q.isUsed);
-                            if (unusedQuote) {
-                                caption = unusedQuote.quote_text;
+                            let selectedQuote = quotesData.quotes.find(q => !q.isUsed);
+                            if (!selectedQuote) {
+                                selectedQuote = quotesData.quotes.find(
+                                    (q) => q.id !== state.lastUsedQuoteId,
+                                ) || quotesData.quotes[0];
+                            }
+                            if (selectedQuote) {
+                                caption = selectedQuote.quote_text;
                                 // Update caption field
                                 if (captionField) captionField.value = caption;
-                                // Mark as used
-                                await fetch('/api/quotes', {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ id: unusedQuote.id, pageId })
-                                });
-                                state.lastUsedQuoteId = unusedQuote.id;
+                                if (!selectedQuote.isUsed) {
+                                    // Mark as used only if it was unused
+                                    await fetch('/api/quotes', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: selectedQuote.id, pageId })
+                                    });
+                                }
+                                state.lastUsedQuoteId = selectedQuote.id;
                             }
+                        }
+                    }
+
+                    if (!caption && state.referenceImages.length === 0) {
+                        if (getNewText) {
+                             throw new Error("ไม่สามารถหาคำคมใหม่ได้ กรุณาเพิ่มคำคมในระบบ");
+                        } else {
+                             throw new Error("ไม่พบข้อความสำหรับเจนรูป กรุณาใส่ Primary Text หรือเพิ่มคำคม");
                         }
                     }
 
@@ -5577,6 +5806,11 @@
                         }
                     } catch (e) {
                         console.warn('[Regenerate] Failed to load prompt from DB');
+                    }
+
+                    // Save caption to state for future regeneration
+                    if (caption) {
+                        state.lastCaption = caption;
                     }
 
                     // Build request body
@@ -5601,18 +5835,21 @@
                     });
 
                     const data = await response.json();
+                    console.log('[Generate] Response received:', { success: !data.error, imageCount: data.images?.length });
                     if (data.error) throw new Error(data.error);
 
                     state.generatedImages = data.images;
 
-                    // Auto-select first image and show full view
+                    // Auto-select first image and show full view with action buttons
                     if (data.images && data.images.length > 0) {
+                        console.log('[Generate] Calling showSingleImage with first image');
                         state.selectedImage = data.images[0];
-                        showFullImage(data.images[0]);
+                        showSingleImage(data.images[0]);
                     } else {
                         showGeneratedGrid();
                     }
                 } catch (err) {
+                    console.error('[Generate] Error:', err.message);
                     alert("Generation failed: " + err.message);
                     showGeneratedGrid(); // Show previous results
                 }
@@ -5633,6 +5870,7 @@
 
             // Show full image (uses current mode)
             function showFullImage(imgSrc) {
+                console.log('[showFullImage] Called with imgSrc:', imgSrc?.substring(0, 50));
                 const state = getState();
                 const els = getModeElements();
 
@@ -5641,7 +5879,15 @@
                 els.generateOverlay.style.display = "none";
                 els.refThumbsRow.style.display = "none";
                 els.generatedGrid.style.display = "none";
+                els.skeletonGrid.style.display = "none";
+                els.skeletonGrid.classList.remove('single');
                 els.fullImageView.style.display = "flex";
+
+                // Mark image as ready for link mode validation
+                if (postMode === 'link') {
+                    linkModeImageReady = true;
+                    console.log('[showFullImage] Set linkModeImageReady = true');
+                }
 
                 // Create elements instead of innerHTML
                 els.fullImageView.textContent = "";
@@ -5658,6 +5904,9 @@
                 imgEl.alt = "Selected";
                 els.fullImageView.appendChild(backBtn);
                 els.fullImageView.appendChild(imgEl);
+                console.log('[showFullImage] About to call validateLinkMode');
+                validateLinkMode(); // Enable SCHEDULE when image is selected
+                console.log('[showFullImage] validateLinkMode called, publishBtn.disabled =', publishBtn.disabled);
             }
 
             // Update preview on input change
@@ -5688,6 +5937,10 @@
                     previewEl.contentEditable = "false";
                     previewEl.classList.remove("editing");
                     inputEl.value = previewEl.textContent;
+                    // Trigger validation when description changes
+                    if (inputEl.id === 'description') {
+                        validateLinkMode();
+                    }
                 });
 
                 previewEl.addEventListener("keydown", (e) => {
@@ -5712,6 +5965,15 @@
             setupEditableText(previewCaption, caption);
             setupEditableText(previewDescription, description);
 
+            // Keep hidden inputs in sync while typing in previews
+            previewCaption.addEventListener("input", () => {
+                caption.value = previewCaption.textContent;
+            });
+            previewDescription.addEventListener("input", () => {
+                description.value = previewDescription.textContent;
+                validateLinkMode();
+            });
+
             // Publish
             let lastPublishedUrl = null;
 
@@ -5721,6 +5983,7 @@
                 if (!els.publishBtn) return;
 
                 els.publishBtn.addEventListener("click", async () => {
+                    console.log('[PUBLISH] Button clicked! Mode:', mode, 'Stack trace:', new Error().stack);
                     const state = modeState[mode];
 
                     // If already published, open the URL in background
@@ -5839,10 +6102,26 @@
                                     // Clear the uploaded image after navigation
                                     state.selectedImage = null;
                                     state.currentView = "upload";
+                                    linkModeImageReady = false;
                                     if (els.fullImageView) els.fullImageView.style.display = "none";
                                     if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
                                     els.publishBtn.textContent = "SCHEDULE";
                                     els.publishBtn.classList.remove("published");
+
+                                    // Clear form fields silently (Link URL, Primary Text, Caption/พิกัด)
+                                    const linkUrlField = document.getElementById("linkUrl");
+                                    const primaryTextField = document.getElementById("primaryText");
+                                    const captionField = document.getElementById("caption");
+                                    const descField = document.getElementById("description");
+                                    if (linkUrlField) linkUrlField.value = "";
+                                    if (primaryTextField) primaryTextField.value = "";
+                                    if (captionField) captionField.value = "";
+                                    if (descField) descField.value = "";
+                                    // Clear the preview description (พิกัด) - but keep domain display
+                                    const previewDesc = document.getElementById("previewDescription");
+                                    if (previewDesc) previewDesc.textContent = "";
+                                    // Re-validate after clearing
+                                    validateLinkMode();
                                 }, 1000);
                             }
 
@@ -5905,17 +6184,43 @@
                             imageToUpload = await compressImage(imageToUpload, 1200, 0.8);
                         }
 
+                        const previewDescEl = document.getElementById("previewDescription");
+                        const previewCaptionEl = document.getElementById("previewCaption");
+                        const descriptionText = isLinkMode
+                            ? (description?.value?.trim() || previewDescEl?.textContent?.trim() || "")
+                            : "";
+                        const captionText = isLinkMode
+                            ? (caption?.value?.trim() || previewCaptionEl?.textContent?.trim() || "")
+                            : "";
+                        if (isLinkMode) {
+                            description.value = descriptionText;
+                            caption.value = captionText;
+                        }
+                        const linkUrlValue = isLinkMode ? linkUrl.value.trim() : "";
+                        const linkNameValue = isLinkMode
+                            ? (descriptionText ? `พิกัด : ${descriptionText}` : (linkName?.value?.trim() || ""))
+                            : "";
+
+                        if (isLinkMode) {
+                            console.log("[PUBLISH] === LINK PAYLOAD DEBUG ===");
+                            console.log("[PUBLISH] linkUrl:", linkUrlValue);
+                            console.log("[PUBLISH] linkName:", linkNameValue);
+                            console.log("[PUBLISH] caption:", captionText);
+                            console.log("[PUBLISH] description:", descriptionText);
+                            console.log("[PUBLISH] primaryText:", primaryTextEl?.value || "(empty)");
+                            console.log("[PUBLISH] imageUrl length:", imageToUpload?.length || 0);
+                            console.log("[PUBLISH] === END PAYLOAD ===");
+                        }
+
                         const response = await fetch("/api/publish", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 imageUrl: imageToUpload,
-                                linkUrl: isLinkMode ? linkUrl.value : "",
-                                linkName: isLinkMode
-                                    ? "พิกัด : " + description.value
-                                    : "",
-                                caption: isLinkMode ? caption.value : "",
-                                description: "",
+                                linkUrl: linkUrlValue,
+                                linkName: linkNameValue,
+                                caption: captionText,
+                                description: descriptionText,
                                 primaryText: primaryTextEl
                                     ? primaryTextEl.value
                                     : "",
@@ -6060,10 +6365,26 @@
                                         // Clear the uploaded image after navigation
                                         state.selectedImage = null;
                                         state.currentView = "upload";
+                                        linkModeImageReady = false;
                                         if (els.fullImageView) els.fullImageView.style.display = "none";
                                         if (els.uploadPrompt) els.uploadPrompt.style.display = "flex";
                                         els.publishBtn.textContent = "SCHEDULE";
                                         els.publishBtn.classList.remove("published");
+
+                                        // Clear form fields silently (Link URL, Primary Text, Caption/พิกัด)
+                                        const linkUrlField = document.getElementById("linkUrl");
+                                        const primaryTextField = document.getElementById("primaryText");
+                                        const captionField = document.getElementById("caption");
+                                        const descField = document.getElementById("description");
+                                        if (linkUrlField) linkUrlField.value = "";
+                                        if (primaryTextField) primaryTextField.value = "";
+                                        if (captionField) captionField.value = "";
+                                        if (descField) descField.value = "";
+                                        // Clear the preview description (พิกัด) - but keep domain display
+                                        const previewDesc = document.getElementById("previewDescription");
+                                        if (previewDesc) previewDesc.textContent = "";
+                                        // Re-validate after clearing
+                                        validateLinkMode();
                                     }, 1000);
                                 } else {
                                     throw new Error(
@@ -6127,6 +6448,8 @@
                             previewDescription.textContent =
                                 config.defaults.description;
                         }
+                        // Re-validate after loading defaults
+                        validateLinkMode();
                     }
                     // Set page and ad account from server config
                     if (config.pageId) {
