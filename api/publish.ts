@@ -32,9 +32,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pageId,
       adAccountId,
       scheduledTime,
+      message,
+      postType,
+      scheduled
     } = req.body;
 
-    // Validation
+    // Handle text posts
+    if (postType === 'text') {
+      if (!message) {
+        return res.status(400).json({ success: false, error: 'No message provided for text post' });
+      }
+      if (!pageId) {
+        return res.status(400).json({ success: false, error: 'No page selected' });
+      }
+
+      // Get page token from cookies or use access token
+      let pageToken = accessToken;
+      if (cookieData) {
+        // Extract page token from cookie data if available
+        const pageTokenMatch = cookieData.match(new RegExp(`"${pageId}"[^}]*"access_token":"([^"]+)"`));
+        if (pageTokenMatch) {
+          pageToken = pageTokenMatch[1];
+        }
+      }
+
+      // Calculate scheduled time if requested
+      let fbBody: any = {
+        message,
+        access_token: pageToken,
+      };
+
+      if (scheduled) {
+        const scheduleTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+        fbBody.scheduled_publish_time = Math.floor(scheduleTime.getTime() / 1000);
+        fbBody.published = false;
+      }
+
+      // Post to Facebook
+      const fbResponse = await fetch(`${API_BASE}/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fbBody),
+      });
+
+      const fbResult = await fbResponse.json();
+
+      if (fbResponse.ok && fbResult.id) {
+        return res.status(200).json({
+          success: true,
+          postId: fbResult.id,
+          scheduledTime: scheduled ? fbBody.scheduled_publish_time * 1000 : null
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: fbResult.error?.message || 'Facebook API error'
+        });
+      }
+    }
+
+    // Original image/link post logic
     if (!imageUrl) {
       return res.status(400).json({ success: false, error: 'No image provided' });
     }
@@ -166,11 +223,10 @@ async function createAdCreative(options: {
 }): Promise<string> {
   const linkData: Record<string, any> = {
     picture: options.imageUrl,
-    description: options.description,
     link: options.linkUrl,
     multi_share_optimized: true,
     multi_share_end_card: false,
-    caption: options.caption,
+    message: options.description, // ข้อความอธิบายสินค้า (แสดงเป็น post text)
     call_to_action: { type: "SHOP_NOW" },
   };
 
