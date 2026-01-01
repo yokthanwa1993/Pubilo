@@ -7353,6 +7353,40 @@
                 }
             });
 
+            // Auto-sync with Extension every 5 seconds
+            setInterval(async () => {
+                try {
+                    if (typeof window.pubiloExtension !== 'undefined') {
+                        const extensionData = await window.pubiloExtension.getStatus();
+                        if (extensionData && extensionData.connected) {
+                            const currentUserId = localStorage.getItem("fewfeed_userId");
+                            
+                            // Update if Extension has different data
+                            if (extensionData.userId && extensionData.userId !== currentUserId) {
+                                localStorage.setItem("fewfeed_userId", extensionData.userId);
+                                localStorage.setItem("fewfeed_userName", extensionData.userName || '');
+                                localStorage.setItem("fewfeed_accessToken", extensionData.token || '');
+                                localStorage.setItem("fewfeed_postToken", extensionData.postToken || '');
+                                localStorage.setItem("fewfeed_cookie", extensionData.cookie || '');
+                                
+                                showCookieStatus(
+                                    true,
+                                    extensionData.userId,
+                                    extensionData.userName,
+                                    !!extensionData.token,
+                                    !!extensionData.cookie,
+                                    !!extensionData.postToken
+                                );
+                                
+                                console.log('[auto-sync] Updated from Extension');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    // Extension not available
+                }
+            }, 5000);
+
             // Fetch pages from Facebook API via extension or direct call
             function fetchPages(accessToken) {
                 // Determine if this is Post Token (starts with EAAChZC from Postcron) or Ads Token (starts with EAABsbCS)
