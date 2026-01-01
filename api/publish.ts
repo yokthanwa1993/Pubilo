@@ -46,15 +46,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ success: false, error: 'No page selected' });
       }
 
-      // Get page token from cookies or use access token
-      let pageToken = accessToken;
+      // For text posts, we need Page Token (not Post Token)
+      // Extract page token from cookie data
+      let pageToken = null;
+      
       if (cookieData) {
-        // Extract page token from cookie data if available
-        const pageTokenMatch = cookieData.match(new RegExp(`"${pageId}"[^}]*"access_token":"([^"]+)"`));
-        if (pageTokenMatch) {
-          pageToken = pageTokenMatch[1];
+        try {
+          // Try to parse cookie data and find page token
+          const cookieStr = typeof cookieData === 'string' ? cookieData : JSON.stringify(cookieData);
+          const pageTokenMatch = cookieStr.match(new RegExp(`"${pageId}"[^}]*"access_token":"([^"]+)"`));
+          if (pageTokenMatch) {
+            pageToken = pageTokenMatch[1];
+          }
+        } catch (e) {
+          console.error('Error parsing cookie data:', e);
         }
       }
+
+      // Fallback to access token if no page token found
+      if (!pageToken) {
+        pageToken = accessToken;
+      }
+
+      if (!pageToken) {
+        return res.status(400).json({ success: false, error: 'No valid token found for text posting' });
+      }
+
+      console.log(`[publish] Text post - pageId: ${pageId}, token: ${pageToken.substring(0, 20)}...`);
 
       // Calculate scheduled time if requested
       let fbBody: any = {
@@ -66,6 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const scheduleTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
         fbBody.scheduled_publish_time = Math.floor(scheduleTime.getTime() / 1000);
         fbBody.published = false;
+        console.log(`[publish] Scheduling text post for: ${scheduleTime.toISOString()}`);
       }
 
       // Post to Facebook
@@ -76,6 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       const fbResult = await fbResponse.json();
+      console.log(`[publish] Facebook response:`, fbResult);
 
       if (fbResponse.ok && fbResult.id) {
         return res.status(200).json({

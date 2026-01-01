@@ -5131,7 +5131,9 @@
                                         pageId: pageId,
                                         message: message,
                                         postType: "text",
-                                        scheduled: true // Request scheduled posting
+                                        scheduled: true, // Request scheduled posting
+                                        accessToken: localStorage.getItem("fewfeed_accessToken"),
+                                        cookieData: localStorage.getItem("fewfeed_cookie")
                                     }),
                                 });
 
