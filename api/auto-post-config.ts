@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Use custom nextPostAt if provided, otherwise calculate from schedule
       let nextPostAt = customNextPostAt || null;
-      if (enabled && !nextPostAt) {
+      if (enabled && !nextPostAt && postToken) {
         // Get schedule_minutes from page_settings
         const { data: settings } = await supabase
           .from('page_settings')
@@ -92,7 +92,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .single();
 
         const scheduleMinutesStr = settings?.schedule_minutes || '00, 15, 30, 45';
-        nextPostAt = getNextScheduledTime(scheduleMinutesStr).toISOString();
+
+        // Get scheduled posts from Facebook to find available slot
+        const scheduledTimestamps = await getScheduledPosts(pageId, postToken);
+        nextPostAt = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps).toISOString();
       }
 
       const updateData: any = {
@@ -129,8 +132,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-// Find next scheduled time based on minute schedule (e.g., "00, 15, 30, 45")
-function getNextScheduledTime(scheduleMinutesStr: string): Date {
+// Get scheduled posts from Facebook to check which time slots are taken
+async function getScheduledPosts(pageId: string, pageToken: string): Promise<number[]> {
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.data || []).map((post: any) => parseInt(post.scheduled_publish_time));
+  } catch {
+    return [];
+  }
+}
+
+// Find next available time slot from schedule that's not already taken on Facebook
+function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: number[]): Date {
   const scheduledMinutes = scheduleMinutesStr
     .split(',')
     .map(m => parseInt(m.trim()))
@@ -142,28 +159,23 @@ function getNextScheduledTime(scheduleMinutesStr: string): Date {
   }
 
   const now = new Date();
-  const currentMinute = now.getMinutes();
-  const currentHour = now.getHours();
+  const minTime = new Date(now.getTime() + 11 * 60 * 1000); // Facebook requires 10+ minutes
 
-  let nextMinute = scheduledMinutes.find(m => m > currentMinute);
-  let nextHour = currentHour;
-  let addDays = 0;
+  for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
+    for (const minute of scheduledMinutes) {
+      const candidate = new Date(now);
+      candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
 
-  if (nextMinute === undefined) {
-    nextMinute = scheduledMinutes[0];
-    nextHour = currentHour + 1;
-    if (nextHour >= 24) {
-      nextHour = 0;
-      addDays = 1;
+      if (candidate.getTime() < minTime.getTime()) continue;
+
+      const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 60);
+
+      if (!isTaken) {
+        return candidate;
+      }
     }
   }
 
-  const nextTime = new Date(now);
-  nextTime.setHours(nextHour, nextMinute, 0, 0);
-
-  if (addDays > 0) {
-    nextTime.setDate(nextTime.getDate() + addDays);
-  }
-
-  return nextTime;
+  return new Date(Date.now() + 60 * 60 * 1000);
 }

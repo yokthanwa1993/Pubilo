@@ -26,6 +26,61 @@ interface Quote {
   used_by_pages: string[];
 }
 
+// Get scheduled posts from Facebook to check which time slots are taken
+async function getScheduledPosts(pageId: string, pageToken: string): Promise<number[]> {
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    // Return array of scheduled timestamps (in seconds)
+    return (data.data || []).map((post: any) => parseInt(post.scheduled_publish_time));
+  } catch {
+    return [];
+  }
+}
+
+// Find next available time slot from schedule that's not already taken on Facebook
+function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: number[]): Date {
+  const scheduledMinutes = scheduleMinutesStr
+    .split(',')
+    .map(m => parseInt(m.trim()))
+    .filter(m => !isNaN(m) && m >= 0 && m < 60)
+    .sort((a, b) => a - b);
+
+  if (scheduledMinutes.length === 0) {
+    return new Date(Date.now() + 60 * 60 * 1000);
+  }
+
+  const now = new Date();
+  // Facebook requires at least 10 minutes in the future
+  const minTime = new Date(now.getTime() + 11 * 60 * 1000);
+
+  // Check slots for next 24 hours
+  for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
+    for (const minute of scheduledMinutes) {
+      const candidate = new Date(now);
+      candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
+
+      // Skip if in the past or too soon
+      if (candidate.getTime() < minTime.getTime()) continue;
+
+      // Check if this slot is already taken
+      const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
+      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 60);
+
+      if (!isTaken) {
+        console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()}`);
+        return candidate;
+      }
+    }
+  }
+
+  // Fallback: 1 hour from now
+  return new Date(Date.now() + 60 * 60 * 1000);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS for browser testing
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -129,8 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const aiResolution = settings?.ai_resolution || '2K';
         const imageSize = settings?.image_image_size || '1:1';
 
-        // Use next_post_at as the scheduled publish time
-        const scheduledTime = config.next_post_at ? new Date(config.next_post_at) : undefined;
+        // Get scheduled posts from Facebook to find available time slot
+        const scheduledTimestamps = await getScheduledPosts(config.page_id, config.post_token);
+        console.log(`[cron-auto-post] Found ${scheduledTimestamps.length} existing scheduled posts on Facebook`);
+
+        // Find next available time slot that's not taken
+        const scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
+        console.log(`[cron-auto-post] Scheduling post for: ${scheduledTime.toISOString()}`);
 
         let facebookPostId: string;
 
@@ -165,8 +225,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           );
         }
 
-        // Update config state - find next scheduled time
-        const nextPostAt = getNextScheduledTime(scheduleMinutesStr).toISOString();
+        // Update config state - find next available time (add just-scheduled time to avoid picking same slot)
+        scheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
+        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
+        const nextPostAt = nextAvailable.toISOString();
         await sql`
           UPDATE auto_post_config
           SET last_post_type = ${nextPostType},
@@ -401,47 +463,3 @@ async function getPageName(sql: any, pageId: string): Promise<string | null> {
   }
 }
 
-// Find next scheduled time based on minute schedule (e.g., "00, 15, 30, 45")
-function getNextScheduledTime(scheduleMinutesStr: string): Date {
-  // Parse schedule minutes
-  const scheduledMinutes = scheduleMinutesStr
-    .split(',')
-    .map(m => parseInt(m.trim()))
-    .filter(m => !isNaN(m) && m >= 0 && m < 60)
-    .sort((a, b) => a - b);
-
-  if (scheduledMinutes.length === 0) {
-    // Fallback: 1 hour from now
-    return new Date(Date.now() + 60 * 60 * 1000);
-  }
-
-  const now = new Date();
-  const currentMinute = now.getUTCMinutes();
-  const currentHour = now.getUTCHours();
-
-  // Find next minute in schedule that is AFTER current minute
-  let nextMinute = scheduledMinutes.find(m => m > currentMinute);
-  let nextHour = currentHour;
-  let addDays = 0;
-
-  if (nextMinute === undefined) {
-    // No more scheduled minutes this hour, go to next hour
-    nextMinute = scheduledMinutes[0];
-    nextHour = currentHour + 1;
-
-    if (nextHour >= 24) {
-      nextHour = 0;
-      addDays = 1;
-    }
-  }
-
-  const nextTime = new Date(now);
-  nextTime.setUTCHours(nextHour, nextMinute, 0, 0);
-
-  if (addDays > 0) {
-    nextTime.setUTCDate(nextTime.getUTCDate() + addDays);
-  }
-
-  console.log(`[cron-auto-post] Next scheduled time: ${nextTime.toISOString()} (schedule: ${scheduleMinutesStr})`);
-  return nextTime;
-}
