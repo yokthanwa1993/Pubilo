@@ -1,0 +1,447 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import postgres from 'postgres';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const FREEIMAGE_API_KEY = process.env.FREEIMAGE_API_KEY || "";
+
+const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
+              process.env.SUPABASE_POSTGRES_URL ||
+              process.env.POSTGRES_URL ||
+              process.env.DATABASE_URL || "";
+
+interface AutoPostConfig {
+  id: string;
+  page_id: string;
+  enabled: boolean;
+  interval_minutes: number;
+  last_post_type: 'text' | 'image' | null;
+  last_post_at: string | null;
+  next_post_at: string | null;
+  post_token: string | null;
+}
+
+interface Quote {
+  id: string;
+  quote_text: string;
+  used_by_pages: string[];
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS for browser testing
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Verify cron secret (optional - skip if no secret set or if "test" header)
+  const authHeader = req.headers['authorization'];
+  const isTest = authHeader === 'Bearer test';
+  const isValidCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (process.env.CRON_SECRET && !isValidCron && !isTest) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!dbUrl) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
+  const sql = postgres(dbUrl, { ssl: 'require' });
+
+  try {
+    const now = new Date();
+    const nowStr = now.toISOString();
+    // Schedule 15 minutes early to allow Facebook's 10-minute minimum
+    const scheduleWindowEnd = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+    console.log('[cron-auto-post] Running at', nowStr, '- looking for posts due before', scheduleWindowEnd);
+
+    // Query configs where enabled=true AND next_post_at is within 15 minutes
+    const dueConfigs = await sql<AutoPostConfig[]>`
+      SELECT * FROM auto_post_config
+      WHERE enabled = true AND next_post_at <= ${scheduleWindowEnd}
+    `;
+
+    if (!dueConfigs || dueConfigs.length === 0) {
+      await sql.end();
+      return res.status(200).json({ success: true, message: 'No posts due', processed: 0 });
+    }
+
+    console.log(`[cron-auto-post] Processing ${dueConfigs.length} due auto-posts`);
+
+    let processed = 0;
+    const results: any[] = [];
+
+    for (const config of dueConfigs) {
+      try {
+        if (!config.post_token) {
+          console.log(`[cron-auto-post] No post_token for page ${config.page_id}, skipping`);
+          results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_token' });
+          continue;
+        }
+
+        // Debounce: skip if last post was less than 1 minute ago
+        if (config.last_post_at) {
+          const lastPostTime = new Date(config.last_post_at).getTime();
+          const timeSinceLastPost = Date.now() - lastPostTime;
+          if (timeSinceLastPost < 60 * 1000) {
+            console.log(`[cron-auto-post] Skipping page ${config.page_id} - posted ${Math.round(timeSinceLastPost/1000)}s ago`);
+            results.push({ page_id: config.page_id, status: 'skipped', reason: 'debounce' });
+            continue;
+          }
+        }
+
+        // Determine next post type (alternate from last)
+        const nextPostType = config.last_post_type === 'text' ? 'image' : 'text';
+        console.log(`[cron-auto-post] Page ${config.page_id}: next post type = ${nextPostType}`);
+
+        // Fetch unused quote
+        const quotes = await sql<Quote[]>`
+          SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at ASC
+        `;
+
+        const unusedQuote = quotes.find(q => {
+          const usedBy = q.used_by_pages || [];
+          return !usedBy.includes(config.page_id);
+        });
+
+        if (!unusedQuote) {
+          console.log(`[cron-auto-post] No unused quotes for page ${config.page_id}`);
+          // Disable auto-post since no quotes available
+          await sql`
+            UPDATE auto_post_config
+            SET enabled = false, updated_at = ${nowStr}
+            WHERE id = ${config.id}::uuid
+          `;
+          results.push({ page_id: config.page_id, status: 'disabled', reason: 'no_quotes' });
+          continue;
+        }
+
+        // Get page settings for schedule and image generation
+        const settingsResult = await sql`
+          SELECT schedule_minutes, image_image_size, ai_model, ai_resolution FROM page_settings WHERE page_id = ${config.page_id} LIMIT 1
+        `;
+        const settings = settingsResult[0];
+        const scheduleMinutesStr = settings?.schedule_minutes || '00, 15, 30, 45';
+        const aiModel = settings?.ai_model || 'gemini-2.0-flash-exp';
+        const aiResolution = settings?.ai_resolution || '2K';
+        const imageSize = settings?.image_image_size || '1:1';
+
+        // Use next_post_at as the scheduled publish time
+        const scheduledTime = config.next_post_at ? new Date(config.next_post_at) : undefined;
+
+        let facebookPostId: string;
+
+        if (nextPostType === 'text') {
+          // Create text-only post (scheduled)
+          facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, scheduledTime);
+        } else {
+          // Create image post
+          const customPrompt = await getImagePrompt(sql, config.page_id);
+          const pageName = await getPageName(sql, config.page_id);
+
+          // Generate AI image with page settings
+          const base64Image = await generateAIImage(
+            unusedQuote.quote_text,
+            customPrompt || undefined,
+            imageSize,
+            pageName || undefined,
+            aiModel,
+            aiResolution
+          );
+
+          // Upload to image host
+          const imageUrl = await uploadImageToHost(base64Image);
+
+          // Post to Facebook (scheduled)
+          facebookPostId = await createImagePost(
+            config.page_id,
+            config.post_token,
+            imageUrl,
+            unusedQuote.quote_text,
+            scheduledTime
+          );
+        }
+
+        // Update config state - find next scheduled time
+        const nextPostAt = getNextScheduledTime(scheduleMinutesStr).toISOString();
+        await sql`
+          UPDATE auto_post_config
+          SET last_post_type = ${nextPostType},
+              last_post_at = ${nowStr},
+              next_post_at = ${nextPostAt},
+              updated_at = ${nowStr}
+          WHERE id = ${config.id}::uuid
+        `;
+
+        // Mark quote as used
+        const usedByPages: string[] = unusedQuote.used_by_pages || [];
+        if (!usedByPages.includes(config.page_id)) {
+          usedByPages.push(config.page_id);
+        }
+        await sql`
+          UPDATE quotes SET used_by_pages = ${usedByPages} WHERE id = ${unusedQuote.id}
+        `;
+
+        processed++;
+        results.push({ page_id: config.page_id, status: 'success', post_type: nextPostType, post_id: facebookPostId });
+        console.log(`[cron-auto-post] Successfully posted ${nextPostType} for page ${config.page_id}`);
+
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`[cron-auto-post] Error for page ${config.page_id}:`, errorMessage);
+
+        // Calculate next retry time (add 5 minutes on failure)
+        const retryTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        await sql`
+          UPDATE auto_post_config
+          SET next_post_at = ${retryTime}, updated_at = ${nowStr}
+          WHERE id = ${config.id}::uuid
+        `;
+
+        results.push({ page_id: config.page_id, status: 'failed', error: errorMessage });
+      }
+    }
+
+    await sql.end();
+    return res.status(200).json({ success: true, processed, results });
+
+  } catch (error) {
+    await sql.end();
+    console.error('[cron-auto-post] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+// Helper functions
+async function createTextPost(pageId: string, postToken: string, message: string, scheduledTime?: Date): Promise<string> {
+  const isScheduled = scheduledTime && scheduledTime.getTime() > Date.now() + 10 * 60 * 1000;
+  console.log(`[cron-auto-post] Creating ${isScheduled ? 'SCHEDULED' : 'immediate'} text post for page ${pageId}${isScheduled ? ` at ${scheduledTime.toISOString()}` : ''}`);
+
+  const body: any = {
+    message,
+    access_token: postToken,
+  };
+
+  // Add scheduled_publish_time if scheduling (must be at least 10 mins in future)
+  if (isScheduled) {
+    body.scheduled_publish_time = Math.floor(scheduledTime.getTime() / 1000);
+    body.published = false;
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/v21.0/${pageId}/feed`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Facebook API error: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+  return result.id;
+}
+
+async function createImagePost(pageId: string, postToken: string, imageUrl: string, message: string, scheduledTime?: Date): Promise<string> {
+  const isScheduled = scheduledTime && scheduledTime.getTime() > Date.now() + 10 * 60 * 1000;
+  console.log(`[cron-auto-post] Creating ${isScheduled ? 'SCHEDULED' : 'immediate'} image post for page ${pageId}${isScheduled ? ` at ${scheduledTime.toISOString()}` : ''}`);
+
+  const body: any = {
+    url: imageUrl,
+    caption: message,
+    access_token: postToken,
+  };
+
+  // Add scheduled_publish_time if scheduling (must be at least 10 mins in future)
+  if (isScheduled) {
+    body.scheduled_publish_time = Math.floor(scheduledTime.getTime() / 1000);
+    body.published = false;
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/v21.0/${pageId}/photos`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Facebook API error: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+  return result.post_id || result.id;
+}
+
+async function generateAIImage(
+  quoteText: string,
+  customPrompt?: string,
+  aspectRatio?: string,
+  pageName?: string,
+  aiModel?: string,
+  aiResolution?: string
+): Promise<string> {
+  const model = aiModel || 'gemini-2.0-flash-exp';
+  const resolution = aiResolution || '2K';
+  console.log(`[cron-auto-post] Generating AI image - model: ${model}, resolution: ${resolution}, aspectRatio: ${aspectRatio}`);
+
+  let textPrompt: string;
+  const finalAspectRatio = aspectRatio || '1:1';
+
+  // Resolution dimensions
+  const resolutionDimensions: Record<string, Record<string, string>> = {
+    '2K': { '1:1': '1024x1024', '2:3': '1024x1536', '3:2': '1536x1024', '16:9': '1920x1080', '9:16': '1080x1920' },
+    '4K': { '1:1': '2048x2048', '2:3': '2048x3072', '3:2': '3072x2048', '16:9': '3840x2160', '9:16': '2160x3840' },
+  };
+  const dimensions = resolutionDimensions[resolution]?.[finalAspectRatio] || resolutionDimensions['2K'][finalAspectRatio] || '1024x1024';
+
+  if (customPrompt && customPrompt.trim()) {
+    textPrompt = customPrompt
+      .replace(/\{\{QUOTE\}\}/g, quoteText)
+      .replace(/\{\{PAGE_NAME\}\}/g, pageName || '');
+
+    textPrompt += `\n\n**CRITICAL IMAGE DIMENSIONS:**
+- **Aspect Ratio: ${finalAspectRatio}** → Generate image with ${dimensions} pixels
+- สร้างแค่ 1 รูปเดียว ห้ามสร้าง grid, collage`;
+  } else {
+    textPrompt = `สร้างรูปภาพ 1 รูป สำหรับโพสต์ Facebook:
+**ข้อความภาษาไทย:** "${quoteText}"
+**สไตล์:** Quote/คำคม สำหรับ Social Media ไทย
+**ขนาด:** ${dimensions} pixels`;
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: textPrompt }] }],
+      generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+
+  if (result.candidates?.[0]?.content?.parts) {
+    for (const part of result.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        const base64 = part.inlineData.data;
+        const mimeType = part.inlineData.mimeType || 'image/png';
+        return `data:${mimeType};base64,${base64}`;
+      }
+    }
+  }
+
+  throw new Error('No image generated from Gemini');
+}
+
+async function uploadImageToHost(base64Data: string): Promise<string> {
+  console.log('[cron-auto-post] Uploading image to freeimage.host...');
+
+  const base64Only = base64Data.replace(/^data:image\/\w+;base64,/, '');
+
+  const formData = new FormData();
+  formData.append('key', FREEIMAGE_API_KEY);
+  formData.append('source', base64Only);
+  formData.append('format', 'json');
+
+  const response = await fetch('https://freeimage.host/api/1/upload', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Image upload failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  if (!result.image?.url) {
+    throw new Error('No URL returned from image host');
+  }
+
+  return result.image.url;
+}
+
+async function getImagePrompt(sql: any, pageId: string): Promise<string | null> {
+  const result = await sql`
+    SELECT prompt_text FROM prompts
+    WHERE page_id = ${pageId} AND prompt_type = 'image_post'
+    LIMIT 1
+  `;
+  return result[0]?.prompt_text || null;
+}
+
+async function getPageName(sql: any, pageId: string): Promise<string | null> {
+  try {
+    const result = await sql`
+      SELECT page_name FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+    `;
+    return result[0]?.page_name || null;
+  } catch {
+    return null;
+  }
+}
+
+// Find next scheduled time based on minute schedule (e.g., "00, 15, 30, 45")
+function getNextScheduledTime(scheduleMinutesStr: string): Date {
+  // Parse schedule minutes
+  const scheduledMinutes = scheduleMinutesStr
+    .split(',')
+    .map(m => parseInt(m.trim()))
+    .filter(m => !isNaN(m) && m >= 0 && m < 60)
+    .sort((a, b) => a - b);
+
+  if (scheduledMinutes.length === 0) {
+    // Fallback: 1 hour from now
+    return new Date(Date.now() + 60 * 60 * 1000);
+  }
+
+  const now = new Date();
+  const currentMinute = now.getUTCMinutes();
+  const currentHour = now.getUTCHours();
+
+  // Find next minute in schedule that is AFTER current minute
+  let nextMinute = scheduledMinutes.find(m => m > currentMinute);
+  let nextHour = currentHour;
+  let addDays = 0;
+
+  if (nextMinute === undefined) {
+    // No more scheduled minutes this hour, go to next hour
+    nextMinute = scheduledMinutes[0];
+    nextHour = currentHour + 1;
+
+    if (nextHour >= 24) {
+      nextHour = 0;
+      addDays = 1;
+    }
+  }
+
+  const nextTime = new Date(now);
+  nextTime.setUTCHours(nextHour, nextMinute, 0, 0);
+
+  if (addDays > 0) {
+    nextTime.setUTCDate(nextTime.getUTCDate() + addDays);
+  }
+
+  console.log(`[cron-auto-post] Next scheduled time: ${nextTime.toISOString()} (schedule: ${scheduleMinutesStr})`);
+  return nextTime;
+}
