@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Fallback to access token if no page token found
+      // If no page token found, use access token (might be Ads Token)
       if (!pageToken) {
         pageToken = accessToken;
       }
@@ -72,19 +72,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ success: false, error: 'No valid token found for text posting' });
       }
 
-      console.log(`[publish] Text post - pageId: ${pageId}, token: ${pageToken.substring(0, 20)}...`);
+      console.log(`[publish] Text post - pageId: ${pageId}, token type: ${pageToken.startsWith('EAABsbCS') ? 'Ads Token' : 'Page Token'}, token: ${pageToken.substring(0, 20)}...`);
 
-      // Calculate scheduled time if requested
+      // For Ads Token, we need to post as immediate (not scheduled)
+      const isAdsToken = pageToken.startsWith('EAABsbCS');
+      
       let fbBody: any = {
         message,
         access_token: pageToken,
       };
 
-      if (scheduled) {
-        const scheduleTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+      // Only schedule if we have proper Page Token
+      if (scheduled && !isAdsToken) {
+        const scheduleTime = new Date(Date.now() + 15 * 60 * 1000);
         fbBody.scheduled_publish_time = Math.floor(scheduleTime.getTime() / 1000);
         fbBody.published = false;
         console.log(`[publish] Scheduling text post for: ${scheduleTime.toISOString()}`);
+      } else if (scheduled && isAdsToken) {
+        console.log(`[publish] Cannot schedule with Ads Token, posting immediately`);
       }
 
       // Post to Facebook
