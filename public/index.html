@@ -3882,6 +3882,8 @@
             // Calculate next schedule for panel (fetch from database with auto-refresh)
             async function calculateNextScheduleForPanel() {
                 try {
+                    // Use hardcoded pageId for now - should get from pageSelect
+                    const pageId = getCurrentPageId() || '168440993027073';
                     const response = await fetch('/api/auto-post-config?pageId=' + pageId);
                     const data = await response.json();
                     
