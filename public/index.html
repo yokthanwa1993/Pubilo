@@ -5115,51 +5115,54 @@
 
                             try {
                                 textPublishBtn.disabled = true;
-                                textPublishBtn.textContent = "กำลังโพสต์...";
+                                textPublishBtn.innerHTML = '<span class="publish-icon">⏳</span> กำลังโพสต์...';
 
-                                // Option 1: Manual text post (immediate)
-                                const useManual = confirm("เลือกวิธีโพสต์:\nOK = โพสต์ทันที\nCancel = ใช้ระบบ Auto-post (ดึงคำคม + เวลาว่าง)");
+                                const pageId = getCurrentPageId();
+                                const pageToken = localStorage.getItem("fewfeed_postToken");
                                 
-                                if (useManual) {
-                                    // Manual immediate post
-                                    const response = await fetch("/api/publish", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                            pageId: getCurrentPageId(),
-                                            message: message,
-                                            postType: "text"
-                                        }),
-                                    });
-
-                                    const result = await response.json();
-                                    
-                                    if (result.success) {
-                                        alert("โพสต์ทันทีสำเร็จ!");
-                                    } else {
-                                        alert("เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถโพสต์ได้"));
-                                    }
-                                } else {
-                                    // Use auto-post system (with quotes and scheduling)
-                                    const response = await fetch("/api/cron-auto-post?force=true", {
-                                        method: "GET",
-                                        headers: { "Authorization": "Bearer test" }
-                                    });
-
-                                    const result = await response.json();
-                                    
-                                    if (result.success && result.processed > 0) {
-                                        alert("ใช้ระบบ Auto-post สำเร็จ! (ดึงคำคม + จัดเวลาอัตโนมัติ)");
-                                    } else {
-                                        alert("เกิดข้อผิดพลาดในระบบ Auto-post");
-                                    }
+                                if (!pageId || !pageToken) {
+                                    alert("กรุณาเลือกเพจและตรวจสอบ token ก่อน");
+                                    return;
                                 }
 
-                                // Clear form on success
-                                document.getElementById("textMessageTextarea").value = "";
-                                document.getElementById("textPreviewContent").textContent = "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
+                                // Get next available time slot (same as image posting)
+                                const scheduledTime = calculateNextScheduleTime();
+                                const scheduledTimestamp = Math.floor(scheduledTime.getTime() / 1000);
+
+                                // Post to Facebook with scheduling
+                                const fbResponse = await fetch(
+                                    `https://graph.facebook.com/v21.0/${pageId}/feed`,
+                                    {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            message: message,
+                                            access_token: pageToken,
+                                            scheduled_publish_time: scheduledTimestamp,
+                                            published: false
+                                        }),
+                                    }
+                                );
+
+                                const fbResult = await fbResponse.json();
+
+                                if (fbResponse.ok && fbResult.id) {
+                                    alert(`โพสต์สำเร็จ! กำหนดเวลา: ${scheduledTime.toLocaleString('th-TH')}`);
+                                    
+                                    // Clear form
+                                    document.getElementById("textMessageTextarea").value = "";
+                                    document.getElementById("textPreviewContent").textContent = "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
+                                    
+                                    // Refresh pending posts
+                                    if (typeof loadScheduledPosts === 'function') {
+                                        loadScheduledPosts();
+                                    }
+                                } else {
+                                    throw new Error(fbResult.error?.message || 'Facebook API error');
+                                }
                                 
                             } catch (error) {
+                                console.error('Text post error:', error);
                                 alert("เกิดข้อผิดพลาด: " + error.message);
                             } finally {
                                 textPublishBtn.disabled = false;
