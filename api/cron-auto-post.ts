@@ -137,16 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           continue;
         }
 
-        // Skip if next_post_at is more than 15 minutes in the future (not due yet)
-        if (config.next_post_at) {
-          const nextPostTime = new Date(config.next_post_at).getTime();
-          const timeUntilPost = nextPostTime - Date.now();
-          if (timeUntilPost > 15 * 60 * 1000) {
-            console.log(`[cron-auto-post] Skipping page ${config.page_id} - next post in ${Math.round(timeUntilPost/60000)} mins`);
-            results.push({ page_id: config.page_id, status: 'skipped', reason: 'not_due' });
-            continue;
-          }
-        }
+        // No debounce - process all due posts
 
         // Determine next post type (alternate from last)
         const nextPostType = config.last_post_type === 'text' ? 'image' : 'text';
