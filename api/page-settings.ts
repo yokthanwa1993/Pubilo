@@ -11,6 +11,8 @@ interface PageSettings {
   page_id: string;
   auto_schedule: boolean;
   schedule_minutes: string;
+  working_hours_start: number;
+  working_hours_end: number;
   ai_model: string;
   ai_resolution: string;
   link_image_size: string;
@@ -75,6 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pageId,
         autoSchedule,
         scheduleMinutes,
+        workingHoursStart,
+        workingHoursEnd,
         aiModel,
         aiResolution,
         linkImageSize,
@@ -92,6 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         page_id: pageId,
         auto_schedule: autoScheduleBool,
         schedule_minutes: mins,
+        working_hours_start: workingHoursStart ?? 6,
+        working_hours_end: workingHoursEnd ?? 24,
         ai_model: aiModel || 'gemini-2.0-flash-exp',
         ai_resolution: aiResolution || '2K',
         link_image_size: linkImageSize || '1:1',

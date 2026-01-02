@@ -8,6 +8,10 @@
     {
       "path": "/api/cron-auto-post",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/auto-hide",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {

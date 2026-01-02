@@ -3256,6 +3256,72 @@
                             </div>
                             <div
                                 class="setting-group"
+                                id="workingHoursGroupPanel"
+                                style="display: none"
+                            >
+                                <label class="form-label">ช่วงเวลาทำงาน</label>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <select id="workingHoursStart" class="form-input" style="padding: 0.5rem; width: auto;">
+                                        <option value="0">00:00</option>
+                                        <option value="1">01:00</option>
+                                        <option value="2">02:00</option>
+                                        <option value="3">03:00</option>
+                                        <option value="4">04:00</option>
+                                        <option value="5">05:00</option>
+                                        <option value="6" selected>06:00</option>
+                                        <option value="7">07:00</option>
+                                        <option value="8">08:00</option>
+                                        <option value="9">09:00</option>
+                                        <option value="10">10:00</option>
+                                        <option value="11">11:00</option>
+                                        <option value="12">12:00</option>
+                                        <option value="13">13:00</option>
+                                        <option value="14">14:00</option>
+                                        <option value="15">15:00</option>
+                                        <option value="16">16:00</option>
+                                        <option value="17">17:00</option>
+                                        <option value="18">18:00</option>
+                                        <option value="19">19:00</option>
+                                        <option value="20">20:00</option>
+                                        <option value="21">21:00</option>
+                                        <option value="22">22:00</option>
+                                        <option value="23">23:00</option>
+                                    </select>
+                                    <span>ถึง</span>
+                                    <select id="workingHoursEnd" class="form-input" style="padding: 0.5rem; width: auto;">
+                                        <option value="0">00:00</option>
+                                        <option value="1">01:00</option>
+                                        <option value="2">02:00</option>
+                                        <option value="3">03:00</option>
+                                        <option value="4">04:00</option>
+                                        <option value="5">05:00</option>
+                                        <option value="6">06:00</option>
+                                        <option value="7">07:00</option>
+                                        <option value="8">08:00</option>
+                                        <option value="9">09:00</option>
+                                        <option value="10">10:00</option>
+                                        <option value="11">11:00</option>
+                                        <option value="12">12:00</option>
+                                        <option value="13">13:00</option>
+                                        <option value="14">14:00</option>
+                                        <option value="15">15:00</option>
+                                        <option value="16">16:00</option>
+                                        <option value="17">17:00</option>
+                                        <option value="18">18:00</option>
+                                        <option value="19">19:00</option>
+                                        <option value="20">20:00</option>
+                                        <option value="21">21:00</option>
+                                        <option value="22">22:00</option>
+                                        <option value="23">23:00</option>
+                                        <option value="24" selected>24:00</option>
+                                    </select>
+                                </div>
+                                <p class="setting-desc">
+                                    โพสต์เฉพาะในช่วงเวลานี้ (เวลาไทย)
+                                </p>
+                            </div>
+                            <div
+                                class="setting-group"
                                 id="nextScheduleInfoPanel"
                                 style="display: none"
                             >
@@ -3295,6 +3361,20 @@
                                     ⚡ ทดสอบ Cron ทันที
                                 </button>
                                 <span id="cronResult" style="font-size: 0.8rem;"></span>
+                            </div>
+                        </div>
+
+                        <!-- Auto Hide Posts Section -->
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">🙈 Auto Hide Posts</h3>
+                            <div class="setting-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="autoHideEnabled" />
+                                    <span>ซ่อนโพสต์อัตโนมัติ</span>
+                                </label>
+                                <p class="setting-desc">
+                                    ซ่อนโพสต์ประเภท shared_story, mobile_status_update, added_photos จาก Timeline
+                                </p>
                             </div>
                         </div>
 
@@ -3883,17 +3963,21 @@
                     return new Date(Date.now() + 15 * 60 * 1000);
                 }
 
+                // Get working hours from UI
+                const workingStart = parseInt(workingHoursStart?.value) || 6;
+                const workingEnd = parseInt(workingHoursEnd?.value) || 24;
+
                 // Facebook requires at least 10 min in the future
                 const minTime = new Date(Date.now() + 10 * 60 * 1000);
 
                 // Find first available slot
-                let candidate = findNextSlot(minTime, minutesArr);
+                let candidate = findNextSlot(minTime, minutesArr, workingStart, workingEnd);
 
                 // Keep looking until we find a free slot (max 100 iterations to prevent infinite loop)
                 let iterations = 0;
                 while (isSlotTaken(candidate) && iterations < 100) {
                     // Move to next slot
-                    candidate = findNextSlot(new Date(candidate.getTime() + 60 * 1000), minutesArr);
+                    candidate = findNextSlot(new Date(candidate.getTime() + 60 * 1000), minutesArr, workingStart, workingEnd);
                     iterations++;
                 }
 
@@ -3901,24 +3985,31 @@
             }
 
             // Find the next slot from given time based on specific minutes
-            function findNextSlot(fromTime, minutesArr) {
+            function findNextSlot(fromTime, minutesArr, workingStart = 6, workingEnd = 24) {
                 const result = new Date(fromTime);
                 result.setSeconds(0, 0);
 
-                const currentMinute = result.getMinutes();
-
-                // Find next minute in array that is > currentMinute
-                let foundMinute = minutesArr.find(m => m > currentMinute);
-
-                if (foundMinute !== undefined) {
-                    result.setMinutes(foundMinute, 0, 0);
-                } else {
-                    // Move to next hour
-                    result.setHours(result.getHours() + 1);
-                    result.setMinutes(minutesArr[0], 0, 0);
+                // Check up to 48 hours ahead
+                for (let hourOffset = 0; hourOffset < 48; hourOffset++) {
+                    const checkTime = new Date(result.getTime() + hourOffset * 60 * 60 * 1000);
+                    const thaiHour = checkTime.getHours(); // Already in local time
+                    
+                    // Skip if outside working hours
+                    if (thaiHour < workingStart || thaiHour >= workingEnd) continue;
+                    
+                    for (const minute of minutesArr) {
+                        const candidate = new Date(checkTime);
+                        candidate.setMinutes(minute, 0, 0);
+                        
+                        // Must be after fromTime
+                        if (candidate.getTime() > fromTime.getTime()) {
+                            return candidate;
+                        }
+                    }
                 }
 
-                return result;
+                // Fallback: 1 hour from now
+                return new Date(Date.now() + 60 * 60 * 1000);
             }
 
             // Update next schedule display
@@ -3950,16 +4041,20 @@
                     return new Date(Date.now() + 15 * 60 * 1000).toLocaleString("th-TH");
                 }
 
+                // Get working hours from UI
+                const workingStart = parseInt(workingHoursStart?.value) || 6;
+                const workingEnd = parseInt(workingHoursEnd?.value) || 24;
+
                 // Facebook requires at least 10 min in the future
                 const minTime = new Date(Date.now() + 10 * 60 * 1000);
 
                 // Find first available slot
-                let candidate = findNextSlot(minTime, minutesArr);
+                let candidate = findNextSlot(minTime, minutesArr, workingStart, workingEnd);
 
                 // Keep looking until we find a free slot
                 let iterations = 0;
                 while (isSlotTaken(candidate) && iterations < 100) {
-                    candidate = findNextSlot(new Date(candidate.getTime() + 60 * 1000), minutesArr);
+                    candidate = findNextSlot(new Date(candidate.getTime() + 60 * 1000), minutesArr, workingStart, workingEnd);
                     iterations++;
                 }
 
@@ -4045,6 +4140,9 @@
             const scheduleMinutesPanel = document.getElementById("scheduleMinutesPanel");
             const scheduleMinutesGridPanel = document.getElementById("scheduleMinutesGridPanel");
             const scheduleIntervalGroupPanel = document.getElementById("scheduleIntervalGroupPanel");
+            const workingHoursGroupPanel = document.getElementById("workingHoursGroupPanel");
+            const workingHoursStart = document.getElementById("workingHoursStart");
+            const workingHoursEnd = document.getElementById("workingHoursEnd");
 
             // Add event listeners to Settings Panel minute grid
             if (scheduleMinutesGridPanel) {
@@ -4066,6 +4164,9 @@
             const autoPostEnabled = document.getElementById("autoPostEnabled");
             const autoPostStatusGroup = document.getElementById("autoPostStatusGroup");
             const autoPostNextType = document.getElementById("autoPostNextType");
+
+            // Auto-Hide elements
+            const autoHideEnabled = document.getElementById("autoHideEnabled");
 
             // Auto-resize textarea function
             function autoResizeTextarea(textarea) {
@@ -4188,6 +4289,47 @@
                     console.error("[Auto-Post] Failed to save config:", err);
                 }
             }
+
+            // Auto-Hide Functions
+            async function loadAutoHideConfig() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return;
+
+                try {
+                    const response = await fetch(`/api/auto-hide-config?pageId=${pageId}`);
+                    const data = await response.json();
+                    if (data.success && data.config) {
+                        autoHideEnabled.checked = data.config.enabled || false;
+                    }
+                } catch (err) {
+                    console.error("[Auto-Hide] Failed to load config:", err);
+                }
+            }
+
+            async function saveAutoHideConfig() {
+                const pageId = getCurrentPageId();
+                if (!pageId) return;
+
+                const enabled = autoHideEnabled.checked;
+                const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+
+                try {
+                    const response = await fetch('/api/auto-hide-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pageId, enabled, postToken: pageToken })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        console.log("[Auto-Hide] Config saved:", data.config);
+                    }
+                } catch (err) {
+                    console.error("[Auto-Hide] Failed to save config:", err);
+                }
+            }
+
+            // Auto-hide checkbox change handler
+            autoHideEnabled.addEventListener("change", saveAutoHideConfig);
 
             // Auto-post enabled checkbox change handler
             autoPostEnabled.addEventListener("change", () => {
@@ -4325,15 +4467,20 @@
                 if (settings) {
                     autoScheduleEnabledPanel.checked = settings.autoSchedule || false;
                     scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
+                    if (workingHoursStart) workingHoursStart.value = settings.workingHoursStart ?? 6;
+                    if (workingHoursEnd) workingHoursEnd.value = settings.workingHoursEnd ?? 24;
                 } else {
                     autoScheduleEnabledPanel.checked = false;
                     scheduleMinutesPanel.value = "00, 15, 30, 45";
+                    if (workingHoursStart) workingHoursStart.value = 6;
+                    if (workingHoursEnd) workingHoursEnd.value = 24;
                 }
                 // Sync minute grid with hidden input
                 if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
                 // Update visibility
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                workingHoursGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
                     calculateNextScheduleForPanel().then(result => {
@@ -4395,11 +4542,15 @@
 
                 // Load Auto-Post Alternating config
                 await loadAutoPostConfig();
+                
+                // Load Auto-Hide config
+                await loadAutoHideConfig();
             }
 
             // Auto schedule checkbox change handler for panel
             autoScheduleEnabledPanel.addEventListener("change", () => {
                 scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
+                workingHoursGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
                 if (autoScheduleEnabledPanel.checked) {
                     calculateNextScheduleForPanel().then(result => {
@@ -4427,6 +4578,8 @@
 
                 const autoSchedule = autoScheduleEnabledPanel.checked;
                 const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
+                const workingStart = parseInt(workingHoursStart.value) || 6;
+                const workingEnd = parseInt(workingHoursEnd.value) || 24;
                 const linkPrompt = linkPromptInput.value.trim();
                 const imagePrompt = imagePromptInput.value.trim();
                 const linkImageSize = getLinkImageSize();
@@ -4447,6 +4600,8 @@
                     pageId,
                     autoSchedule,
                     scheduleMinutes: mins,
+                    workingHoursStart: workingStart,
+                    workingHoursEnd: workingEnd,
                     aiModel: aiModelSelect.value,
                     aiResolution: aiResolutionSelect.value,
                     linkImageSize,
@@ -4470,6 +4625,8 @@
                             pageId,
                             autoSchedule,
                             scheduleMinutes: mins,
+                            workingHoursStart: workingStart,
+                            workingHoursEnd: workingEnd,
                             aiModel: aiModelSelect.value,
                             aiResolution: aiResolutionSelect.value,
                             linkImageSize,

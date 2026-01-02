@@ -52,7 +52,7 @@ async function getScheduledPosts(pageId: string, pageToken: string): Promise<num
 }
 
 // Find next available time slot from schedule that's not already taken on Facebook
-function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: number[]): Date {
+function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: number[], workingHoursStart: number = 6, workingHoursEnd: number = 24): Date {
   const scheduledMinutes = scheduleMinutesStr
     .split(',')
     .map(m => parseInt(m.trim()))
@@ -67,8 +67,8 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
   // Schedule 10 minutes ahead (Facebook minimum requirement)
   const minTime = new Date(now.getTime() + 10 * 60 * 1000);
 
-  // Check slots for next 24 hours
-  for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
+  // Check slots for next 48 hours (to handle overnight working hours)
+  for (let hourOffset = 0; hourOffset < 48; hourOffset++) {
     for (const minute of scheduledMinutes) {
       const candidate = new Date(now);
       candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
@@ -76,12 +76,27 @@ function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: 
       // Skip if in the past or too soon
       if (candidate.getTime() < minTime.getTime()) continue;
 
+      // Check working hours (convert to Thailand time UTC+7)
+      const thaiHour = (candidate.getUTCHours() + 7) % 24;
+      
+      // Handle overnight working hours (e.g., 06:00 - 24:00 means 6am to midnight)
+      let isInWorkingHours = false;
+      if (workingHoursEnd <= 24) {
+        // Normal case: start < end (e.g., 06:00 - 24:00)
+        isInWorkingHours = thaiHour >= workingHoursStart && thaiHour < workingHoursEnd;
+      } else {
+        // Wrap around case (shouldn't happen with current UI but handle it)
+        isInWorkingHours = thaiHour >= workingHoursStart || thaiHour < (workingHoursEnd % 24);
+      }
+      
+      if (!isInWorkingHours) continue;
+
       // Check if this slot is already taken (within 2-minute window)
       const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
       const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
 
       if (!isTaken) {
-        console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()}`);
+        console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()} (Thai hour: ${thaiHour})`);
         // Add small random offset (0-59 seconds) to prevent exact collisions
         const randomOffset = Math.floor(Math.random() * 60) * 1000;
         const finalTime = new Date(candidate.getTime() + randomOffset);
@@ -170,14 +185,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const nextPostType = config.last_post_type === 'text' ? 'image' : 'text';
         console.log(`[cron-auto-post] Page ${config.page_id}: next post type = ${nextPostType}`);
 
-        // Fetch unused quote
+        // Fetch unused quote (Global mode - not used by ANY page)
         const quotes = await sql<Quote[]>`
           SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at ASC
         `;
 
         const unusedQuote = quotes.find(q => {
           const usedBy = q.used_by_pages || [];
-          return !usedBy.includes(config.page_id);
+          return usedBy.length === 0; // Global mode: must not be used by any page
         });
 
         if (!unusedQuote) {
@@ -194,10 +209,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get page settings for schedule and image generation
         const settingsResult = await sql`
-          SELECT schedule_minutes, image_image_size, ai_model, ai_resolution FROM page_settings WHERE page_id = ${config.page_id} LIMIT 1
+          SELECT schedule_minutes, image_image_size, ai_model, ai_resolution, working_hours_start, working_hours_end FROM page_settings WHERE page_id = ${config.page_id} LIMIT 1
         `;
         const settings = settingsResult[0];
         const scheduleMinutesStr = settings?.schedule_minutes || '00, 15, 30, 45';
+        const workingHoursStart = settings?.working_hours_start ?? 6;
+        const workingHoursEnd = settings?.working_hours_end ?? 24;
         const aiModel = settings?.ai_model || 'gemini-2.0-flash-exp';
         const aiResolution = settings?.ai_resolution || '2K';
         const imageSize = settings?.image_image_size || '1:1';
@@ -213,7 +230,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.log(`[cron-auto-post] Using scheduled time from database: ${scheduledTime.toISOString()}`);
         } else {
           // Fallback: calculate next available time slot
-          scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps);
+          scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps, workingHoursStart, workingHoursEnd);
           console.log(`[cron-auto-post] Calculated new scheduled time: ${scheduledTime.toISOString()}`);
         }
 
@@ -263,7 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updatedScheduledTimestamps.push(Math.floor(bufferTime1.getTime() / 1000));
         updatedScheduledTimestamps.push(Math.floor(bufferTime2.getTime() / 1000));
         
-        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, updatedScheduledTimestamps);
+        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, updatedScheduledTimestamps, workingHoursStart, workingHoursEnd);
         const nextPostAt = nextAvailable.toISOString();
         await sql`
           UPDATE auto_post_config
