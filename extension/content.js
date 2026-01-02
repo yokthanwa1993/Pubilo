@@ -3,65 +3,24 @@
 
 console.log("[FEWFEED Content] Script loaded on", window.location.href);
 
-// Cache duration: 1 hour (in milliseconds)
-const TOKEN_CACHE_DURATION = 60 * 60 * 1000;
-
-// Check if we should fetch new tokens or use cached ones
-function shouldFetchTokens() {
-  const lastFetch = localStorage.getItem("fewfeed_lastFetch");
-  const existingToken = localStorage.getItem("fewfeed_accessToken");
-
-  // No token = must fetch
-  if (!existingToken) {
-    console.log("[FEWFEED Content] No token found, will fetch");
-    return true;
-  }
-
-  // No timestamp = fetch to be safe
-  if (!lastFetch) {
-    console.log("[FEWFEED Content] No fetch timestamp, will fetch");
-    return true;
-  }
-
-  // Check if cache expired (1 hour)
-  const elapsed = Date.now() - parseInt(lastFetch, 10);
-  if (elapsed > TOKEN_CACHE_DURATION) {
-    console.log("[FEWFEED Content] Cache expired, will fetch");
-    return true;
-  }
-
-  console.log("[FEWFEED Content] Using cached tokens (fetched", Math.round(elapsed / 60000), "min ago)");
-  return false;
-}
-
 // Main function - request tokens from background and wait for them
-async function initializeTokens(forceFetch = false) {
-  console.log("[FEWFEED Content] Initializing tokens...", forceFetch ? "(forced)" : "");
+async function initializeTokens() {
+  console.log("[FEWFEED Content] Requesting tokens from background...");
 
   // Show loading indicator
   showLoadingIndicator();
 
   try {
-    // Get existing localStorage values
+    // Ask background to fetch token (this will wait for fetch to complete)
+    const data = await chrome.runtime.sendMessage({ action: "fetchToken" });
+
+    // Get existing localStorage values as fallback
     const existingToken = localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
     const existingPostToken = localStorage.getItem("fewfeed_postToken");
     const existingFbDtsg = localStorage.getItem("fewfeed_fbDtsg");
     const existingCookie = localStorage.getItem("fewfeed_cookie");
     const existingUserId = localStorage.getItem("fewfeed_userId");
     const existingUserName = localStorage.getItem("fewfeed_userName");
-
-    let data = null;
-
-    // Only fetch if needed or forced
-    if (forceFetch || shouldFetchTokens()) {
-      console.log("[FEWFEED Content] Fetching tokens from background...");
-      data = await chrome.runtime.sendMessage({ action: "fetchToken" });
-      // Update last fetch timestamp
-      localStorage.setItem("fewfeed_lastFetch", Date.now().toString());
-    } else {
-      // Use stored data from extension storage
-      data = await chrome.runtime.sendMessage({ action: "getStoredData" });
-    }
 
     // Use new data if available, otherwise keep existing
     const finalToken = data?.fewfeed_accessToken || existingToken || "";
@@ -193,9 +152,9 @@ window.addEventListener("message", async (event) => {
     }, "*");
   }
 
-  // Page requesting to refresh tokens (force fetch)
+  // Page requesting to refresh tokens
   if (event.data.type === "FEWFEED_REFRESH_TOKEN") {
-    await initializeTokens(true);
+    await initializeTokens();
   }
 
   // Page requesting to refresh post token specifically (triggers OAuth flow)
@@ -267,8 +226,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Token updated from Facebook page (fb-content.js extracted it)
   if (request.action === "tokenUpdated") {
     console.log("[FEWFEED Content] Token updated notification received!");
-    // Re-initialize to get the new tokens (force fetch)
-    initializeTokens(true);
+    // Re-initialize to get the new tokens
+    initializeTokens();
     sendResponse({ success: true });
     return true;
   }

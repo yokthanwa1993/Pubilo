@@ -514,6 +514,25 @@
                 background: #059669;
             }
 
+            /* Post Mode Buttons */
+            .post-mode-btn {
+                padding: 0.5rem 1rem;
+                border: 2px solid #e5e7eb;
+                border-radius: 8px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: all 0.2s;
+            }
+            .post-mode-btn:hover {
+                border-color: #9333ea;
+            }
+            .post-mode-btn.active {
+                background: #9333ea;
+                color: #fff;
+                border-color: #9333ea;
+            }
+
             /* Card Preview - Fixed height container for all modes */
             .card-preview {
                 background: #fff;
@@ -1585,6 +1604,7 @@
                 flex-direction: column;
                 height: calc(100vh - 60px - 1rem);
                 overflow: hidden;
+                flex: 1;
             }
 
             #settingsPanel .pending-panel-header {
@@ -2750,39 +2770,46 @@
                 <!-- End linkModeContainer -->
 
                 <!-- ========== TEXT MODE ========== -->
-                <div class="mode-container" id="textModeContainer">
-                    <!-- Preview Panel -->
-                    <div class="preview-panel">
-                        <div class="card-preview">
-                            <div class="card-content">
-                                <div class="card-title">Text Post Preview</div>
-                                <div class="card-description" id="textPreviewContent" style="white-space: pre-wrap; min-height: 100px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                                    พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...
-                                </div>
-                            </div>
-                        </div>
+                <div class="pending-panel" id="textModePanel" style="display: none;">
+                    <div class="pending-panel-header">
+                        <h2>Text Post</h2>
                     </div>
-
-                    <!-- Input Panel -->
-                    <div class="input-panel">
-                        <div class="input-group">
-                            <label for="textMessageTextarea" style="display: block; margin-bottom: 8px; font-weight: 500;">ข้อความ</label>
+                    <div style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
+                        <!-- Input -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">ข้อความ</label>
                             <textarea
                                 id="textMessageTextarea"
                                 placeholder="พิมพ์ข้อความที่ต้องการโพสต์..."
-                                rows="8"
-                                style="width: 100%; min-height: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.5; resize: vertical; box-sizing: border-box;"
+                                style="width: 100%; min-height: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; box-sizing: border-box;"
                             ></textarea>
                         </div>
 
-                        <div class="publish-section" style="margin-top: 20px;">
-                            <button class="publish-btn" id="textPublishBtn" style="width: 100%; padding: 12px 20px; background: #1877f2; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <span class="publish-icon">📝</span>
-                                Publish Text Post
-                            </button>
+                        <!-- Share to Pages -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">แชร์ไปเพจอื่น (เลือกได้หลายเพจ)</label>
+                            <div id="sharePagesList" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fafafa;"></div>
                         </div>
+
+                        <!-- i_user for GraphQL Edit -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">i_user (Profile Plus ID)</label>
+                            <input type="text" id="iUserInput" placeholder="เช่น 61554708539220" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                            <small style="color: #666; margin-top: 4px; display: block;">ดูจาก URL เมื่อสลับเป็นเพจ หรือเปิด Extension เพื่อ sync ข้อมูลใหม่</small>
+                        </div>
+
+                        <!-- Publish Button -->
+                        <button class="publish-btn" id="textPublishBtn" style="width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)';" onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                            <span>📝</span> Publish Text Post
+                        </button>
+                        
+                        <!-- Status -->
+                        <div id="textPublishStatus" style="margin-top: 12px; padding: 12px; border-radius: 8px; display: none;"></div>
                     </div>
                 </div>
+                
+                <!-- Old text mode container - hidden -->
+                <div class="mode-container" id="textModeContainer" style="display: none !important;"></div>
                 <!-- End textModeContainer -->
 
                 <!-- ========== IMAGE MODE ========== -->
@@ -3337,14 +3364,15 @@
 
                         <!-- Auto-Post Alternating Section -->
                         <div class="settings-section">
-                            <h3 class="settings-section-title">🔄 Auto-Post Alternating</h3>
+                            <h3 class="settings-section-title">🔄 Auto-Post Mode</h3>
                             <div class="setting-group">
-                                <label class="setting-label">
-                                    <input type="checkbox" id="autoPostEnabled" />
-                                    <span>สลับโพสต์ Text / Image</span>
-                                </label>
-                                <p class="setting-desc">
-                                    ใช้เวลาร่วมกับ Auto Schedule Posts - สลับระหว่าง Text (ข้อความ) กับ Image (รูป AI)
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button type="button" id="postModeImage" class="btn post-mode-btn" data-mode="image">🖼️ รูปอย่างเดียว</button>
+                                    <button type="button" id="postModeText" class="btn post-mode-btn" data-mode="text">📝 ข้อความอย่างเดียว</button>
+                                    <button type="button" id="postModeAlternate" class="btn post-mode-btn" data-mode="alternate">🔄 สลับ</button>
+                                </div>
+                                <p class="setting-desc" style="margin-top: 0.5rem;">
+                                    เลือกโหมดการโพสต์อัตโนมัติ
                                 </p>
                             </div>
                             <div class="setting-group" id="autoPostStatusGroup" style="display: none;">
@@ -3753,6 +3781,11 @@
                 const pageSelect = document.getElementById("pageSelect");
                 return pageSelect ? pageSelect.value : null;
             }
+            
+            // Get current user ID
+            function getCurrentUserId() {
+                return localStorage.getItem("fewfeed_userId");
+            }
 
             // Auto-resize textarea to fit content
             function autoResizeTextarea(textarea) {
@@ -4160,10 +4193,17 @@
             const aiResolutionSelect = document.getElementById("aiResolutionSelect");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
 
-            // Auto-Post Alternating elements
-            const autoPostEnabled = document.getElementById("autoPostEnabled");
+            // Auto-Post Mode elements
+            const postModeImage = document.getElementById("postModeImage");
+            const postModeText = document.getElementById("postModeText");
+            const postModeAlternate = document.getElementById("postModeAlternate");
             const autoPostStatusGroup = document.getElementById("autoPostStatusGroup");
             const autoPostNextType = document.getElementById("autoPostNextType");
+            let currentPostMode = "image"; // default
+            
+            console.log("[Init] postModeImage:", postModeImage);
+            console.log("[Init] postModeText:", postModeText);
+            console.log("[Init] postModeAlternate:", postModeAlternate);
 
             // Auto-Hide elements
             const autoHideEnabled = document.getElementById("autoHideEnabled");
@@ -4217,6 +4257,25 @@
                 return lastType === "text" ? "Image" : "Text";
             }
 
+            function setAutoPostMode(mode) {
+                currentPostMode = mode;
+                [postModeImage, postModeText, postModeAlternate].forEach(btn => {
+                    if (btn) btn.classList.remove('active');
+                });
+                if (mode === 'image' && postModeImage) {
+                    postModeImage.classList.add('active');
+                } else if (mode === 'text' && postModeText) {
+                    postModeText.classList.add('active');
+                } else if (mode === 'alternate' && postModeAlternate) {
+                    postModeAlternate.classList.add('active');
+                }
+                // null = ไม่เลือกสักอัน = ไม่ทำงาน
+                
+                if (autoPostStatusGroup) {
+                    autoPostStatusGroup.style.display = mode === 'alternate' ? 'block' : 'none';
+                }
+            }
+
             async function loadAutoPostConfig() {
                 const pageId = getCurrentPageId();
                 if (!pageId) return;
@@ -4226,24 +4285,19 @@
                     const data = await response.json();
                     if (data.success && data.config) {
                         const config = data.config;
-                        autoPostEnabled.checked = config.enabled || false;
-
-                        // Update visibility and status
-                        autoPostStatusGroup.style.display = config.enabled ? "block" : "none";
+                        const mode = config.post_mode || 'image';
+                        setAutoPostMode(mode);
                         autoPostNextType.textContent = getNextPostType(config.last_post_type);
 
-                        // Auto-sync PAGE token to database if enabled
-                        // This ensures cron uses the correct token
-                        if (config.enabled) {
-                            const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                            if (pageToken && pageToken !== config.post_token) {
-                                console.log("[Auto-Post] Syncing page token to database...");
-                                fetch('/api/auto-post-config', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
-                                });
-                            }
+                        // Auto-sync PAGE token to database
+                        const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                        if (pageToken && pageToken !== config.post_token) {
+                            console.log("[Auto-Post] Syncing page token to database...");
+                            fetch('/api/auto-post-config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ pageId, postMode: mode, postToken: pageToken })
+                            });
                         }
                     }
                 } catch (err) {
@@ -4251,21 +4305,13 @@
                 }
             }
 
-            async function saveAutoPostConfig() {
+            async function saveAutoPostConfig(mode) {
                 const pageId = getCurrentPageId();
                 if (!pageId) return;
 
-                const enabled = autoPostEnabled.checked;
-                console.log("[Auto-Post] Saving config - pageId:", pageId, "enabled:", enabled);
+                console.log("[Auto-Post] Saving config - pageId:", pageId, "mode:", mode);
 
-                // Get PAGE token from localStorage (set when selecting a page)
-                // This is the page-specific token needed for posting, NOT the user token
                 const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                if (!pageToken) {
-                    console.warn("[Auto-Post] No page token in localStorage - please select a page first");
-                } else {
-                    console.log("[Auto-Post] Using pageToken from localStorage:", pageToken.substring(0, 15) + "...");
-                }
 
                 try {
                     const response = await fetch('/api/auto-post-config', {
@@ -4273,15 +4319,14 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             pageId,
-                            enabled: enabled,
-                            postToken: pageToken  // Use the PAGE token, not user token
+                            postMode: mode,
+                            postToken: pageToken
                         })
                     });
                     const data = await response.json();
                     if (data.success) {
                         console.log("[Auto-Post] Config saved:", data.config);
-                        // Reload config to update UI
-                        await loadAutoPostConfig();
+                        setAutoPostMode(mode);
                     } else {
                         console.error("[Auto-Post] Failed to save config:", data.error);
                     }
@@ -4331,9 +4376,18 @@
             // Auto-hide checkbox change handler
             autoHideEnabled.addEventListener("change", saveAutoHideConfig);
 
-            // Auto-post enabled checkbox change handler
-            autoPostEnabled.addEventListener("change", () => {
-                autoPostStatusGroup.style.display = autoPostEnabled.checked ? "block" : "none";
+            // Post mode button handlers - toggle on/off
+            postModeImage.addEventListener("click", () => {
+                const newMode = currentPostMode === 'image' ? null : 'image';
+                saveAutoPostConfig(newMode);
+            });
+            postModeText.addEventListener("click", () => {
+                const newMode = currentPostMode === 'text' ? null : 'text';
+                saveAutoPostConfig(newMode);
+            });
+            postModeAlternate.addEventListener("click", () => {
+                const newMode = currentPostMode === 'alternate' ? null : 'alternate';
+                saveAutoPostConfig(newMode);
             });
 
             // Sync Token button handler - force sync PAGE token to database
@@ -5193,9 +5247,13 @@
                 settingsPanel.style.display = "none";
                 const tp = document.getElementById("textPanel");
                 if (tp) tp.style.display = "none";
-                // Restore body scroll
+                const textModePanel = document.getElementById("textModePanel");
+                if (textModePanel) textModePanel.style.display = "none";
+                // Reset mode-container display
+                document.querySelectorAll(".mode-container").forEach((c) => {
+                    c.style.display = "";
+                });
                 document.body.style.overflow = "";
-                // Remove pending mode class
                 appLayout.classList.remove("pending-mode");
             }
 
@@ -5222,15 +5280,16 @@
                 // Hide all mode containers
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
+                    c.style.display = "none";
                 });
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
                 textPanel.style.display = "none";
+                const textModePanel = document.getElementById("textModePanel");
+                if (textModePanel) textModePanel.style.display = "none";
                 settingsPanel.style.display = "flex";
                 appLayout.classList.add("pending-mode");
-                // Lock body scroll
                 document.body.style.overflow = "hidden";
-                // Load settings for current page
                 loadSettingsPanel();
             }
 
@@ -5246,15 +5305,14 @@
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
                 
-                // Show dashboard and text mode
-                setPostMode("text");
-                showDashboard();
-                
-                // Show text mode container
-                const textContainer = document.getElementById("textModeContainer");
-                if (textContainer) {
-                    textContainer.classList.add("active");
+                // Show text mode panel (full width like pending)
+                const textModePanel = document.getElementById("textModePanel");
+                if (textModePanel) {
+                    textModePanel.style.display = "block";
                 }
+                
+                // Add pending-mode class for full width layout
+                appLayout.classList.add("pending-mode");
                 
                 // Focus on text textarea
                 setTimeout(() => {
@@ -5263,12 +5321,14 @@
                         textTextarea.focus();
                         
                         // Add preview functionality
-                        textTextarea.addEventListener('input', () => {
+                        textTextarea.oninput = () => {
                             const previewContent = document.getElementById("textPreviewContent");
                             if (previewContent) {
-                                previewContent.textContent = textTextarea.value || "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
+                                const text = textTextarea.value;
+                                previewContent.textContent = text || "พิมพ์ข้อความในช่องด้านล่างเพื่อดูตัวอย่าง...";
+                                previewContent.style.color = text ? "#333" : "#999";
                             }
-                        });
+                        };
                     }
                     
                     // Add publish button handler
@@ -5281,9 +5341,18 @@
                                 return;
                             }
 
+                            const statusEl = document.getElementById("textPublishStatus");
+                            const showStatus = (msg, isError = false) => {
+                                statusEl.style.display = 'block';
+                                statusEl.style.background = isError ? '#fee2e2' : '#dcfce7';
+                                statusEl.style.color = isError ? '#dc2626' : '#16a34a';
+                                statusEl.innerHTML = msg;
+                            };
+
                             try {
                                 textPublishBtn.disabled = true;
                                 textPublishBtn.innerHTML = '<span class="publish-icon">⏳</span> กำลังโพสต์...';
+                                showStatus('📤 กำลังสร้างโพสต์...');
 
                                 const pageId = getCurrentPageId();
                                 if (!pageId) {
@@ -5291,61 +5360,123 @@
                                     return;
                                 }
 
-                                // Get Page Token (NOT Ads Token)
-                                const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                                
-                                if (!pageToken) {
-                                    alert("ไม่มี Page Token กรุณาเลือก Page ใหม่");
-                                    return;
+                                // Get selected share pages
+                                const shareCheckboxes = document.querySelectorAll('input[name="sharePage"]:checked');
+                                const shareToPages = Array.from(shareCheckboxes).map(cb => cb.value);
+                                const userId = getCurrentUserId();
+
+                                if (!userId) {
+                                    throw new Error('กรุณาเลือกผู้ใช้ก่อน');
                                 }
 
-                                console.log(`[text-post] pageId: ${pageId}`);
-                                console.log(`[text-post] pageToken: ${pageToken.substring(0, 20)}...`);
+                                const iUser = document.getElementById('iUserInput')?.value?.trim();
 
-                                // Use server API with Page Token only
-                                const response = await fetch("/api/publish", {
+                                showStatus('📤 กำลังโพสต์...');
+                                const response = await fetch("/api/text-post", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({
-                                        pageId: pageId,
-                                        message: message,
-                                        postType: "text",
-                                        scheduled: true,
-                                        accessToken: pageToken
+                                        pageId,
+                                        message,
+                                        shareToPages,
+                                        userId,
+                                        iUser
                                     }),
                                 });
 
                                 const result = await response.json();
 
                                 if (result.success) {
-                                    alert(`โพสต์สำเร็จ! ${result.scheduledTime ? 'กำหนดเวลา: ' + new Date(result.scheduledTime).toLocaleString('th-TH') : ''}`);
+                                    let statusMsg = `✅ โพสต์สำเร็จ!<br>Post ID: ${result.postId}`;
+                                    
+                                    // แสดงผล edit
+                                    if (result.editSuccess) {
+                                        statusMsg += '<br>✅ ลบรูปสำเร็จ (เหลือแค่ text)';
+                                    } else if (result.editError) {
+                                        statusMsg += '<br>❌ ลบรูปไม่สำเร็จ: ' + result.editError.slice(0, 100);
+                                    }
+                                    
+                                    if (result.shareResults?.length > 0) {
+                                        statusMsg += '<br><br>📢 แชร์:';
+                                        result.shareResults.forEach(sr => {
+                                            statusMsg += sr.success 
+                                                ? `<br>✅ ${sr.pageId}` 
+                                                : `<br>❌ ${sr.pageId}: ${sr.error}`;
+                                        });
+                                    }
+                                    showStatus(statusMsg);
                                     
                                     // Clear form
                                     document.getElementById("textMessageTextarea").value = "";
-                                    document.getElementById("textPreviewContent").textContent = "พิมพ์ข้อความในช่องด้านขวาเพื่อดูตัวอย่าง...";
                                     
-                                    // Refresh scheduled times and update display
-                                    await refreshScheduledPostTimes();
-                                    updateNextScheduleDisplay();
-                                    
-                                    // Refresh pending posts
-                                    if (typeof loadScheduledPosts === 'function') {
-                                        loadScheduledPosts();
-                                    }
+                                    // Uncheck all share checkboxes
+                                    document.querySelectorAll('input[name="sharePage"]').forEach(cb => cb.checked = false);
                                 } else {
                                     throw new Error(result.error || 'Server error');
                                 }
                                 
                             } catch (error) {
                                 console.error('Text post error:', error);
-                                alert("เกิดข้อผิดพลาด: " + error.message);
+                                showStatus("❌ " + error.message, true);
                             } finally {
                                 textPublishBtn.disabled = false;
                                 textPublishBtn.innerHTML = '<span class="publish-icon">📝</span> Publish Text Post';
                             }
                         };
                     }
+                    
+                    // Load share pages list
+                    loadSharePagesList();
                 }, 100);
+            }
+            
+            // Load pages for sharing - ดึงจาก database
+            async function loadSharePagesList() {
+                const container = document.getElementById('sharePagesList');
+                if (!container) return;
+                
+                container.innerHTML = '<div style="color: #666; padding: 8px;">กำลังโหลด...</div>';
+                
+                try {
+                    const currentPageId = getCurrentPageId();
+                    const userId = getCurrentUserId();
+                    
+                    if (!userId) {
+                        container.innerHTML = '<div style="color: #999; padding: 8px;">กรุณาเลือกผู้ใช้ก่อน</div>';
+                        return;
+                    }
+                    
+                    // ดึง pages ของ user จาก Graph API
+                    const res = await fetch(`/api/pages?userId=${userId}`);
+                    const data = await res.json();
+                    
+                    if (data.success && data.pages?.length > 0) {
+                        renderPagesList(container, data.pages, currentPageId);
+                    } else {
+                        container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่พบรายการเพจ</div>';
+                    }
+                        
+                } catch (e) {
+                    console.error('Load pages error:', e);
+                    container.innerHTML = '<div style="color: #f00; padding: 8px;">เกิดข้อผิดพลาด</div>';
+                }
+            }
+            
+            function renderPagesList(container, pages, currentPageId) {
+                const filteredPages = pages.filter(p => p.page_id !== currentPageId);
+                if (filteredPages.length === 0) {
+                    container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่มีเพจอื่นให้แชร์</div>';
+                    return;
+                }
+                
+                container.innerHTML = filteredPages.map(p => `
+                    <label style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" 
+                           onmouseover="this.style.background='#f0f0f0'" 
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="sharePage" value="${p.page_id}" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span style="flex: 1; font-size: 14px;">${p.page_name || p.page_id}</span>
+                    </label>
+                `).join('');
             }
 
             // Text Quote Form Handlers

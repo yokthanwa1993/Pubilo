@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pubilo Token Helper",
-  "version": "6.1.1",
+  "version": "6.1.0",
   "description": "ดึง Token จาก Facebook อัตโนมัติ - แค่เคย login Facebook ไว้ก็ใช้ได้เลย",
   "permissions": [
     "cookies",

@@ -1,9 +1,3 @@
-2025/12/31-19:30:07.053 a6748 Reusing MANIFEST /Users/yok/Developer/Pubilo/puppeteer/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
-2025/12/31-19:30:07.055 a6748 Recovering log #10
-2025/12/31-19:30:07.056 a6748 Reusing old log /Users/yok/Developer/Pubilo/puppeteer/chrome-profile/Default/Local Storage/leveldb/000010.log 
-2025/12/31-19:30:16.243 a674b Level-0 table #14: started
-2025/12/31-19:30:16.247 a674b Level-0 table #14: 18824 bytes OK
-2025/12/31-19:30:16.252 a674b Delete type=0 #10
-2025/12/31-19:32:22.249 a674b Level-0 table #16: started
-2025/12/31-19:32:22.255 a674b Level-0 table #16: 305264 bytes OK
-2025/12/31-19:32:22.260 a674b Delete type=0 #13
+2026/01/02-16:21:32.460 494f5e Reusing MANIFEST /Users/yok/Developer/Pubilo/puppeteer/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/01/02-16:21:32.461 494f5e Recovering log #29
+2026/01/02-16:21:32.462 494f5e Reusing old log /Users/yok/Developer/Pubilo/puppeteer/chrome-profile/Default/Local Storage/leveldb/000029.log 

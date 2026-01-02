@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST - Save auto-post config
   if (req.method === 'POST') {
-    const { pageId, enabled, postToken } = req.body;
+    const { pageId, enabled, postToken, postMode } = req.body;
     
     if (!pageId) {
       return res.status(400).json({ error: 'Missing pageId' });
@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Update existing
         await sql`
           UPDATE auto_post_config
-          SET enabled = ${enabled}, 
+          SET post_mode = COALESCE(${postMode}, post_mode),
               post_token = COALESCE(${postToken}, post_token),
               updated_at = ${now}
           WHERE page_id = ${pageId}
@@ -98,8 +98,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         // Insert new
         await sql`
-          INSERT INTO auto_post_config (page_id, enabled, post_token, created_at, updated_at)
-          VALUES (${pageId}, ${enabled}, ${postToken}, ${now}, ${now})
+          INSERT INTO auto_post_config (page_id, post_mode, post_token, created_at, updated_at)
+          VALUES (${pageId}, ${postMode || 'image'}, ${postToken}, ${now}, ${now})
         `;
       }
 
