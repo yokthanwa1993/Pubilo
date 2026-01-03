@@ -76,6 +76,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing pageId' });
     }
 
+    // Convert undefined to null for postgres
+    const safePostToken = postToken ?? null;
+    const safePostMode = postMode ?? null;
+
     const sql = postgres(dbUrl, { ssl: 'require' });
 
     try {
@@ -90,8 +94,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Update existing
         await sql`
           UPDATE auto_post_config
-          SET post_mode = COALESCE(${postMode}, post_mode),
-              post_token = COALESCE(${postToken}, post_token),
+          SET post_mode = COALESCE(${safePostMode}, post_mode),
+              post_token = COALESCE(${safePostToken}, post_token),
               updated_at = ${now}
           WHERE page_id = ${pageId}
         `;
@@ -99,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Insert new
         await sql`
           INSERT INTO auto_post_config (page_id, post_mode, post_token, created_at, updated_at)
-          VALUES (${pageId}, ${postMode || 'image'}, ${postToken}, ${now}, ${now})
+          VALUES (${pageId}, ${safePostMode || 'image'}, ${safePostToken}, ${now}, ${now})
         `;
       }
 

@@ -18,96 +18,13 @@ interface AutoPostConfig {
   last_post_at: string | null;
   next_post_at: string | null;
   post_token: string | null;
+  post_mode: 'image' | 'text' | 'alternate' | null;
 }
 
 interface Quote {
   id: string;
   quote_text: string;
   used_by_pages: string[];
-}
-
-// Get scheduled posts from Facebook to check which time slots are taken
-async function getScheduledPosts(pageId: string, pageToken: string): Promise<number[]> {
-  const timestamps: number[] = [];
-  
-  try {
-    // Get scheduled feed posts (includes both text and photo posts)
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
-    );
-    if (response.ok) {
-      const data = await response.json();
-      (data.data || []).forEach((post: any) => {
-        if (post.scheduled_publish_time) {
-          timestamps.push(parseInt(post.scheduled_publish_time));
-        }
-      });
-    }
-  } catch (err) {
-    console.error('[cron-auto-post] Error fetching scheduled posts:', err);
-  }
-  
-  console.log(`[cron-auto-post] Found ${timestamps.length} scheduled posts from Facebook`);
-  return timestamps;
-}
-
-// Find next available time slot from schedule that's not already taken on Facebook
-function findNextAvailableTime(scheduleMinutesStr: string, scheduledTimestamps: number[], workingHoursStart: number = 6, workingHoursEnd: number = 24): Date {
-  const scheduledMinutes = scheduleMinutesStr
-    .split(',')
-    .map(m => parseInt(m.trim()))
-    .filter(m => !isNaN(m) && m >= 0 && m < 60)
-    .sort((a, b) => a - b);
-
-  if (scheduledMinutes.length === 0) {
-    return new Date(Date.now() + 60 * 60 * 1000);
-  }
-
-  const now = new Date();
-  // Schedule 10 minutes ahead (Facebook minimum requirement)
-  const minTime = new Date(now.getTime() + 10 * 60 * 1000);
-
-  // Check slots for next 48 hours (to handle overnight working hours)
-  for (let hourOffset = 0; hourOffset < 48; hourOffset++) {
-    for (const minute of scheduledMinutes) {
-      const candidate = new Date(now);
-      candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
-
-      // Skip if in the past or too soon
-      if (candidate.getTime() < minTime.getTime()) continue;
-
-      // Check working hours (convert to Thailand time UTC+7)
-      const thaiHour = (candidate.getUTCHours() + 7) % 24;
-      
-      // Handle overnight working hours (e.g., 06:00 - 24:00 means 6am to midnight)
-      let isInWorkingHours = false;
-      if (workingHoursEnd <= 24) {
-        // Normal case: start < end (e.g., 06:00 - 24:00)
-        isInWorkingHours = thaiHour >= workingHoursStart && thaiHour < workingHoursEnd;
-      } else {
-        // Wrap around case (shouldn't happen with current UI but handle it)
-        isInWorkingHours = thaiHour >= workingHoursStart || thaiHour < (workingHoursEnd % 24);
-      }
-      
-      if (!isInWorkingHours) continue;
-
-      // Check if this slot is already taken (within 2-minute window)
-      const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
-      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
-
-      if (!isTaken) {
-        console.log(`[cron-auto-post] Found available slot: ${candidate.toISOString()} (Thai hour: ${thaiHour})`);
-        // Add small random offset (0-59 seconds) to prevent exact collisions
-        const randomOffset = Math.floor(Math.random() * 60) * 1000;
-        const finalTime = new Date(candidate.getTime() + randomOffset);
-        console.log(`[cron-auto-post] Final time with random offset: ${finalTime.toISOString()}`);
-        return finalTime;
-      }
-    }
-  }
-
-  // Fallback: 1 hour from now
-  return new Date(Date.now() + 60 * 60 * 1000);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -140,30 +57,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nowStr = now.toISOString();
     const forcePost = req.query.force === 'true' || isTest;
     
-    let dueConfigs: AutoPostConfig[];
+    // Get current minute in Thailand time (UTC+7)
+    const thaiNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const currentMinute = thaiNow.getUTCMinutes();
+    const currentHour = thaiNow.getUTCHours();
     
-    if (forcePost) {
-      console.log('[cron-auto-post] FORCE MODE - processing all enabled configs');
-      dueConfigs = await sql<AutoPostConfig[]>`
-        SELECT * FROM auto_post_config WHERE enabled = true
-      `;
-    } else {
-      // Schedule 30 minutes early to allow time for image generation + Facebook's 10-minute minimum
-      const scheduleWindowEnd = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-      console.log('[cron-auto-post] Running at', nowStr, '- looking for posts due before', scheduleWindowEnd);
-      
-      dueConfigs = await sql<AutoPostConfig[]>`
-        SELECT * FROM auto_post_config
-        WHERE enabled = true AND next_post_at <= ${scheduleWindowEnd}
-      `;
-    }
-
-    if (!dueConfigs || dueConfigs.length === 0) {
+    console.log(`[cron-auto-post] Running at ${nowStr} (Thai: ${currentHour}:${currentMinute.toString().padStart(2, '0')})`);
+    
+    // Get all enabled configs with their page settings
+    const configs = await sql<(AutoPostConfig & { schedule_minutes?: string; working_hours_start?: number; working_hours_end?: number })[]>`
+      SELECT c.*, s.schedule_minutes, s.working_hours_start, s.working_hours_end
+      FROM auto_post_config c
+      LEFT JOIN page_settings s ON c.page_id = s.page_id
+      WHERE c.enabled = true
+    `;
+    
+    if (!configs || configs.length === 0) {
       await sql.end();
-      return res.status(200).json({ success: true, message: 'No posts due', processed: 0 });
+      return res.status(200).json({ success: true, message: 'No enabled configs', processed: 0 });
+    }
+    
+    // Filter configs that should post NOW (current minute matches schedule)
+    const dueConfigs = configs.filter(config => {
+      // Skip if no post_mode set
+      if (!config.post_mode) return false;
+      
+      if (forcePost) return true;
+      
+      const scheduleMinutes = (config.schedule_minutes || '00, 05, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55')
+        .split(',')
+        .map(m => parseInt(m.trim()))
+        .filter(m => !isNaN(m));
+      
+      const workingStart = config.working_hours_start ?? 6;
+      const workingEnd = config.working_hours_end ?? 24;
+      
+      // Check if current hour is within working hours
+      const isInWorkingHours = currentHour >= workingStart && currentHour < workingEnd;
+      
+      // Check if current minute matches schedule
+      const isScheduledMinute = scheduleMinutes.includes(currentMinute);
+      
+      console.log(`[cron-auto-post] Page ${config.page_id}: minute=${currentMinute}, scheduled=${scheduleMinutes.join(',')}, workingHours=${workingStart}-${workingEnd}, inHours=${isInWorkingHours}, match=${isScheduledMinute}`);
+      
+      return isInWorkingHours && isScheduledMinute;
+    });
+
+    if (dueConfigs.length === 0) {
+      await sql.end();
+      return res.status(200).json({ success: true, message: 'No posts due at this minute', processed: 0 });
     }
 
-    console.log(`[cron-auto-post] Processing ${dueConfigs.length} due auto-posts`);
+    console.log(`[cron-auto-post] Processing ${dueConfigs.length} due auto-posts (posting immediately)`);
 
     let processed = 0;
     const results: any[] = [];
@@ -181,10 +126,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           continue;
         }
 
-        // Determine next post type (alternate from last)
-        const nextPostType = config.last_post_type === 'text' ? 'image' : 'text';
-        console.log(`[cron-auto-post] Page ${config.page_id}: next post type = ${nextPostType}`);
-
         // Fetch unused quote (Global mode - not used by ANY page)
         const quotes = await sql<Quote[]>`
           SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at ASC
@@ -197,50 +138,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!unusedQuote) {
           console.log(`[cron-auto-post] No unused quotes for page ${config.page_id}`);
-          // Disable auto-post since no quotes available
-          await sql`
-            UPDATE auto_post_config
-            SET enabled = false, updated_at = ${nowStr}
-            WHERE id = ${config.id}::uuid
-          `;
-          results.push({ page_id: config.page_id, status: 'disabled', reason: 'no_quotes' });
+          results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_quotes' });
           continue;
         }
 
-        // Get page settings for schedule and image generation
+        // Get page settings for image generation
         const settingsResult = await sql`
-          SELECT schedule_minutes, image_image_size, ai_model, ai_resolution, working_hours_start, working_hours_end FROM page_settings WHERE page_id = ${config.page_id} LIMIT 1
+          SELECT image_image_size, ai_model, ai_resolution FROM page_settings WHERE page_id = ${config.page_id} LIMIT 1
         `;
         const settings = settingsResult[0];
-        const scheduleMinutesStr = settings?.schedule_minutes || '00, 15, 30, 45';
-        const workingHoursStart = settings?.working_hours_start ?? 6;
-        const workingHoursEnd = settings?.working_hours_end ?? 24;
         const aiModel = settings?.ai_model || 'gemini-2.0-flash-exp';
         const aiResolution = settings?.ai_resolution || '2K';
         const imageSize = settings?.image_image_size || '1:1';
+        
+        console.log(`[cron-auto-post] Page ${config.page_id} settings: model=${aiModel}, resolution=${aiResolution}, size=${imageSize}`);
 
-        // Get scheduled posts from Facebook to check conflicts
-        const scheduledTimestamps = await getScheduledPosts(config.page_id, config.post_token);
-        console.log(`[cron-auto-post] Found ${scheduledTimestamps.length} existing scheduled posts on Facebook`);
-
-        // Use next_post_at from database if available and valid
-        let scheduledTime: Date;
-        if (config.next_post_at && !forcePost) {
-          scheduledTime = new Date(config.next_post_at);
-          console.log(`[cron-auto-post] Using scheduled time from database: ${scheduledTime.toISOString()}`);
+        // Determine post type based on post_mode
+        const postMode = config.post_mode && config.post_mode.trim() ? config.post_mode : 'image';
+        let nextPostType: 'text' | 'image';
+        
+        if (postMode === 'text') {
+          nextPostType = 'text';
+        } else if (postMode === 'image') {
+          nextPostType = 'image';
+        } else if (postMode === 'alternate') {
+          // alternate mode
+          nextPostType = config.last_post_type === 'text' ? 'image' : 'text';
         } else {
-          // Fallback: calculate next available time slot
-          scheduledTime = findNextAvailableTime(scheduleMinutesStr, scheduledTimestamps, workingHoursStart, workingHoursEnd);
-          console.log(`[cron-auto-post] Calculated new scheduled time: ${scheduledTime.toISOString()}`);
+          // default to image
+          nextPostType = 'image';
         }
+        
+        console.log(`[cron-auto-post] Page ${config.page_id}: postMode=${postMode}, nextPostType=${nextPostType}`);
 
         let facebookPostId: string;
 
         if (nextPostType === 'text') {
-          // Create text-only post (scheduled)
-          facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, scheduledTime);
+          // Create text-only post (immediate - no scheduledTime)
+          facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text);
         } else {
-          // Create image post
+          // Create image post (immediate)
           const customPrompt = await getImagePrompt(sql, config.page_id);
           const pageName = await getPageName(sql, config.page_id);
 
@@ -257,36 +194,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Upload to image host
           const imageUrl = await uploadImageToHost(base64Image);
 
-          // Post to Facebook (scheduled)
+          // Post to Facebook (immediate - no scheduledTime)
           facebookPostId = await createImagePost(
             config.page_id,
             config.post_token,
             imageUrl,
-            unusedQuote.quote_text,
-            scheduledTime
+            unusedQuote.quote_text
           );
         }
 
-        // Update config state - refresh scheduled posts and find next available time
-        const updatedScheduledTimestamps = await getScheduledPosts(config.page_id, config.post_token);
-        console.log(`[cron-auto-post] Refreshed scheduled posts: ${updatedScheduledTimestamps.length} found`);
-        
-        // Add just-scheduled time to avoid picking same slot
-        updatedScheduledTimestamps.push(Math.floor(scheduledTime.getTime() / 1000));
-        
-        // Add buffer times around the scheduled time (±2 minutes)
-        const bufferTime1 = new Date(scheduledTime.getTime() - 2 * 60 * 1000);
-        const bufferTime2 = new Date(scheduledTime.getTime() + 2 * 60 * 1000);
-        updatedScheduledTimestamps.push(Math.floor(bufferTime1.getTime() / 1000));
-        updatedScheduledTimestamps.push(Math.floor(bufferTime2.getTime() / 1000));
-        
-        const nextAvailable = findNextAvailableTime(scheduleMinutesStr, updatedScheduledTimestamps, workingHoursStart, workingHoursEnd);
-        const nextPostAt = nextAvailable.toISOString();
+        // Update config state
         await sql`
           UPDATE auto_post_config
           SET last_post_type = ${nextPostType},
               last_post_at = ${nowStr},
-              next_post_at = ${nextPostAt},
               updated_at = ${nowStr}
           WHERE id = ${config.id}::uuid
         `;
@@ -300,6 +221,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           UPDATE quotes SET used_by_pages = ${usedByPages} WHERE id = ${unusedQuote.id}
         `;
 
+        // Log to auto_post_logs (quote_id as text since quotes table uses integer)
+        await sql`
+          INSERT INTO auto_post_logs (page_id, post_type, quote_text, status, facebook_post_id)
+          VALUES (${config.page_id}, ${nextPostType}, ${unusedQuote.quote_text}, 'success', ${facebookPostId})
+        `;
+
         processed++;
         results.push({ page_id: config.page_id, status: 'success', post_type: nextPostType, post_id: facebookPostId });
         console.log(`[cron-auto-post] Successfully posted ${nextPostType} for page ${config.page_id}`);
@@ -307,16 +234,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[cron-auto-post] Error for page ${config.page_id}:`, errorMessage);
-
-        // Calculate next retry time (add 5 minutes on failure)
-        const retryTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-        await sql`
-          UPDATE auto_post_config
-          SET next_post_at = ${retryTime}, updated_at = ${nowStr}
-          WHERE id = ${config.id}::uuid
-        `;
-
         results.push({ page_id: config.page_id, status: 'failed', error: errorMessage });
+        
+        // Log failure
+        await sql`
+          INSERT INTO auto_post_logs (page_id, post_type, quote_text, status, error_message)
+          VALUES (${config.page_id}, 'image', null, 'failed', ${errorMessage})
+        `.catch(() => {});
       }
     }
 
@@ -334,20 +258,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 // Helper functions
-async function createTextPost(pageId: string, postToken: string, message: string, scheduledTime?: Date): Promise<string> {
-  const isScheduled = scheduledTime && scheduledTime.getTime() > Date.now() + 10 * 60 * 1000;
-  console.log(`[cron-auto-post] Creating ${isScheduled ? 'SCHEDULED' : 'immediate'} text post for page ${pageId}${isScheduled ? ` at ${scheduledTime.toISOString()}` : ''}`);
+async function createTextPost(pageId: string, postToken: string, message: string): Promise<string> {
+  console.log(`[cron-auto-post] Creating immediate text post for page ${pageId}`);
 
   const body: any = {
     message,
     access_token: postToken,
   };
-
-  // Add scheduled_publish_time if scheduling (must be at least 10 mins in future)
-  if (isScheduled) {
-    body.scheduled_publish_time = Math.floor(scheduledTime.getTime() / 1000);
-    body.published = false;
-  }
 
   const response = await fetch(
     `https://graph.facebook.com/v21.0/${pageId}/feed`,
@@ -367,21 +284,14 @@ async function createTextPost(pageId: string, postToken: string, message: string
   return result.id;
 }
 
-async function createImagePost(pageId: string, postToken: string, imageUrl: string, message: string, scheduledTime?: Date): Promise<string> {
-  const isScheduled = scheduledTime && scheduledTime.getTime() > Date.now() + 10 * 60 * 1000;
-  console.log(`[cron-auto-post] Creating ${isScheduled ? 'SCHEDULED' : 'immediate'} image post for page ${pageId}${isScheduled ? ` at ${scheduledTime.toISOString()}` : ''}`);
+async function createImagePost(pageId: string, postToken: string, imageUrl: string, message: string): Promise<string> {
+  console.log(`[cron-auto-post] Creating immediate image post for page ${pageId}`);
 
   const body: any = {
     url: imageUrl,
     caption: message,
     access_token: postToken,
   };
-
-  // Add scheduled_publish_time if scheduling (must be at least 10 mins in future)
-  if (isScheduled) {
-    body.scheduled_publish_time = Math.floor(scheduledTime.getTime() / 1000);
-    body.published = false;
-  }
 
   const response = await fetch(
     `https://graph.facebook.com/v21.0/${pageId}/photos`,
