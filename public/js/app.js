@@ -4021,63 +4021,130 @@
                     
                     const pageId = getCurrentPageId();
                     const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                    const newsUrlInput = document.getElementById("newsUrlInput");
-                    const newsPrimaryText = document.getElementById("newsPrimaryText");
-                    const newsPreviewDesc = document.getElementById("newsPreviewDescription");
+                    const adsToken = fbToken || localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
+                    const cookie = fbCookie || localStorage.getItem("fewfeed_cookie");
+                    const adAccountId = document.getElementById("adAccountSelect")?.value;
+                    const newsUrlInputEl = document.getElementById("newsUrlInput");
+                    const newsPrimaryTextEl = document.getElementById("newsPrimaryText");
+                    const newsPreviewDescEl = document.getElementById("newsPreviewDescription");
+                    const newsPreviewCaptionEl = document.getElementById("newsPreviewCaption");
                     
-                    if (!pageId || !pageToken) {
-                        alert("กรุณาเลือกเพจก่อน");
+                    if (!pageId || !adsToken || !cookie) {
+                        alert("กรุณาเลือกเพจและ login ก่อน");
                         return;
                     }
                     
-                    const linkUrl = newsUrlInput?.value?.trim();
-                    const description = newsPreviewDesc?.textContent?.trim();
-                    const primaryText = newsPrimaryText?.value?.trim() || "";
-                    const imageData = newsGeneratedImages[newsSelectedIndex];
+                    const linkUrlValue = newsUrlInputEl?.value?.trim();
+                    const descriptionText = newsPreviewDescEl?.textContent?.trim() || "";
+                    const captionText = newsPreviewCaptionEl?.textContent?.trim() || "S.LAZADA.CO.TH";
+                    const primaryText = newsPrimaryTextEl?.value?.trim() || "";
+                    let imageData = newsGeneratedImages[newsSelectedIndex];
                     
-                    if (!linkUrl || !description || !imageData) {
+                    if (!linkUrlValue || !descriptionText || !imageData) {
                         alert("กรุณากรอกข้อมูลให้ครบ");
                         return;
                     }
                     
                     newsPublishBtn.disabled = true;
-                    newsPublishBtn.textContent = "SCHEDULING...";
+                    newsPublishBtn.innerHTML = '<span class="loading"></span>';
                     
                     try {
+                        // Compress image
+                        if (imageData.startsWith("data:")) {
+                            imageData = await compressImage(imageData, 1200, 0.8);
+                        }
+                        
+                        // Check if auto-schedule is enabled
+                        const isAutoSchedule = cachedPageSettings.pageId === pageId && cachedPageSettings.autoSchedule;
+                        let scheduledTime = null;
+                        if (isAutoSchedule) {
+                            await refreshScheduledPostTimes();
+                            scheduledTime = getNextScheduleTime();
+                            scheduledPostTimes.push(scheduledTime);
+                            console.log("[News] Auto-schedule enabled, scheduledTime:", scheduledTime?.toISOString());
+                        } else {
+                            console.log("[News] Auto-schedule NOT enabled", { cachedPageId: cachedPageSettings.pageId, pageId, autoSchedule: cachedPageSettings.autoSchedule });
+                        }
+                        
+                        const fbDtsg = localStorage.getItem("fewfeed_fbDtsg");
+                        
                         const response = await fetch("/api/publish", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 pageId,
-                                pageToken,
-                                linkUrl,
-                                linkName: "S.LAZADA.CO.TH",
-                                caption: "S.LAZADA.CO.TH",
-                                description,
+                                adAccountId,
+                                accessToken: adsToken,
+                                cookieData: cookie,
+                                imageUrl: imageData,
+                                linkUrl: linkUrlValue,
+                                linkName: descriptionText ? `พิกัด : ${descriptionText}` : captionText,
+                                caption: captionText,
+                                description: descriptionText,
                                 primaryText,
                                 callToAction: "SHOP_NOW",
-                                imageData,
-                                mode: "link"
+                                scheduledTime: scheduledTime ? Math.floor(scheduledTime.getTime() / 1000) : null,
+                                fbDtsg
                             })
                         });
                         
-                        const data = await response.json();
+                        // Handle streaming response (same as Link flow)
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let fullLog = "";
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            fullLog += decoder.decode(value);
+                        }
                         
-                        if (data.success) {
-                            newsPublishBtn.textContent = "SCHEDULED ✓";
-                            newsPublishBtn.classList.add("published");
+                        const urlMatch = fullLog.match(/"url":"([^"]+)"/);
+                        const postIdMatch = fullLog.match(/"postId":"([^"]+)"/);
+                        const needsSchedulingMatch = fullLog.match(/"needsScheduling":true/);
+                        const scheduledTimeMatch = fullLog.match(/"scheduledTime":(\d+)/);
+                        
+                        if (urlMatch) {
+                            const postId = postIdMatch ? postIdMatch[1] : null;
                             
-                            // Reset after 3 seconds
-                            setTimeout(() => {
-                                newsPublishBtn.textContent = "SCHEDULE";
-                                newsPublishBtn.classList.remove("published");
-                                newsPublishBtn.disabled = true;
-                                newsPublishBtn.style.opacity = "0.5";
+                            // Schedule via extension GraphQL if needed
+                            if (needsSchedulingMatch && postId && scheduledTimeMatch && fbDtsg) {
+                                const scheduleTimestamp = parseInt(scheduledTimeMatch[1]);
+                                console.log("[News] Scheduling via extension GraphQL, postId:", postId);
                                 
-                                // Clear form
-                                if (newsUrlInput) newsUrlInput.value = "";
-                                if (newsPrimaryText) newsPrimaryText.value = "";
-                                if (newsPreviewDesc) newsPreviewDesc.textContent = "";
+                                window.postMessage({
+                                    type: "FEWFEED_SCHEDULE_POST_GRAPHQL",
+                                    postId, pageId, fbDtsg,
+                                    scheduledTime: scheduleTimestamp,
+                                }, "*");
+                                
+                                await new Promise((resolve) => {
+                                    const handler = (event) => {
+                                        if (event.data.type === "FEWFEED_SCHEDULE_POST_GRAPHQL_RESPONSE") {
+                                            window.removeEventListener("message", handler);
+                                            resolve(event.data.data);
+                                        }
+                                    };
+                                    window.addEventListener("message", handler);
+                                    setTimeout(() => { window.removeEventListener("message", handler); resolve({ success: false }); }, 30000);
+                                });
+                            }
+                            
+                            newsPublishBtn.textContent = "✓";
+                            newsPublishBtn.classList.add("published");
+                            newsPublishBtn.disabled = false;
+                            
+                            if (scheduledTime) {
+                                await refreshScheduledPostTimes();
+                                updateNextScheduleDisplay();
+                            }
+                            
+                            setTimeout(() => {
+                                window.location.hash = "#pending";
+                                handleNavigation();
+                                
+                                if (newsUrlInputEl) newsUrlInputEl.value = "";
+                                if (newsPrimaryTextEl) newsPrimaryTextEl.value = "";
+                                if (newsPreviewDescEl) newsPreviewDescEl.textContent = "";
                                 newsGeneratedImages = [];
                                 newsSelectedImages = [];
                                 newsModeImageReady = false;
@@ -4086,9 +4153,15 @@
                                 if (container) container.style.display = "none";
                                 const uploadPrompt = document.getElementById("newsUploadPrompt");
                                 if (uploadPrompt) uploadPrompt.style.display = "flex";
-                            }, 3000);
+                                
+                                newsPublishBtn.textContent = "SCHEDULE";
+                                newsPublishBtn.classList.remove("published");
+                                newsPublishBtn.disabled = true;
+                                newsPublishBtn.style.opacity = "0.5";
+                                validateNewsMode();
+                            }, 1000);
                         } else {
-                            throw new Error(data.error || "Failed to schedule");
+                            throw new Error("Failed to schedule - no URL in response");
                         }
                     } catch (err) {
                         console.error("[News] Publish error:", err);

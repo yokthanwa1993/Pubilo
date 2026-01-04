@@ -81,6 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       linkName,
       caption,
       description,
+      primaryText,
       accessToken,
       cookieData,
       pageId,
@@ -211,6 +212,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       linkName,
       caption: caption || 'Check it out!',
       description: description || '',
+      primaryText: primaryText || '',
       pageId,
       adAccountId: formattedAdAccountId,
       accessToken,
@@ -302,6 +304,7 @@ async function createAdCreative(options: {
   linkName?: string;
   caption: string;
   description: string;
+  primaryText?: string;
   pageId: string;
   adAccountId: string;
   accessToken: string;
@@ -312,7 +315,7 @@ async function createAdCreative(options: {
     link: options.linkUrl,
     multi_share_optimized: true,
     multi_share_end_card: false,
-    message: options.description, // ข้อความอธิบายสินค้า (แสดงเป็น post text)
+    message: options.primaryText || options.description, // ใช้ primaryText เป็นแคปชั่นข้างบน
     call_to_action: { type: "SHOP_NOW" },
   };
 
