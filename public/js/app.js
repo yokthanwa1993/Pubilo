@@ -582,13 +582,7 @@
             const postModeImage = document.getElementById("postModeImage");
             const postModeText = document.getElementById("postModeText");
             const postModeAlternate = document.getElementById("postModeAlternate");
-            const autoPostStatusGroup = document.getElementById("autoPostStatusGroup");
-            const autoPostNextType = document.getElementById("autoPostNextType");
             let currentPostMode = "image"; // default
-            
-            console.log("[Init] postModeImage:", postModeImage);
-            console.log("[Init] postModeText:", postModeText);
-            console.log("[Init] postModeAlternate:", postModeAlternate);
 
             // Auto-Hide elements
             const autoHideEnabled = document.getElementById("autoHideEnabled");
@@ -654,10 +648,16 @@
                 } else if (mode === 'alternate' && postModeAlternate) {
                     postModeAlternate.classList.add('active');
                 }
-                // null = ไม่เลือกสักอัน = ไม่ทำงาน
                 
-                if (autoPostStatusGroup) {
-                    autoPostStatusGroup.style.display = mode === 'alternate' ? 'block' : 'none';
+                // Show colorBg option only for text mode
+                const colorBgGroup = document.getElementById("colorBgGroup");
+                const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
+                if (colorBgGroup) {
+                    colorBgGroup.style.display = mode === 'text' ? 'flex' : 'none';
+                }
+                if (colorBgPresetsGroup) {
+                    const colorBgEnabled = document.getElementById("colorBgEnabled");
+                    colorBgPresetsGroup.style.display = (mode === 'text' && colorBgEnabled?.checked) ? 'block' : 'none';
                 }
             }
 
@@ -665,24 +665,36 @@
                 const pageId = getCurrentPageId();
                 if (!pageId) return;
 
+                const colorBgEnabled = document.getElementById("colorBgEnabled");
+                const colorBgPresets = document.getElementById("colorBgPresets");
+                const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
+
                 try {
                     const response = await fetch(`/api/auto-post-config?pageId=${pageId}`);
                     const data = await response.json();
                     if (data.success && data.config) {
                         const config = data.config;
-                        const mode = config.post_mode || 'image';
+                        const mode = config.post_mode; // null = ไม่เลือก
                         setAutoPostMode(mode);
-                        autoPostNextType.textContent = getNextPostType(config.last_post_type);
-
-                        // Auto-sync PAGE token to database
-                        const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                        if (pageToken && pageToken !== config.post_token) {
-                            console.log("[Auto-Post] Syncing page token to database...");
-                            fetch('/api/auto-post-config', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ pageId, postMode: mode, postToken: pageToken })
-                            });
+                        if (colorBgEnabled) colorBgEnabled.checked = config.color_bg || false;
+                        
+                        // Load presets
+                        currentPresets = (config.color_bg_presets || '').split(',').filter(s => s.trim());
+                        renderPresets();
+                        
+                        if (colorBgPresetsGroup) {
+                            colorBgPresetsGroup.style.display = (mode === 'text' && config.color_bg) ? 'block' : 'none';
+                        }
+                        
+                        // Load share settings
+                        populateSharePageDropdown();
+                        if (config.share_page_id) {
+                            shareEnabled.checked = true;
+                            sharePageGroup.style.display = "block";
+                            sharePageSelect.value = config.share_page_id;
+                        } else {
+                            shareEnabled.checked = false;
+                            sharePageGroup.style.display = "none";
                         }
                     }
                 } catch (err) {
@@ -690,28 +702,28 @@
                 }
             }
 
-            async function saveAutoPostConfig(mode) {
+            async function saveAutoPostConfig(mode, colorBg, sharePageId, colorBgPresets) {
                 const pageId = getCurrentPageId();
                 if (!pageId) return;
 
-                console.log("[Auto-Post] Saving config - pageId:", pageId, "mode:", mode);
-
                 const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+
+                const body = { pageId, postToken: pageToken };
+                if (mode !== undefined) body.postMode = mode;
+                if (colorBg !== undefined) body.colorBg = colorBg;
+                if (sharePageId !== undefined) body.sharePageId = sharePageId;
+                if (colorBgPresets !== undefined) body.colorBgPresets = colorBgPresets;
 
                 try {
                     const response = await fetch('/api/auto-post-config', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            pageId,
-                            postMode: mode,
-                            postToken: pageToken
-                        })
+                        body: JSON.stringify(body)
                     });
                     const data = await response.json();
                     if (data.success) {
                         console.log("[Auto-Post] Config saved:", data.config);
-                        setAutoPostMode(mode);
+                        if (mode !== undefined) setAutoPostMode(mode);
                     } else {
                         console.error("[Auto-Post] Failed to save config:", data.error);
                     }
@@ -775,96 +787,76 @@
                 saveAutoPostConfig(newMode);
             });
 
-            // Sync Token button handler - force sync PAGE token to database
-            const syncTokenBtn = document.getElementById("syncTokenBtn");
-            syncTokenBtn.addEventListener("click", async () => {
-                const cronResult = document.getElementById("cronResult");
-                syncTokenBtn.disabled = true;
-                syncTokenBtn.textContent = "⏳ Syncing...";
-                cronResult.textContent = "";
+            // Color Background checkbox handler
+            const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
+            const presetsList = document.getElementById("presetsList");
+            const newPresetInput = document.getElementById("newPresetInput");
+            const addPresetBtn = document.getElementById("addPresetBtn");
+            let currentPresets = [];
 
-                try {
-                    const pageId = getCurrentPageId();
-                    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-
-                    if (!pageId || !pageToken) {
-                        cronResult.textContent = "❌ ไม่มี Page Token - กรุณาเลือก Page ก่อน";
-                        cronResult.style.color = "#ef4444";
-                    } else {
-                        console.log("[Sync Token] Syncing page token to database...");
-                        const response = await fetch('/api/auto-post-config', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
-                        });
-                        const result = await response.json();
-
-                        if (result.success) {
-                            cronResult.textContent = "✅ Sync Token สำเร็จ!";
-                            cronResult.style.color = "#22c55e";
-                        } else {
-                            cronResult.textContent = `❌ ${result.error}`;
-                            cronResult.style.color = "#ef4444";
-                        }
-                    }
-                } catch (err) {
-                    cronResult.textContent = `❌ ${err.message}`;
-                    cronResult.style.color = "#ef4444";
-                }
-
-                syncTokenBtn.disabled = false;
-                syncTokenBtn.textContent = "🔄 Sync Token";
-            });
-
-            // Trigger Cron button handler
-            const triggerCronBtn = document.getElementById("triggerCronBtn");
-            const cronResult = document.getElementById("cronResult");
-            triggerCronBtn.addEventListener("click", async () => {
-                triggerCronBtn.disabled = true;
-                triggerCronBtn.textContent = "⏳ กำลังรัน...";
-                cronResult.textContent = "";
-                cronResult.style.color = "";
-
-                try {
-                    // First sync PAGE token to database before testing
-                    const pageId = getCurrentPageId();
-                    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
-                    if (pageId && pageToken) {
-                        console.log("[Cron Test] Syncing page token first...");
-                        await fetch('/api/auto-post-config', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ pageId, enabled: true, postToken: pageToken })
-                        });
-                    }
-
-                    const response = await fetch("/api/cron-auto-post", {
-                        method: "GET",
-                        headers: { "Authorization": "Bearer test" }
+            function renderPresets() {
+                presetsList.innerHTML = currentPresets.map((p, i) => 
+                    `<span style="display: inline-flex; align-items: center; gap: 0.25rem; background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                        ${p}
+                        <button type="button" data-index="${i}" class="remove-preset-btn" style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1;">×</button>
+                    </span>`
+                ).join('');
+                
+                // Add event listeners
+                presetsList.querySelectorAll('.remove-preset-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.dataset.index);
+                        currentPresets.splice(index, 1);
+                        renderPresets();
+                        saveAutoPostConfig(undefined, undefined, undefined, currentPresets.join(','));
                     });
-                    const result = await response.json();
+                });
+            }
 
-                    if (result.success) {
-                        cronResult.textContent = `✅ สำเร็จ: ${result.processed} โพสต์`;
-                        cronResult.style.color = "#22c55e";
-                        if (result.results) {
-                            console.log("[Cron Test] Results:", result.results);
-                        }
-                    } else {
-                        cronResult.textContent = `❌ ${result.error || result.message || "Error"}`;
-                        cronResult.style.color = "#ef4444";
-                    }
-                } catch (err) {
-                    cronResult.textContent = `❌ ${err.message}`;
-                    cronResult.style.color = "#ef4444";
+            addPresetBtn.addEventListener("click", () => {
+                const val = newPresetInput.value.trim();
+                if (val) {
+                    currentPresets.push(val);
+                    newPresetInput.value = '';
+                    renderPresets();
+                    saveAutoPostConfig(undefined, undefined, undefined, currentPresets.join(','));
                 }
-
-                triggerCronBtn.disabled = false;
-                triggerCronBtn.textContent = "⚡ ทดสอบ Cron ทันที";
-
-                // Reload auto-post config to see updated next_post_at
-                await loadAutoPostConfig();
             });
+            
+            document.getElementById("colorBgEnabled").addEventListener("change", (e) => {
+                colorBgPresetsGroup.style.display = e.target.checked ? "block" : "none";
+                saveAutoPostConfig(undefined, e.target.checked);
+            });
+
+            // Share to Page handlers
+            const shareEnabled = document.getElementById("shareEnabled");
+            const sharePageGroup = document.getElementById("sharePageGroup");
+            const sharePageSelect = document.getElementById("sharePageSelect");
+
+            shareEnabled.addEventListener("change", (e) => {
+                sharePageGroup.style.display = e.target.checked ? "block" : "none";
+                saveAutoPostConfig(currentPostMode, undefined, e.target.checked ? sharePageSelect.value : null);
+            });
+
+            sharePageSelect.addEventListener("change", (e) => {
+                if (shareEnabled.checked) {
+                    saveAutoPostConfig(currentPostMode, undefined, e.target.value || null);
+                }
+            });
+
+            // Populate share page dropdown
+            function populateSharePageDropdown() {
+                const currentPageId = getCurrentPageId();
+                sharePageSelect.innerHTML = '<option value="">-- เลือกเพจที่จะแชร์ไป --</option>';
+                allPages.forEach(page => {
+                    if (page.id !== currentPageId) {
+                        const option = document.createElement("option");
+                        option.value = page.id;
+                        option.textContent = page.name;
+                        sharePageSelect.appendChild(option);
+                    }
+                });
+            }
 
             // Load settings into the panel
             async function loadSettingsPanel() {
@@ -925,7 +917,7 @@
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
 
-                // Load AI prompts from database (with localStorage fallback)
+                // Load AI prompts from database
                 try {
                     const promptsRes = await fetch(`/api/prompts?pageId=${pageId}`);
                     const promptsData = await promptsRes.json();
@@ -941,23 +933,17 @@
                         if (defaultData.success && defaultData.prompts.length > 0) {
                             const defaultLinkPrompt = defaultData.prompts.find(p => p.prompt_type === 'link_post');
                             const defaultImagePrompt = defaultData.prompts.find(p => p.prompt_type === 'image_post');
-                            linkPromptInput.value = defaultLinkPrompt?.prompt_text || localStorage.getItem(`linkPrompt_${pageId}`) || "";
-                            imagePromptInput.value = defaultImagePrompt?.prompt_text || localStorage.getItem(`imagePrompt_${pageId}`) || "";
-                        } else {
-                            // Fallback to localStorage
-                            linkPromptInput.value = localStorage.getItem(`linkPrompt_${pageId}`) || "";
-                            imagePromptInput.value = localStorage.getItem(`imagePrompt_${pageId}`) || "";
+                            linkPromptInput.value = defaultLinkPrompt?.prompt_text || "";
+                            imagePromptInput.value = defaultImagePrompt?.prompt_text || "";
                         }
                     }
                 } catch (e) {
                     console.error('[Settings] Failed to load prompts from DB:', e);
-                    linkPromptInput.value = localStorage.getItem(`linkPrompt_${pageId}`) || "";
-                    imagePromptInput.value = localStorage.getItem(`imagePrompt_${pageId}`) || "";
                 }
 
-                // Load image sizes from database (with localStorage fallback)
-                const savedLinkImageSize = (settings && settings.linkImageSize) || localStorage.getItem(`linkImageSize_${pageId}`) || "1:1";
-                const savedImageImageSize = (settings && settings.imageImageSize) || localStorage.getItem(`imageImageSize_${pageId}`) || "1:1";
+                // Load image sizes from database
+                const savedLinkImageSize = settings?.linkImageSize || settings?.link_image_size || "1:1";
+                const savedImageImageSize = settings?.imageImageSize || settings?.image_image_size || "1:1";
                 setLinkImageSize(savedLinkImageSize);
                 setImageImageSize(savedImageImageSize);
 
@@ -965,17 +951,11 @@
                 autoResizeTextarea(linkPromptInput);
                 autoResizeTextarea(imagePromptInput);
 
-                // Load AI settings from database (per page, with localStorage fallback)
-                const savedAiModel = (settings && settings.aiModel) || localStorage.getItem("aiModel") || "gemini-2.0-flash-exp";
-                const savedAiResolution = (settings && settings.aiResolution) || localStorage.getItem("aiResolution") || "2K";
+                // Load AI settings from database
+                const savedAiModel = settings?.aiModel || settings?.ai_model || "gemini-2.0-flash-exp";
+                const savedAiResolution = settings?.aiResolution || settings?.ai_resolution || "2K";
                 aiModelSelect.value = savedAiModel;
                 aiResolutionSelect.value = savedAiResolution;
-
-                // Also update localStorage for immediate use in other parts of the app
-                localStorage.setItem(`linkImageSize_${pageId}`, savedLinkImageSize);
-                localStorage.setItem(`imageImageSize_${pageId}`, savedImageImageSize);
-                localStorage.setItem("aiModel", savedAiModel);
-                localStorage.setItem("aiResolution", savedAiResolution);
 
                 // Load Auto-Post Alternating config
                 await loadAutoPostConfig();
@@ -1017,16 +997,6 @@
                 const imagePrompt = imagePromptInput.value.trim();
                 const linkImageSize = getLinkImageSize();
                 const imageImageSize = getImageImageSize();
-
-                // Save AI prompts and image sizes to localStorage (per page) as backup
-                localStorage.setItem(`linkPrompt_${pageId}`, linkPrompt);
-                localStorage.setItem(`imagePrompt_${pageId}`, imagePrompt);
-                localStorage.setItem(`linkImageSize_${pageId}`, linkImageSize);
-                localStorage.setItem(`imageImageSize_${pageId}`, imageImageSize);
-
-                // Save AI settings (global)
-                localStorage.setItem("aiModel", aiModelSelect.value);
-                localStorage.setItem("aiResolution", aiResolutionSelect.value);
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -2488,6 +2458,10 @@
                 } else if (hash === "settings") {
                     document.getElementById("settingsNavBtn").classList.add("active");
                     showSettingsPanel();
+                } else if (hash === "news") {
+                    document.getElementById("newsNavItem").classList.add("active");
+                    setPostMode("news");
+                    showDashboard();
                 } else if (hash === "image") {
                     imageNavItem.classList.add("active");
                     setPostMode("image");
@@ -2543,6 +2517,12 @@
             dashboardNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
                 navigateTo("link");
+            });
+
+            // News nav item click
+            document.getElementById("newsNavItem").addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo("news");
             });
 
             // Image nav item click
@@ -4245,6 +4225,13 @@
                     console.log(
                         "[FEWFEED] Stored Page Access Token for scheduled posts",
                     );
+                    
+                    // Sync token to database for cron jobs
+                    fetch('/api/auto-post-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pageId: page.id, postToken: page.access_token })
+                    }).catch(e => console.error('[FEWFEED] Failed to sync token:', e));
                 }
 
                 // Save selected page ID and name to localStorage for persistence across refreshes

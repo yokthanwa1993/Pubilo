@@ -49,11 +49,21 @@ console.log("[FEWFEED FB] Content script loaded on", window.location.href);
   }
 
   if (token || dtsg) {
-    console.log("[FEWFEED FB] Auto-extracted:", { hasToken: !!token, hasDtsg: !!dtsg });
+    // Try to extract profile picture URL
+    let avatarUrl = null;
+    const avatarImg = document.querySelector('image[*|href*="scontent"]') || 
+                      document.querySelector('svg image[href*="scontent"]') ||
+                      document.querySelector('img[alt*="profile picture"]');
+    if (avatarImg) {
+      avatarUrl = avatarImg.getAttribute('xlink:href') || avatarImg.getAttribute('href') || avatarImg.src;
+    }
+
+    console.log("[FEWFEED FB] Auto-extracted:", { hasToken: !!token, hasDtsg: !!dtsg, hasAvatar: !!avatarUrl });
     chrome.runtime.sendMessage({
       action: "tokenExtracted",
       token: token,
       dtsg: dtsg,
+      avatarUrl: avatarUrl,
       source: window.location.hostname
     });
   }

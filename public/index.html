@@ -215,7 +215,13 @@
 
                 <nav class="sidebar-nav">
                     <div class="nav-section">
-                        <div class="nav-section-title">Main</div>
+                        <div class="nav-section-title">Post</div>
+                        <a href="#" class="nav-item" id="newsNavItem">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 12h10"/>
+                            </svg>
+                            โพสต์ข่าว
+                        </a>
                         <a
                             href="#"
                             class="nav-item active"
@@ -383,6 +389,77 @@
 
             <!-- Main Content -->
             <main class="main-content">
+                <!-- ========== NEWS MODE ========== -->
+                <div class="mode-container" id="newsModeContainer">
+                    <div class="preview-panel">
+                        <div class="card-preview">
+                            <div class="card-image-area" id="newsCardImageArea">
+                                <div class="upload-prompt" id="newsUploadPrompt">
+                                    <div class="upload-buttons">
+                                        <button class="upload-btn upload-from-device" id="newsUploadFromDevice">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="17 8 12 3 7 8"/>
+                                                <line x1="12" y1="3" x2="12" y2="15"/>
+                                            </svg>
+                                            <span>อัพโหลดจากเครื่อง</span>
+                                        </button>
+                                        <button class="upload-btn upload-from-gemini" id="newsUploadFromGemini">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                            </svg>
+                                            <span>เจนจาก Gemini</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="full-image-view" id="newsFullImageView" style="display: none"></div>
+                            </div>
+                            <div class="card-link-info" id="newsCardLinkInfo">
+                                <div class="card-link-details">
+                                    <div class="card-link-caption editable-text" id="newsPreviewCaption">DOMAIN.COM</div>
+                                    <div class="card-link-title editable-text" id="newsPreviewTitle">หัวข้อข่าว</div>
+                                    <div class="card-link-description editable-text" id="newsPreviewDescription">รายละเอียดข่าว...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="caption-area">
+                            <textarea class="caption-input" id="newsCaptionInput" placeholder="เขียนแคปชั่น..."></textarea>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-publish" id="newsPublishBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                                Publish
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-panel">
+                        <div class="settings-section collapsible open">
+                            <div class="settings-section-header">
+                                <h3>📰 ข้อมูลข่าว</h3>
+                                <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                            <div class="settings-section-content">
+                                <div class="setting-group">
+                                    <label>URL ข่าว</label>
+                                    <input type="text" id="newsUrlInput" placeholder="https://example.com/news/...">
+                                </div>
+                                <div class="setting-group">
+                                    <label>หัวข้อข่าว</label>
+                                    <input type="text" id="newsTitleInput" placeholder="หัวข้อข่าว">
+                                </div>
+                                <div class="setting-group">
+                                    <label>รายละเอียด</label>
+                                    <textarea id="newsDescInput" placeholder="รายละเอียดข่าว..." style="min-height: 80px;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End newsModeContainer -->
+
                 <!-- ========== LINK MODE ========== -->
                 <div class="mode-container active" id="linkModeContainer">
                     <!-- Preview Panel - Center -->
@@ -1034,8 +1111,12 @@
                     </div>
                     <div class="settings-content">
                         <!-- Schedule Settings -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">ตั้งเวลาโพสต์</h3>
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                ⏰ ตั้งเวลาโพสต์
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
                             <div class="setting-group">
                                 <label class="setting-label">
                                     <input type="checkbox" id="autoScheduleEnabledPanel" />
@@ -1197,11 +1278,16 @@
                                     -
                                 </div>
                             </div>
+                            </div>
                         </div>
 
                         <!-- Auto-Post Alternating Section -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">🔄 Auto-Post Mode</h3>
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🔄 Auto-Post Mode
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
                             <div class="setting-group">
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <button type="button" id="postModeImage" class="btn post-mode-btn" data-mode="image">🖼️ รูปอย่างเดียว</button>
@@ -1211,27 +1297,40 @@
                                 <p class="setting-desc" style="margin-top: 0.5rem;">
                                     เลือกโหมดการโพสต์อัตโนมัติ
                                 </p>
-                            </div>
-                            <div class="setting-group" id="autoPostStatusGroup" style="display: none;">
-                                <div class="auto-post-status" style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
-                                    <span>โพสต์ถัดไป: </span>
-                                    <span id="autoPostNextType" style="font-weight: 600;">-</span>
+                                <label id="colorBgGroup" style="display: none; align-items: center; gap: 0.5rem; margin-top: 0.75rem; cursor: pointer;">
+                                    <input type="checkbox" id="colorBgEnabled" style="width: 18px; height: 18px;">
+                                    <span style="font-size: 0.9rem;">🎨 Colors Background</span>
+                                </label>
+                                <div id="colorBgPresetsGroup" style="display: none; margin-top: 0.5rem;">
+                                    <div id="presetsList" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <input type="text" id="newPresetInput" class="form-input" placeholder="Preset ID" style="padding: 0.4rem; flex: 1; font-size: 0.85rem;">
+                                        <button type="button" id="addPresetBtn" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+</button>
+                                    </div>
+                                </div>
+                                <!-- Share to Page -->
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" id="shareEnabled" style="width: 18px; height: 18px;">
+                                        <span style="font-size: 0.9rem;">🔄 แชร์ไปเพจอื่นด้วย</span>
+                                    </label>
+                                    <div id="sharePageGroup" style="display: none; margin-top: 0.75rem;">
+                                        <select id="sharePageSelect" class="form-input" style="padding: 0.5rem; width: 100%;">
+                                            <option value="">-- เลือกเพจที่จะแชร์ไป --</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="setting-group" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button type="button" id="syncTokenBtn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
-                                    🔄 Sync Token
-                                </button>
-                                <button type="button" id="triggerCronBtn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
-                                    ⚡ ทดสอบ Cron ทันที
-                                </button>
-                                <span id="cronResult" style="font-size: 0.8rem;"></span>
                             </div>
                         </div>
 
                         <!-- Auto Hide Posts Section -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">🙈 Auto Hide Posts</h3>
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🙈 Auto Hide Posts
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
                             <div class="setting-group">
                                 <label class="setting-label">
                                     <input type="checkbox" id="autoHideEnabled" />
@@ -1241,63 +1340,76 @@
                                     ซ่อนโพสต์ประเภท shared_story, mobile_status_update, added_photos จาก Timeline
                                 </p>
                             </div>
+                            </div>
                         </div>
 
-                        <!-- Link Post AI Settings -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">🔗 Link Post - AI Image</h3>
-                            <div class="setting-group">
-                                <label class="form-label">Prompt สำหรับเจนรูป Link Post</label>
-                                <textarea
-                                    id="linkPromptInput"
-                                    class="form-input auto-resize"
-                                    rows="3"
-                                    placeholder="ใส่ prompt สำหรับเจนรูป Link Post เช่น: A professional banner image..."
-                                    style="resize: none; min-height: 80px; overflow: hidden;"
-                                ></textarea>
-                            </div>
-                            <div class="setting-group" style="margin-top: 0.75rem;">
-                                <label class="form-label">ขนาดรูป</label>
-                                <div class="radio-group" id="linkImageSizeGroup">
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="1:1" checked> 1:1</label>
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="16:9"> 16:9</label>
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="4:3"> 4:3</label>
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="9:16"> 9:16</label>
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="2:3"> 2:3</label>
-                                    <label class="radio-option"><input type="radio" name="linkImageSize" value="3:4"> 3:4</label>
+                        <!-- Link Post Prompt Section -->
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🔗 Link Post Prompt
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
+                                <div class="setting-group">
+                                    <textarea
+                                        id="linkPromptInput"
+                                        class="form-input auto-resize"
+                                        rows="2"
+                                        placeholder="ใส่ prompt สำหรับเจนรูป Link Post..."
+                                        style="resize: none; min-height: 50px; overflow: hidden;"
+                                    ></textarea>
+                                </div>
+                                <div class="setting-group" style="margin-top: 0.75rem;">
+                                    <label class="form-label">ขนาดรูป</label>
+                                    <div class="radio-group" id="linkImageSizeGroup">
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="1:1" checked> 1:1</label>
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="16:9"> 16:9</label>
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="4:3"> 4:3</label>
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="9:16"> 9:16</label>
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="2:3"> 2:3</label>
+                                        <label class="radio-option"><input type="radio" name="linkImageSize" value="3:4"> 3:4</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Image Post AI Settings -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">🖼️ Image Post - AI Image</h3>
-                            <div class="setting-group">
-                                <label class="form-label">Prompt สำหรับเจนรูป Image Post</label>
-                                <textarea
-                                    id="imagePromptInput"
-                                    class="form-input auto-resize"
-                                    rows="3"
-                                    placeholder="ใส่ prompt สำหรับเจนรูป Image Post เช่น: A vibrant social media image..."
-                                    style="resize: none; min-height: 80px; overflow: hidden;"
-                                ></textarea>
-                            </div>
-                            <div class="setting-group" style="margin-top: 0.75rem;">
-                                <label class="form-label">ขนาดรูป</label>
-                                <div class="radio-group" id="imageImageSizeGroup">
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="1:1" checked> 1:1</label>
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="16:9"> 16:9</label>
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="4:3"> 4:3</label>
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="9:16"> 9:16</label>
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="2:3"> 2:3</label>
-                                    <label class="radio-option"><input type="radio" name="imageImageSize" value="3:4"> 3:4</label>
+                        <!-- Image Post Prompt Section -->
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🖼️ Image Post Prompt
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
+                                <div class="setting-group">
+                                    <textarea
+                                        id="imagePromptInput"
+                                        class="form-input auto-resize"
+                                        rows="2"
+                                        placeholder="ใส่ prompt สำหรับเจนรูป Image Post..."
+                                        style="resize: none; min-height: 50px; overflow: hidden;"
+                                    ></textarea>
+                                </div>
+                                <div class="setting-group" style="margin-top: 0.75rem;">
+                                    <label class="form-label">ขนาดรูป</label>
+                                    <div class="radio-group" id="imageImageSizeGroup">
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="1:1" checked> 1:1</label>
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="16:9"> 16:9</label>
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="4:3"> 4:3</label>
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="9:16"> 9:16</label>
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="2:3"> 2:3</label>
+                                        <label class="radio-option"><input type="radio" name="imageImageSize" value="3:4"> 3:4</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- AI Model Settings -->
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">🤖 AI Image Generation</h3>
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🤖 AI Image Generation
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
                             <div class="setting-group">
                                 <label class="form-label">โมเดล</label>
                                 <select id="aiModelSelect" class="form-input" style="padding: 0.5rem;">
@@ -1315,6 +1427,7 @@
                                     <option value="2K" selected>2K (2048px)</option>
                                     <option value="4K">4K (4096px)</option>
                                 </select>
+                            </div>
                             </div>
                         </div>
 

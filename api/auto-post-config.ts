@@ -70,40 +70,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST - Save auto-post config
   if (req.method === 'POST') {
-    const { pageId, enabled, postToken, postMode } = req.body;
+    const { pageId, enabled, postToken, postMode, colorBg, sharePageId, colorBgPresets } = req.body;
     
     if (!pageId) {
       return res.status(400).json({ error: 'Missing pageId' });
     }
 
-    // Convert undefined to null for postgres
+    // Check if values were explicitly provided
+    const hasPostMode = 'postMode' in req.body;
+    const hasColorBg = 'colorBg' in req.body;
+    const hasSharePageId = 'sharePageId' in req.body;
+    const hasColorBgPresets = 'colorBgPresets' in req.body;
     const safePostToken = postToken ?? null;
-    const safePostMode = postMode ?? null;
 
     const sql = postgres(dbUrl, { ssl: 'require' });
 
     try {
       // Check if config exists
       const existing = await sql`
-        SELECT id FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+        SELECT id, post_mode, color_bg, share_page_id, color_bg_presets FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
       `;
 
       const now = new Date().toISOString();
 
       if (existing.length > 0) {
-        // Update existing
+        // Update existing - only update fields that were explicitly provided
+        const currentMode = existing[0].post_mode;
+        const currentColorBg = existing[0].color_bg;
+        const currentSharePageId = existing[0].share_page_id;
+        const currentColorBgPresets = existing[0].color_bg_presets;
+        
+        const newMode = hasPostMode ? (postMode ?? null) : currentMode;
+        const newColorBg = hasColorBg ? colorBg : currentColorBg;
+        const newSharePageId = hasSharePageId ? (sharePageId || null) : currentSharePageId;
+        const newColorBgPresets = hasColorBgPresets ? (colorBgPresets || null) : currentColorBgPresets;
+        
         await sql`
           UPDATE auto_post_config
-          SET post_mode = COALESCE(${safePostMode}, post_mode),
+          SET post_mode = ${newMode},
               post_token = COALESCE(${safePostToken}, post_token),
+              color_bg = ${newColorBg},
+              share_page_id = ${newSharePageId},
+              color_bg_presets = ${newColorBgPresets},
               updated_at = ${now}
           WHERE page_id = ${pageId}
         `;
       } else {
         // Insert new
         await sql`
-          INSERT INTO auto_post_config (page_id, post_mode, post_token, created_at, updated_at)
-          VALUES (${pageId}, ${safePostMode || 'image'}, ${safePostToken}, ${now}, ${now})
+          INSERT INTO auto_post_config (page_id, post_mode, post_token, color_bg, share_page_id, color_bg_presets, created_at, updated_at)
+          VALUES (${pageId}, ${postMode ?? null}, ${safePostToken}, ${colorBg || false}, ${sharePageId || null}, ${colorBgPresets || null}, ${now}, ${now})
         `;
       }
 
@@ -145,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Get auto-post config for specific page
     const configs = await sql`
-      SELECT page_id, enabled, next_post_at, last_post_at, last_post_type, post_token
+      SELECT page_id, enabled, next_post_at, last_post_at, last_post_type, post_token, post_mode, color_bg, share_page_id, color_bg_presets
       FROM auto_post_config 
       WHERE page_id = ${pageId}
       LIMIT 1

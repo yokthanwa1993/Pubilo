@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import postgres from 'postgres';
+// @ts-ignore
+import FB from 'fb';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const FREEIMAGE_API_KEY = process.env.FREEIMAGE_API_KEY || "";
@@ -19,6 +21,10 @@ interface AutoPostConfig {
   next_post_at: string | null;
   post_token: string | null;
   post_mode: 'image' | 'text' | 'alternate' | null;
+  color_bg: boolean;
+  share_page_id: string | null;
+  color_bg_presets: string | null;
+  color_bg_index: number;
 }
 
 interface Quote {
@@ -174,8 +180,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let facebookPostId: string;
 
         if (nextPostType === 'text') {
+          // Get preset ID for colored background
+          let presetId: string | null = null;
+          if (config.color_bg) {
+            const presets = (config.color_bg_presets || '1881421442117417').split(',').map(s => s.trim()).filter(s => s);
+            if (presets.length > 0) {
+              const index = config.color_bg_index || 0;
+              presetId = presets[index % presets.length];
+              // Update index for next post
+              await sql`UPDATE auto_post_config SET color_bg_index = ${(index + 1) % presets.length} WHERE page_id = ${config.page_id}`;
+            }
+          }
+          
           // Create text-only post (immediate - no scheduledTime)
-          facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text);
+          facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, presetId);
         } else {
           // Create image post (immediate)
           const customPrompt = await getImagePrompt(sql, config.page_id);
@@ -227,6 +245,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${config.page_id}, ${nextPostType}, ${unusedQuote.quote_text}, 'success', ${facebookPostId})
         `;
 
+        // Share to another page if configured
+        if (config.share_page_id && facebookPostId) {
+          try {
+            // Get share page token
+            const sharePageConfig = await sql`
+              SELECT post_token FROM auto_post_config WHERE page_id = ${config.share_page_id} LIMIT 1
+            `;
+            if (sharePageConfig[0]?.post_token) {
+              await sharePost(facebookPostId, config.share_page_id, sharePageConfig[0].post_token);
+              console.log(`[cron-auto-post] Shared post to page ${config.share_page_id}`);
+            }
+          } catch (shareErr) {
+            console.error(`[cron-auto-post] Failed to share post:`, shareErr);
+          }
+        }
+
         processed++;
         results.push({ page_id: config.page_id, status: 'success', post_type: nextPostType, post_id: facebookPostId });
         console.log(`[cron-auto-post] Successfully posted ${nextPostType} for page ${config.page_id}`);
@@ -257,58 +291,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Helper functions
-async function createTextPost(pageId: string, postToken: string, message: string): Promise<string> {
-  console.log(`[cron-auto-post] Creating immediate text post for page ${pageId}`);
+// Helper functions using Facebook SDK
+async function createTextPost(pageId: string, postToken: string, message: string, presetId: string | null = null): Promise<string> {
+  console.log(`[cron-auto-post] Creating text post via SDK for page ${pageId}, presetId: ${presetId}`);
 
-  const body: any = {
-    message,
-    access_token: postToken,
-  };
-
-  const response = await fetch(
-    `https://graph.facebook.com/v21.0/${pageId}/feed`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Facebook API error: ${response.status} - ${error}`);
+  FB.setAccessToken(postToken);
+  
+  const params: any = { message };
+  if (presetId) {
+    params.text_format_preset_id = presetId;
   }
 
-  const result = await response.json();
-  return result.id;
+  return new Promise((resolve, reject) => {
+    FB.api(`/${pageId}/feed`, 'POST', params, (response: any) => {
+      if (!response || response.error) {
+        reject(new Error(response?.error?.message || 'Facebook API error'));
+      } else {
+        resolve(response.id);
+      }
+    });
+  });
 }
 
 async function createImagePost(pageId: string, postToken: string, imageUrl: string, message: string): Promise<string> {
-  console.log(`[cron-auto-post] Creating immediate image post for page ${pageId}`);
+  console.log(`[cron-auto-post] Creating image post via SDK for page ${pageId}`);
 
-  const body: any = {
-    url: imageUrl,
-    caption: message,
-    access_token: postToken,
-  };
+  FB.setAccessToken(postToken);
 
-  const response = await fetch(
-    `https://graph.facebook.com/v21.0/${pageId}/photos`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  );
+  return new Promise((resolve, reject) => {
+    FB.api(`/${pageId}/photos`, 'POST', { url: imageUrl, caption: message }, (response: any) => {
+      if (!response || response.error) {
+        reject(new Error(response?.error?.message || 'Facebook API error'));
+      } else {
+        resolve(response.post_id || response.id);
+      }
+    });
+  });
+}
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Facebook API error: ${response.status} - ${error}`);
-  }
+async function sharePost(postId: string, targetPageId: string, targetPageToken: string): Promise<string> {
+  console.log(`[cron-auto-post] Sharing post ${postId} to page ${targetPageId} via SDK`);
 
-  const result = await response.json();
-  return result.post_id || result.id;
+  FB.setAccessToken(targetPageToken);
+
+  return new Promise((resolve, reject) => {
+    FB.api(`/${targetPageId}/feed`, 'POST', { link: `https://www.facebook.com/${postId}` }, (response: any) => {
+      if (!response || response.error) {
+        reject(new Error(response?.error?.message || 'Share failed'));
+      } else {
+        resolve(response.id);
+      }
+    });
+  });
 }
 
 async function generateAIImage(

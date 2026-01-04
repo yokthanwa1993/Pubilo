@@ -90,24 +90,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const autoScheduleBool = autoSchedule === true || autoSchedule === 'true';
-      const mins = scheduleMinutes || '00, 15, 30, 45';
+      const mins = scheduleMinutes ?? '00, 15, 30, 45';
 
-      const settings: PageSettings = {
+      // Only update fields that were provided
+      const updateFields: any = {
         page_id: pageId,
-        auto_schedule: autoScheduleBool,
-        schedule_minutes: mins,
-        working_hours_start: workingHoursStart ?? 6,
-        working_hours_end: workingHoursEnd ?? 24,
-        ai_model: aiModel || 'gemini-2.0-flash-exp',
-        ai_resolution: aiResolution || '2K',
-        link_image_size: linkImageSize || '1:1',
-        image_image_size: imageImageSize || '1:1',
         updated_at: new Date().toISOString(),
       };
+      
+      if (autoSchedule !== undefined) updateFields.auto_schedule = autoScheduleBool;
+      if (scheduleMinutes !== undefined) updateFields.schedule_minutes = mins;
+      if (workingHoursStart !== undefined) updateFields.working_hours_start = workingHoursStart;
+      if (workingHoursEnd !== undefined) updateFields.working_hours_end = workingHoursEnd;
+      if (aiModel !== undefined) updateFields.ai_model = aiModel;
+      if (aiResolution !== undefined) updateFields.ai_resolution = aiResolution;
+      if (linkImageSize !== undefined) updateFields.link_image_size = linkImageSize;
+      if (imageImageSize !== undefined) updateFields.image_image_size = imageImageSize;
 
       const { data, error } = await supabase
         .from('page_settings')
-        .upsert(settings, { onConflict: 'page_id' })
+        .upsert(updateFields, { onConflict: 'page_id' })
         .select()
         .single();
 

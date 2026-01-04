@@ -572,6 +572,25 @@
                 box-sizing: border-box;
                 max-width: calc(min(800px, calc(100vh - 100px)) - 80px);
             }
+
+            /* News mode: same as link mode */
+            #newsModeContainer .card-preview {
+                width: auto;
+            }
+
+            #newsModeContainer .card-image-area {
+                aspect-ratio: 1 / 1;
+                width: auto;
+                height: calc(100% - 80px);
+            }
+
+            #newsModeContainer .card-link-info {
+                height: 80px;
+                width: 100%;
+                flex-shrink: 0;
+                box-sizing: border-box;
+                max-width: calc(min(800px, calc(100vh - 100px)) - 80px);
+            }
             
             /* Image mode: 2:3 - full height image */
             #imageModeContainer .card-preview {
@@ -1638,8 +1657,43 @@
             .settings-section {
                 background: #f9fafb;
                 border-radius: 8px;
-                padding: 1.25rem;
-                margin-bottom: 1rem;
+                padding: 0;
+                margin-bottom: 0.5rem;
+                overflow: hidden;
+            }
+
+            .settings-section.collapsible .settings-section-title {
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.25rem;
+                margin: 0;
+                border-bottom: none;
+                user-select: none;
+            }
+
+            .settings-section.collapsible .settings-section-title:hover {
+                background: #f3f4f6;
+            }
+
+            .settings-section.collapsible .collapse-icon {
+                font-size: 1.2rem;
+                color: #9ca3af;
+                transition: transform 0.2s;
+            }
+
+            .settings-section.collapsible.open .collapse-icon {
+                transform: rotate(90deg);
+            }
+
+            .settings-section.collapsible .settings-section-content {
+                display: none;
+                padding: 0 1.25rem 1.25rem;
+            }
+
+            .settings-section.collapsible.open .settings-section-content {
+                display: block;
             }
 
             .settings-section-title {

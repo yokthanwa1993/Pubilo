@@ -1,0 +1,1 @@
+ALTER TABLE auto_post_config ADD COLUMN IF NOT EXISTS color_bg BOOLEAN DEFAULT false;

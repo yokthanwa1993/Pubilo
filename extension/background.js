@@ -624,6 +624,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("[FEWFEED] Token received from fb-content.js:", {
       hasToken: !!request.token,
       hasDtsg: !!request.dtsg,
+      hasAvatar: !!request.avatarUrl,
       source: request.source
     });
 
@@ -636,6 +637,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       if (request.dtsg) {
         updates.fewfeed_fbDtsg = request.dtsg;
+      }
+      if (request.avatarUrl) {
+        updates.fewfeed_avatarUrl = request.avatarUrl;
       }
       updates.fewfeed_ready = true;
       updates.fewfeed_lastFetch = Date.now();
