@@ -106,6 +106,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (aiResolution !== undefined) updateFields.ai_resolution = aiResolution;
       if (linkImageSize !== undefined) updateFields.link_image_size = linkImageSize;
       if (imageImageSize !== undefined) updateFields.image_image_size = imageImageSize;
+      if (req.body.newsAnalysisPrompt !== undefined) updateFields.news_analysis_prompt = req.body.newsAnalysisPrompt;
+      if (req.body.newsGenerationPrompt !== undefined) updateFields.news_generation_prompt = req.body.newsGenerationPrompt;
+      if (req.body.newsImageSize !== undefined) updateFields.news_image_size = req.body.newsImageSize;
+      if (req.body.newsVariationCount !== undefined) updateFields.news_variation_count = req.body.newsVariationCount;
 
       const { data, error } = await supabase
         .from('page_settings')

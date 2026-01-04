@@ -48,6 +48,7 @@
             // Validate Link URL, Description, and Image - disable SCHEDULE button if not ready
             // Track if image is ready (set by showFullImage, cleared by clearImages)
             let linkModeImageReady = false;
+            let newsModeImageReady = false;
 
             function validateLinkMode() {
                 // Determine current mode - default to 'link'
@@ -94,6 +95,25 @@
                         publishBtn.style.opacity = '1';
                         publishBtn.style.cursor = 'pointer';
                     }
+                }
+            }
+
+            function validateNewsMode() {
+                const newsUrlInput = document.getElementById("newsUrlInput");
+                const newsPreviewDesc = document.getElementById("newsPreviewDescription");
+                const newsPublishBtn = document.getElementById("newsPublishBtn");
+                
+                const hasUrl = newsUrlInput && newsUrlInput.value.trim().length > 0;
+                const hasDescription = newsPreviewDesc && newsPreviewDesc.textContent.trim().length > 0;
+                const hasImage = newsModeImageReady;
+                
+                const isValid = hasUrl && hasDescription && hasImage;
+                
+                if (newsPublishBtn) {
+                    newsPublishBtn.disabled = !isValid;
+                    newsPublishBtn.classList.toggle('disabled', !isValid);
+                    newsPublishBtn.style.opacity = isValid ? '1' : '0.5';
+                    newsPublishBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
                 }
             }
 
@@ -574,6 +594,10 @@
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
             const imagePromptInput = document.getElementById("imagePromptInput");
+            const newsAnalysisPromptInput = document.getElementById("newsAnalysisPromptInput");
+            const newsGenerationPromptInput = document.getElementById("newsGenerationPromptInput");
+            const newsImageSizeGroup = document.getElementById("newsImageSizeGroup");
+            const newsVariationCount = document.getElementById("newsVariationCount");
             const aiModelSelect = document.getElementById("aiModelSelect");
             const aiResolutionSelect = document.getElementById("aiResolutionSelect");
             const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
@@ -594,7 +618,7 @@
             }
 
             // Add auto-resize listeners
-            [linkPromptInput, imagePromptInput].forEach(textarea => {
+            [linkPromptInput, imagePromptInput, newsAnalysisPromptInput, newsGenerationPromptInput].forEach(textarea => {
                 if (textarea) {
                     textarea.addEventListener('input', () => autoResizeTextarea(textarea));
                 }
@@ -615,6 +639,14 @@
             }
             function setImageImageSize(value) {
                 const radio = document.querySelector(`input[name="imageImageSize"][value="${value}"]`);
+                if (radio) radio.checked = true;
+            }
+            function getNewsImageSize() {
+                const checked = document.querySelector('input[name="newsImageSize"]:checked');
+                return checked ? checked.value : "1:1";
+            }
+            function setNewsImageSize(value) {
+                const radio = document.querySelector(`input[name="newsImageSize"][value="${value}"]`);
                 if (radio) radio.checked = true;
             }
 
@@ -868,30 +900,30 @@
 
                 // Try to load from cache first, otherwise fetch from API
                 let settings = null;
-                if (cachedPageSettings && cachedPageSettings.pageId === pageId) {
-                    settings = cachedPageSettings;
-                } else {
-                    // Fetch from API
-                    try {
-                        const response = await fetch(`/api/page-settings?pageId=${pageId}`);
-                        const data = await response.json();
-                        if (data.success && data.settings) {
-                            settings = {
-                                pageId,
-                                autoSchedule: data.settings.auto_schedule,
-                                scheduleMinutes: data.settings.schedule_minutes,
-                                aiModel: data.settings.ai_model,
-                                aiResolution: data.settings.ai_resolution,
-                                linkImageSize: data.settings.link_image_size,
-                                imageImageSize: data.settings.image_image_size
-                            };
-                            // Update cache
-                            cachedPageSettings = settings;
-                            console.log("[Settings Panel] Loaded from API:", settings);
-                        }
-                    } catch (err) {
-                        console.error("[Settings Panel] Failed to load settings:", err);
+                // Always fetch fresh from API for settings panel
+                try {
+                    const response = await fetch(`/api/page-settings?pageId=${pageId}`);
+                    const data = await response.json();
+                    if (data.success && data.settings) {
+                        settings = {
+                            pageId,
+                            autoSchedule: data.settings.auto_schedule,
+                            scheduleMinutes: data.settings.schedule_minutes,
+                            aiModel: data.settings.ai_model,
+                            aiResolution: data.settings.ai_resolution,
+                            linkImageSize: data.settings.link_image_size,
+                            imageImageSize: data.settings.image_image_size,
+                            newsAnalysisPrompt: data.settings.news_analysis_prompt,
+                            newsGenerationPrompt: data.settings.news_generation_prompt,
+                            newsImageSize: data.settings.news_image_size,
+                            newsVariationCount: data.settings.news_variation_count
+                        };
+                        // Update cache
+                        cachedPageSettings = settings;
+                        console.log("[Settings Panel] Loaded from API:", settings);
                     }
+                } catch (err) {
+                    console.error("[Settings Panel] Failed to load settings:", err);
                 }
 
                 // Apply settings to panel
@@ -944,12 +976,21 @@
                 // Load image sizes from database
                 const savedLinkImageSize = settings?.linkImageSize || settings?.link_image_size || "1:1";
                 const savedImageImageSize = settings?.imageImageSize || settings?.image_image_size || "1:1";
+                const savedNewsImageSize = settings?.newsImageSize || settings?.news_image_size || "1:1";
                 setLinkImageSize(savedLinkImageSize);
                 setImageImageSize(savedImageImageSize);
+                setNewsImageSize(savedNewsImageSize);
+
+                // Load news prompts
+                if (newsAnalysisPromptInput) newsAnalysisPromptInput.value = settings?.newsAnalysisPrompt || "";
+                if (newsGenerationPromptInput) newsGenerationPromptInput.value = settings?.newsGenerationPrompt || "";
+                if (newsVariationCount) newsVariationCount.value = settings?.newsVariationCount || 4;
 
                 // Auto-resize textareas after loading content
                 autoResizeTextarea(linkPromptInput);
                 autoResizeTextarea(imagePromptInput);
+                if (newsAnalysisPromptInput) autoResizeTextarea(newsAnalysisPromptInput);
+                if (newsGenerationPromptInput) autoResizeTextarea(newsGenerationPromptInput);
 
                 // Load AI settings from database
                 const savedAiModel = settings?.aiModel || settings?.ai_model || "gemini-2.0-flash-exp";
@@ -997,6 +1038,10 @@
                 const imagePrompt = imagePromptInput.value.trim();
                 const linkImageSize = getLinkImageSize();
                 const imageImageSize = getImageImageSize();
+                const newsImageSize = getNewsImageSize();
+                const newsAnalysisPrompt = newsAnalysisPromptInput?.value?.trim() || "";
+                const newsGenerationPrompt = newsGenerationPromptInput?.value?.trim() || "";
+                const newsVarCount = parseInt(newsVariationCount?.value) || 4;
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -1008,7 +1053,11 @@
                     aiModel: aiModelSelect.value,
                     aiResolution: aiResolutionSelect.value,
                     linkImageSize,
-                    imageImageSize
+                    imageImageSize,
+                    newsImageSize,
+                    newsAnalysisPrompt,
+                    newsGenerationPrompt,
+                    newsVariationCount: newsVarCount
                 };
 
                 // Also update the modal settings (keep in sync)
@@ -1033,7 +1082,11 @@
                             aiModel: aiModelSelect.value,
                             aiResolution: aiResolutionSelect.value,
                             linkImageSize,
-                            imageImageSize
+                            imageImageSize,
+                            newsImageSize,
+                            newsAnalysisPrompt,
+                            newsGenerationPrompt,
+                            newsVariationCount: newsVarCount
                         })
                     });
                     const data = await response.json();
@@ -2525,6 +2578,172 @@
                 navigateTo("news");
             });
 
+            // News mode upload handlers
+            const newsUploadFromDevice = document.getElementById("newsUploadFromDevice");
+            const newsFileInput = document.createElement("input");
+            newsFileInput.type = "file";
+            newsFileInput.accept = "image/*";
+            newsFileInput.multiple = true;
+            
+            let newsSelectedImages = [];
+            let newsGeneratedImages = [];
+            let newsIsGenerating = false;
+            
+            if (newsUploadFromDevice) {
+                newsUploadFromDevice.addEventListener("click", () => {
+                    newsFileInput.click();
+                });
+            }
+            
+            newsFileInput.addEventListener("change", async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                
+                const loadPromises = files.map(file => {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve({
+                            data: ev.target.result.split(',')[1],
+                            dataUrl: ev.target.result,
+                            mimeType: file.type,
+                            name: file.name
+                        });
+                        reader.readAsDataURL(file);
+                    });
+                });
+                
+                const newImages = await Promise.all(loadPromises);
+                newsSelectedImages.push(...newImages);
+                newsFileInput.value = "";
+                
+                // Auto generate after selecting images
+                await generateNewsImages();
+            });
+            
+            async function generateNewsImages() {
+                if (newsSelectedImages.length === 0 || newsIsGenerating) return;
+                
+                newsIsGenerating = true;
+                const container = document.getElementById("newsFullImageView");
+                const uploadPrompt = document.getElementById("newsUploadPrompt");
+                
+                // Show loading skeleton
+                uploadPrompt.style.display = "none";
+                container.style.display = "grid";
+                container.style.gridTemplateColumns = "repeat(2, 1fr)";
+                container.style.gap = "8px";
+                container.style.padding = "8px";
+                container.innerHTML = `
+                    <div class="skeleton-card" style="aspect-ratio: 1; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px;"></div>
+                    <div class="skeleton-card" style="aspect-ratio: 1; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px;"></div>
+                    <div class="skeleton-card" style="aspect-ratio: 1; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px;"></div>
+                    <div class="skeleton-card" style="aspect-ratio: 1; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px;"></div>
+                    <style>@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }</style>
+                `;
+                
+                try {
+                    const pageId = getCurrentPageId();
+                    
+                    // Get settings
+                    const settingsRes = await fetch(`/api/page-settings?pageId=${pageId}`);
+                    const settingsData = await settingsRes.json();
+                    const settings = settingsData.settings || {};
+                    
+                    // Prepare reference images
+                    const referenceImages = newsSelectedImages.map(img => ({
+                        data: img.data,
+                        mimeType: img.mimeType
+                    }));
+                    
+                    // Call generate API
+                    const response = await fetch('/api/generate-news', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            referenceImages,
+                            analysisPrompt: settings.news_analysis_prompt,
+                            generationPrompt: settings.news_generation_prompt,
+                            aspectRatio: settings.news_image_size || '1:1',
+                            variationCount: settings.news_variation_count || 4,
+                            aiModel: settings.ai_model,
+                            aiResolution: settings.ai_resolution
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.images?.length > 0) {
+                        newsGeneratedImages = data.images;
+                        renderNewsGeneratedGrid();
+                    } else {
+                        throw new Error(data.error || 'Failed to generate');
+                    }
+                } catch (err) {
+                    console.error('[News] Generate error:', err);
+                    container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">เกิดข้อผิดพลาด: ${err.message}<br><button onclick="retryNewsGenerate()" style="margin-top: 12px; padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer;">ลองใหม่</button></div>`;
+                } finally {
+                    newsIsGenerating = false;
+                }
+            }
+            
+            window.retryNewsGenerate = function() {
+                generateNewsImages();
+            };
+            
+            function renderNewsGeneratedGrid() {
+                const container = document.getElementById("newsFullImageView");
+                if (!container || newsGeneratedImages.length === 0) return;
+                
+                container.style.display = "grid";
+                container.style.gridTemplateColumns = "repeat(2, 1fr)";
+                container.style.gap = "8px";
+                container.style.padding = "8px";
+                container.style.alignItems = "stretch";
+                container.style.justifyContent = "stretch";
+                
+                container.innerHTML = newsGeneratedImages.map((img, i) => `
+                    <div style="position: relative; cursor: pointer;" onclick="selectNewsImage(${i})">
+                        <img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid ${newsSelectedIndex === i ? '#8b5cf6' : 'transparent'};" id="newsGenImg${i}">
+                    </div>
+                `).join("");
+            }
+            
+            let newsSelectedIndex = 0;
+            window.selectNewsImage = function(index) {
+                newsSelectedIndex = index;
+                newsModeImageReady = true;
+                validateNewsMode();
+                
+                // Show selected image full size
+                const container = document.getElementById("newsFullImageView");
+                container.style.display = "flex";
+                container.style.flexDirection = "column";
+                container.style.alignItems = "center";
+                container.style.justifyContent = "center";
+                container.style.padding = "0";
+                container.innerHTML = `
+                    <img src="${newsGeneratedImages[index]}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
+                    <button onclick="showNewsImageGrid()" style="position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        เลือกรูปอื่น
+                    </button>
+                `;
+            };
+            
+            window.showNewsImageGrid = function() {
+                renderNewsGeneratedGrid();
+            };
+            
+            window.removeNewsImage = function(index) {
+                newsSelectedImages.splice(index, 1);
+                if (newsSelectedImages.length === 0) {
+                    newsGeneratedImages = [];
+                    const container = document.getElementById("newsFullImageView");
+                    container.style.display = "none";
+                    document.getElementById("newsUploadPrompt").style.display = "flex";
+                }
+            };
+
             // Image nav item click
             imageNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
@@ -2730,6 +2949,61 @@
                     }
                 }, 100);
             });
+
+            // News URL - same Lazada conversion logic
+            const newsUrlInput = document.getElementById("newsUrlInput");
+            const newsLazadaStatus = document.getElementById("newsLazadaStatus");
+            const newsPreviewDescription = document.getElementById("newsPreviewDescription");
+            let newsIsConverting = false;
+            
+            async function convertNewsLazadaLink() {
+                if (newsIsConverting) return;
+                const url = newsUrlInput.value.trim();
+                if (!url || !isLazadaUrl(url)) return;
+                
+                newsIsConverting = true;
+                if (newsLazadaStatus) {
+                    newsLazadaStatus.textContent = "Converting...";
+                    newsLazadaStatus.style.color = "#888";
+                }
+                
+                window.postMessage({ type: "FEWFEED_CONVERT_NEWS_LAZADA_LINK", productUrl: url }, "*");
+            }
+            
+            // Listen for news Lazada conversion response
+            window.addEventListener("message", (event) => {
+                if (event.data.type === "FEWFEED_NEWS_LAZADA_LINK_RESPONSE") {
+                    const response = event.data.data;
+                    newsIsConverting = false;
+                    if (response.success && response.affiliateLink) {
+                        newsUrlInput.value = response.affiliateLink;
+                        if (newsLazadaStatus) newsLazadaStatus.textContent = "";
+                    } else {
+                        if (newsLazadaStatus) {
+                            newsLazadaStatus.textContent = "❌ " + (response.error || "Conversion failed");
+                            newsLazadaStatus.style.color = "#ef4444";
+                        }
+                    }
+                }
+            });
+            
+            if (newsUrlInput) {
+                newsUrlInput.addEventListener("paste", (e) => {
+                    setTimeout(() => {
+                        let url = newsUrlInput.value.trim();
+                        url = cleanLazadaUrl(url);
+                        newsUrlInput.value = url;
+                        if (isLazadaUrl(url) && !url.includes("s.lazada.co.th")) {
+                            convertNewsLazadaLink();
+                        }
+                        validateNewsMode();
+                    }, 100);
+                });
+                newsUrlInput.addEventListener("input", validateNewsMode);
+            }
+            
+            // Make news description editable (will be setup after setupEditableText is defined)
+            // See below after setupEditableText function
 
             // ============================================
 
@@ -3718,6 +3992,21 @@
                 description.value = previewDescription.textContent;
                 validateLinkMode();
             });
+
+            // Setup news description editable (same as link mode)
+            const newsPreviewDesc = document.getElementById("newsPreviewDescription");
+            if (newsPreviewDesc) {
+                const newsDescInput = document.createElement('input');
+                newsDescInput.type = 'hidden';
+                newsDescInput.id = 'newsDescription';
+                document.body.appendChild(newsDescInput);
+                
+                setupEditableText(newsPreviewDesc, newsDescInput);
+                
+                newsPreviewDesc.addEventListener("input", () => {
+                    newsDescInput.value = newsPreviewDesc.textContent;
+                });
+            }
 
             // Publish
             let lastPublishedUrl = null;

@@ -211,6 +211,19 @@ window.addEventListener("message", async (event) => {
     }, "*");
   }
 
+  // Page requesting to convert Lazada URL for News mode
+  if (event.data.type === "FEWFEED_CONVERT_NEWS_LAZADA_LINK") {
+    console.log("[FEWFEED Content] Converting News Lazada link:", event.data.productUrl);
+    const response = await chrome.runtime.sendMessage({
+      action: "convertLazadaLink",
+      productUrl: event.data.productUrl
+    });
+    window.postMessage({
+      type: "FEWFEED_NEWS_LAZADA_LINK_RESPONSE",
+      data: response
+    }, "*");
+  }
+
   // Page requesting to check Lazada login status
   if (event.data.type === "FEWFEED_CHECK_LAZADA_LOGIN") {
     const response = await chrome.runtime.sendMessage({ action: "checkLazadaLogin" });

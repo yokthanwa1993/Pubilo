@@ -1,0 +1,5 @@
+{
+  "name": "Banana Pro Vision",
+  "description": "A high-fidelity AI image generation studio powered by Gemini 3 Pro (Banana Pro). create stunning 4K visuals from text descriptions or edit existing images with ease.",
+  "requestFramePermissions": []
+}

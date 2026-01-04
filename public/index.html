@@ -416,44 +416,31 @@
                             </div>
                             <div class="card-link-info" id="newsCardLinkInfo">
                                 <div class="card-link-details">
-                                    <div class="card-link-caption editable-text" id="newsPreviewCaption">DOMAIN.COM</div>
-                                    <div class="card-link-title editable-text" id="newsPreviewTitle">หัวข้อข่าว</div>
-                                    <div class="card-link-description editable-text" id="newsPreviewDescription">รายละเอียดข่าว...</div>
+                                    <div class="card-link-caption editable-text" id="newsPreviewCaption">S.LAZADA.CO.TH</div>
+                                    <div class="card-link-title">
+                                        <span class="description-prefix">พิกัด :&nbsp;</span>
+                                        <span class="description-input" id="newsPreviewDescription"></span>
+                                    </div>
+                                </div>
+                                <div class="card-button-wrapper">
+                                    <button class="btn-learn-more" id="newsPreviewCardButton">Shop Now</button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="caption-area">
-                            <textarea class="caption-input" id="newsCaptionInput" placeholder="เขียนแคปชั่น..."></textarea>
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn-publish" id="newsPublishBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="22" y1="2" x2="11" y2="13"/>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                                </svg>
-                                Publish
-                            </button>
                         </div>
                     </div>
-                    <div class="settings-panel">
-                        <div class="settings-section collapsible open">
-                            <div class="settings-section-header">
-                                <h3>📰 ข้อมูลข่าว</h3>
-                                <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <div class="form-panel">
+                        <div class="card">
+                            <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 1rem;">
+                                <button class="btn-publish disabled" id="newsPublishBtn" disabled>SCHEDULE</button>
                             </div>
-                            <div class="settings-section-content">
-                                <div class="setting-group">
-                                    <label>URL ข่าว</label>
-                                    <input type="text" id="newsUrlInput" placeholder="https://example.com/news/...">
-                                </div>
-                                <div class="setting-group">
-                                    <label>หัวข้อข่าว</label>
-                                    <input type="text" id="newsTitleInput" placeholder="หัวข้อข่าว">
-                                </div>
-                                <div class="setting-group">
-                                    <label>รายละเอียด</label>
-                                    <textarea id="newsDescInput" placeholder="รายละเอียดข่าว..." style="min-height: 80px;"></textarea>
-                                </div>
+                            <div class="form-group">
+                                <label class="form-label">Link URL</label>
+                                <input type="text" class="form-input" id="newsUrlInput" placeholder="">
+                                <small id="newsLazadaStatus" style="color: #888; margin-top: 4px; display: block;"></small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Primary Text</label>
+                                <textarea class="form-textarea" id="newsPrimaryText" placeholder="Write something about your post..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -1399,6 +1386,55 @@
                                         <label class="radio-option"><input type="radio" name="imageImageSize" value="2:3"> 2:3</label>
                                         <label class="radio-option"><input type="radio" name="imageImageSize" value="3:4"> 3:4</label>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- News Post Prompt Section -->
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                📰 News Post Prompt
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
+                                <div class="setting-group">
+                                    <label class="form-label">Analysis Prompt</label>
+                                    <textarea
+                                        id="newsAnalysisPromptInput"
+                                        class="form-input auto-resize"
+                                        rows="3"
+                                        placeholder="Prompt สำหรับวิเคราะห์รูปภาพ..."
+                                        style="resize: none; min-height: 80px; overflow: hidden;"
+                                    ></textarea>
+                                    <p class="setting-desc">ใช้วิเคราะห์รูปหลายรูป เลือก background, main subject, inserts</p>
+                                </div>
+                                <div class="setting-group" style="margin-top: 1rem;">
+                                    <label class="form-label">Generation Prompt</label>
+                                    <textarea
+                                        id="newsGenerationPromptInput"
+                                        class="form-input auto-resize"
+                                        rows="3"
+                                        placeholder="Prompt สำหรับเจนรูป montage..."
+                                        style="resize: none; min-height: 80px; overflow: hidden;"
+                                    ></textarea>
+                                    <p class="setting-desc">ใช้สร้างรูป montage แบบข่าว (ใช้ {{placeholders}} ได้)</p>
+                                </div>
+                                <div class="setting-group" style="margin-top: 0.75rem;">
+                                    <label class="form-label">ขนาดรูป</label>
+                                    <div class="radio-group" id="newsImageSizeGroup">
+                                        <label class="radio-option"><input type="radio" name="newsImageSize" value="1:1" checked> 1:1</label>
+                                        <label class="radio-option"><input type="radio" name="newsImageSize" value="16:9"> 16:9</label>
+                                        <label class="radio-option"><input type="radio" name="newsImageSize" value="4:3"> 4:3</label>
+                                        <label class="radio-option"><input type="radio" name="newsImageSize" value="9:16"> 9:16</label>
+                                    </div>
+                                </div>
+                                <div class="setting-group" style="margin-top: 0.75rem;">
+                                    <label class="form-label">จำนวนรูปที่เจน</label>
+                                    <select id="newsVariationCount" class="form-input" style="padding: 0.5rem;">
+                                        <option value="1">1 รูป</option>
+                                        <option value="2">2 รูป</option>
+                                        <option value="4" selected>4 รูป</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
