@@ -132,9 +132,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           continue;
         }
 
-        // Fetch unused quote (Global mode - not used by ANY page)
+        // Fetch unused quote (Global mode - not used by ANY page, newest first)
         const quotes = await sql<Quote[]>`
-          SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at ASC
+          SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at DESC
         `;
 
         const unusedQuote = quotes.find(q => {

@@ -2649,10 +2649,13 @@
                     const settingsData = await settingsRes.json();
                     const settings = settingsData.settings || {};
                     
-                    // Prepare reference images
-                    const referenceImages = newsSelectedImages.map(img => ({
-                        data: img.data,
-                        mimeType: img.mimeType
+                    // Prepare reference images (compress first)
+                    const referenceImages = await Promise.all(newsSelectedImages.map(async img => {
+                        const compressed = await compressImage(img.dataUrl, 1200, 0.8);
+                        return {
+                            data: compressed.split(',')[1],
+                            mimeType: 'image/jpeg'
+                        };
                     }));
                     
                     // Call generate API

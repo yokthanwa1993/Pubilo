@@ -44,17 +44,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Calculate counts - GLOBAL mode
       // "ยังไม่ใช้" = quotes that NO page has used yet
-      // "ใช้แล้ว" = quotes used by THIS page
+      // "ใช้แล้ว" = quotes used by THIS page (or any page if no pageId)
       let unusedCount = 0;
       let usedCount = 0;
       
       (allQuotes || []).forEach(q => {
         const usedByPages = q.used_by_pages || [];
         if (usedByPages.length === 0) {
-          // Not used by anyone
           unusedCount++;
-        } else if (pageId && usedByPages.includes(pageId)) {
-          // Used by this page
+        } else if (pageId) {
+          if (usedByPages.includes(pageId)) {
+            usedCount++;
+          }
+        } else {
+          // No pageId - count all used quotes
           usedCount++;
         }
       });

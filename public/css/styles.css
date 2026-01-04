@@ -1121,6 +1121,11 @@
                 overflow-y: hidden;
             }
 
+            #newsPrimaryText {
+                min-height: 200px;
+                flex: 1;
+            }
+
             .form-textarea.auto-resize {
                 height: auto;
             }

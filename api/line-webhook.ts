@@ -1,0 +1,130 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '';
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+
+function verifySignature(body: string, signature: string): boolean {
+  if (!LINE_CHANNEL_SECRET) return true; // Skip if not configured
+  const hash = crypto.createHmac('sha256', LINE_CHANNEL_SECRET).update(body).digest('base64');
+  return hash === signature;
+}
+
+async function replyMessage(replyToken: string, text: string) {
+  if (!LINE_CHANNEL_ACCESS_TOKEN) return;
+  
+  const now = new Date();
+  const timeStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + 
+                  now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  
+  const flexMessage = {
+    type: 'flex',
+    altText: 'เพิ่มคำคมสำเร็จ',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [{ type: 'text', text: 'QUOTE', weight: 'bold', size: 'xl', color: '#ffffff', align: 'center' }],
+        backgroundColor: '#27AE60'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              { type: 'text', text: '📊 สถานะ:', size: 'md', color: '#555555', flex: 2 },
+              { type: 'text', text: 'สำเร็จ ✅', size: 'md', color: '#27AE60', flex: 3, weight: 'bold' }
+            ],
+            margin: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: '📝 ข้อความที่ได้รับ:', size: 'md', color: '#555555' },
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [{ type: 'text', text: text, size: 'md', color: '#333333', wrap: true }],
+                backgroundColor: '#F5F5F5',
+                paddingAll: 'md',
+                cornerRadius: 'md',
+                margin: 'sm'
+              }
+            ],
+            margin: 'xl'
+          },
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              { type: 'text', text: '🕐 เวลา:', size: 'md', color: '#555555', flex: 2 },
+              { type: 'text', text: timeStr, size: 'md', color: '#333333', flex: 3 }
+            ],
+            margin: 'xl'
+          }
+        ]
+      }
+    }
+  };
+
+  await fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify({
+      replyToken,
+      messages: [flexMessage],
+    }),
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method === 'GET') {
+    return res.status(200).send('LINE Webhook OK');
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).end();
+  }
+
+  const signature = req.headers['x-line-signature'] as string;
+  const bodyStr = JSON.stringify(req.body);
+
+  if (!verifySignature(bodyStr, signature)) {
+    return res.status(401).end();
+  }
+
+  const { events } = req.body;
+
+  for (const event of events || []) {
+    if (event.type !== 'message' || event.message.type !== 'text') continue;
+
+    const text = event.message.text.trim();
+    if (!text) continue;
+
+    try {
+      const { error } = await supabase.from('quotes').insert({ quote_text: text });
+      
+      if (error) throw error;
+      
+      await replyMessage(event.replyToken, text);
+    } catch (err) {
+      console.error('[line-webhook] Error:', err);
+    }
+  }
+
+  return res.status(200).end();
+}
