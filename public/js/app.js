@@ -4005,6 +4005,97 @@
                 
                 newsPreviewDesc.addEventListener("input", () => {
                     newsDescInput.value = newsPreviewDesc.textContent;
+                    validateNewsMode();
+                });
+                
+                newsPreviewDesc.addEventListener("blur", () => {
+                    validateNewsMode();
+                });
+            }
+
+            // News publish handler
+            const newsPublishBtn = document.getElementById("newsPublishBtn");
+            if (newsPublishBtn) {
+                newsPublishBtn.addEventListener("click", async () => {
+                    if (newsPublishBtn.disabled) return;
+                    
+                    const pageId = getCurrentPageId();
+                    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                    const newsUrlInput = document.getElementById("newsUrlInput");
+                    const newsPrimaryText = document.getElementById("newsPrimaryText");
+                    const newsPreviewDesc = document.getElementById("newsPreviewDescription");
+                    
+                    if (!pageId || !pageToken) {
+                        alert("กรุณาเลือกเพจก่อน");
+                        return;
+                    }
+                    
+                    const linkUrl = newsUrlInput?.value?.trim();
+                    const description = newsPreviewDesc?.textContent?.trim();
+                    const primaryText = newsPrimaryText?.value?.trim() || "";
+                    const imageData = newsGeneratedImages[newsSelectedIndex];
+                    
+                    if (!linkUrl || !description || !imageData) {
+                        alert("กรุณากรอกข้อมูลให้ครบ");
+                        return;
+                    }
+                    
+                    newsPublishBtn.disabled = true;
+                    newsPublishBtn.textContent = "SCHEDULING...";
+                    
+                    try {
+                        const response = await fetch("/api/publish", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                pageId,
+                                pageToken,
+                                linkUrl,
+                                linkName: "S.LAZADA.CO.TH",
+                                caption: "S.LAZADA.CO.TH",
+                                description,
+                                primaryText,
+                                callToAction: "SHOP_NOW",
+                                imageData,
+                                mode: "link"
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            newsPublishBtn.textContent = "SCHEDULED ✓";
+                            newsPublishBtn.classList.add("published");
+                            
+                            // Reset after 3 seconds
+                            setTimeout(() => {
+                                newsPublishBtn.textContent = "SCHEDULE";
+                                newsPublishBtn.classList.remove("published");
+                                newsPublishBtn.disabled = true;
+                                newsPublishBtn.style.opacity = "0.5";
+                                
+                                // Clear form
+                                if (newsUrlInput) newsUrlInput.value = "";
+                                if (newsPrimaryText) newsPrimaryText.value = "";
+                                if (newsPreviewDesc) newsPreviewDesc.textContent = "";
+                                newsGeneratedImages = [];
+                                newsSelectedImages = [];
+                                newsModeImageReady = false;
+                                
+                                const container = document.getElementById("newsFullImageView");
+                                if (container) container.style.display = "none";
+                                const uploadPrompt = document.getElementById("newsUploadPrompt");
+                                if (uploadPrompt) uploadPrompt.style.display = "flex";
+                            }, 3000);
+                        } else {
+                            throw new Error(data.error || "Failed to schedule");
+                        }
+                    } catch (err) {
+                        console.error("[News] Publish error:", err);
+                        alert("เกิดข้อผิดพลาด: " + err.message);
+                        newsPublishBtn.textContent = "SCHEDULE";
+                        newsPublishBtn.disabled = false;
+                    }
                 });
             }
 
