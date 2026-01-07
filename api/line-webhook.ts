@@ -103,26 +103,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const signature = req.headers['x-line-signature'] as string;
   const bodyStr = JSON.stringify(req.body);
 
+  console.log('[line-webhook] Received:', bodyStr.substring(0, 500));
+
   if (!verifySignature(bodyStr, signature)) {
+    console.log('[line-webhook] Invalid signature');
     return res.status(401).end();
   }
 
   const { events } = req.body;
 
   for (const event of events || []) {
+    console.log('[line-webhook] Event type:', event.type, event.message?.type);
     if (event.type !== 'message' || event.message.type !== 'text') continue;
 
     const text = event.message.text.trim();
+    console.log('[line-webhook] Text:', text);
     if (!text) continue;
 
     try {
       const { error } = await supabase.from('quotes').insert({ quote_text: text });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[line-webhook] DB Error:', error);
+        throw error;
+      }
       
       await replyMessage(event.replyToken, text);
     } catch (err) {
       console.error('[line-webhook] Error:', err);
+      // ลองตอบกลับแม้ insert ไม่สำเร็จ
+      try {
+        await replyMessage(event.replyToken, '❌ เกิดข้อผิดพลาด: ' + (err instanceof Error ? err.message : 'Unknown'));
+      } catch {}
     }
   }
 

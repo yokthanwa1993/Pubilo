@@ -1393,9 +1393,26 @@
             }
 
             .minute-checkbox:has(input:checked) {
-                background: #7c3aed;
-                border-color: #7c3aed;
+                background: var(--page-color, #7c3aed);
+                border-color: var(--page-color, #7c3aed);
                 color: white;
+            }
+
+            .minute-checkbox.used-by-others {
+                background: var(--other-color, #f59e0b);
+                border-color: var(--other-color, #f59e0b);
+                color: white;
+                cursor: not-allowed;
+                opacity: 0.8;
+            }
+
+            .minute-checkbox.used-by-others span {
+                color: white;
+            }
+
+            .minute-checkbox.used-by-others:has(input:checked) {
+                background: var(--page-color, #7c3aed);
+                border-color: var(--page-color, #7c3aed);
             }
 
             .minute-checkbox span {

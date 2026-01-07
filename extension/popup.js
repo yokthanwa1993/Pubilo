@@ -213,14 +213,20 @@ async function checkStatus() {
 
 // Open Pubilo with cookie data
 openBtn.addEventListener("click", async () => {
-  if (!cookieData) return;
+  // Get cookie data directly if not cached
+  let data = cookieData;
+  if (!data) {
+    const response = await chrome.runtime.sendMessage({ action: "getFacebookCookies" });
+    if (response.success) data = response;
+  }
 
-  // Store cookie in extension storage for content script to pick up
-  await chrome.storage.local.set({
-    fewfeed_cookie: cookieData.cookie,
-    fewfeed_userId: cookieData.userId,
-    fewfeed_ready: true
-  });
+  if (data) {
+    await chrome.storage.local.set({
+      fewfeed_cookie: data.cookie,
+      fewfeed_userId: data.userId,
+      fewfeed_ready: true
+    });
+  }
 
   // Open Pubilo
   chrome.tabs.create({ url: "https://pubilo.vercel.app/" }, () => {

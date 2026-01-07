@@ -23,6 +23,8 @@ interface AutoPostConfig {
   post_mode: 'image' | 'text' | 'alternate' | null;
   color_bg: boolean;
   share_page_id: string | null;
+  share_mode: 'both' | 'image' | 'text' | null;
+  share_schedule_minutes: string | null;
   color_bg_presets: string | null;
   color_bg_index: number;
 }
@@ -245,19 +247,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${config.page_id}, ${nextPostType}, ${unusedQuote.quote_text}, 'success', ${facebookPostId})
         `;
 
-        // Share to another page if configured
+        // Queue share to another page if configured (instead of sharing immediately)
         if (config.share_page_id && facebookPostId) {
           try {
-            // Get share page token
-            const sharePageConfig = await sql`
-              SELECT post_token FROM auto_post_config WHERE page_id = ${config.share_page_id} LIMIT 1
-            `;
-            if (sharePageConfig[0]?.post_token) {
-              await sharePost(facebookPostId, config.share_page_id, sharePageConfig[0].post_token);
-              console.log(`[cron-auto-post] Shared post to page ${config.share_page_id}`);
+            const shareMode = config.share_mode || 'both';
+            let shouldQueue = false;
+            
+            if (shareMode === 'both') {
+              shouldQueue = true;
+            } else if (shareMode === 'image' && nextPostType === 'image') {
+              shouldQueue = true;
+            } else if (shareMode === 'text' && nextPostType === 'text') {
+              shouldQueue = true;
+            }
+            
+            if (shouldQueue) {
+              await sql`
+                INSERT INTO share_queue (source_page_id, target_page_id, facebook_post_id, post_type)
+                VALUES (${config.page_id}, ${config.share_page_id}, ${facebookPostId}, ${nextPostType})
+              `;
+              console.log(`[cron-auto-post] Queued share to page ${config.share_page_id} (mode: ${shareMode})`);
             }
           } catch (shareErr) {
-            console.error(`[cron-auto-post] Failed to share post:`, shareErr);
+            console.error(`[cron-auto-post] Failed to queue share:`, shareErr);
           }
         }
 
@@ -278,8 +290,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Process share queue - check source pages' share_schedule_minutes
+    const shareResults: any[] = [];
+    try {
+      // Get distinct source pages with pending shares
+      const sourcePagesWithPending = await sql`
+        SELECT DISTINCT sq.source_page_id, ac.share_schedule_minutes
+        FROM share_queue sq
+        JOIN auto_post_config ac ON sq.source_page_id = ac.page_id
+        WHERE sq.status = 'pending'
+      `;
+      
+      for (const source of sourcePagesWithPending) {
+        const shareSchedule = source.share_schedule_minutes || '';
+        if (!shareSchedule.trim()) continue;
+        
+        const shareMins = shareSchedule
+          .split(',')
+          .map((m: string) => parseInt(m.trim()))
+          .filter((m: number) => !isNaN(m));
+        
+        if (shareMins.length === 0) continue;
+        if (!shareMins.includes(currentMinute) && !forcePost) continue;
+        
+        // Get ONE pending item for this source page
+        const pendingItems = await sql`
+          SELECT sq.id, sq.target_page_id, sq.facebook_post_id, ac_target.post_token as target_token
+          FROM share_queue sq
+          JOIN auto_post_config ac_target ON sq.target_page_id = ac_target.page_id
+          WHERE sq.source_page_id = ${source.source_page_id} AND sq.status = 'pending'
+          ORDER BY sq.created_at ASC
+          LIMIT 1
+        `;
+        
+        if (pendingItems.length === 0) continue;
+        const item = pendingItems[0];
+        if (!item.target_token) continue;
+        
+        try {
+          await sharePost(item.facebook_post_id, item.target_page_id, item.target_token);
+          await sql`UPDATE share_queue SET status = 'shared', shared_at = NOW() WHERE id = ${item.id}`;
+          shareResults.push({ source_page_id: source.source_page_id, target_page_id: item.target_page_id, post_id: item.facebook_post_id, status: 'shared' });
+          console.log(`[cron-auto-post] Shared queued post ${item.facebook_post_id} to page ${item.target_page_id}`);
+        } catch (err) {
+          await sql`UPDATE share_queue SET status = 'failed' WHERE id = ${item.id}`;
+          console.error(`[cron-auto-post] Failed to share queued post:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('[cron-auto-post] Error processing share queue:', err);
+    }
+
     await sql.end();
-    return res.status(200).json({ success: true, processed, results });
+    return res.status(200).json({ success: true, processed, results, shareResults });
 
   } catch (error) {
     await sql.end();

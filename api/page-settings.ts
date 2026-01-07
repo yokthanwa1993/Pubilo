@@ -110,6 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.newsGenerationPrompt !== undefined) updateFields.news_generation_prompt = req.body.newsGenerationPrompt;
       if (req.body.newsImageSize !== undefined) updateFields.news_image_size = req.body.newsImageSize;
       if (req.body.newsVariationCount !== undefined) updateFields.news_variation_count = req.body.newsVariationCount;
+      if (req.body.shareScheduleMinutes !== undefined) updateFields.share_schedule_minutes = req.body.shareScheduleMinutes;
 
       const { data, error } = await supabase
         .from('page_settings')

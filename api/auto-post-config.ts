@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST - Save auto-post config
   if (req.method === 'POST') {
-    const { pageId, enabled, postToken, postMode, colorBg, sharePageId, colorBgPresets } = req.body;
+    const { pageId, enabled, postToken, postMode, colorBg, sharePageId, colorBgPresets, shareMode } = req.body;
     
     if (!pageId) {
       return res.status(400).json({ error: 'Missing pageId' });
@@ -81,6 +81,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const hasColorBg = 'colorBg' in req.body;
     const hasSharePageId = 'sharePageId' in req.body;
     const hasColorBgPresets = 'colorBgPresets' in req.body;
+    const hasShareMode = 'shareMode' in req.body;
+    const hasShareScheduleMinutes = 'shareScheduleMinutes' in req.body;
+    const hasPageColor = 'pageColor' in req.body;
+    const hasPageName = 'pageName' in req.body;
     const safePostToken = postToken ?? null;
 
     const sql = postgres(dbUrl, { ssl: 'require' });
@@ -88,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Check if config exists
       const existing = await sql`
-        SELECT id, post_mode, color_bg, share_page_id, color_bg_presets FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+        SELECT id, post_mode, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
       `;
 
       const now = new Date().toISOString();
@@ -99,11 +103,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const currentColorBg = existing[0].color_bg;
         const currentSharePageId = existing[0].share_page_id;
         const currentColorBgPresets = existing[0].color_bg_presets;
+        const currentShareMode = existing[0].share_mode;
+        const currentShareScheduleMinutes = existing[0].share_schedule_minutes;
+        const currentPageColor = existing[0].page_color;
+        const currentPageName = existing[0].page_name;
         
         const newMode = hasPostMode ? (postMode ?? null) : currentMode;
         const newColorBg = hasColorBg ? colorBg : currentColorBg;
         const newSharePageId = hasSharePageId ? (sharePageId || null) : currentSharePageId;
         const newColorBgPresets = hasColorBgPresets ? (colorBgPresets || null) : currentColorBgPresets;
+        const newShareMode = hasShareMode ? (shareMode || 'both') : currentShareMode;
+        const newShareScheduleMinutes = hasShareScheduleMinutes ? (req.body.shareScheduleMinutes || null) : currentShareScheduleMinutes;
+        const newPageColor = hasPageColor ? (req.body.pageColor || '#f59e0b') : currentPageColor;
+        const newPageName = hasPageName ? (req.body.pageName || null) : currentPageName;
         
         await sql`
           UPDATE auto_post_config
@@ -112,14 +124,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               color_bg = ${newColorBg},
               share_page_id = ${newSharePageId},
               color_bg_presets = ${newColorBgPresets},
+              share_mode = ${newShareMode},
+              share_schedule_minutes = ${newShareScheduleMinutes},
+              page_color = ${newPageColor},
+              page_name = COALESCE(${newPageName}, page_name),
               updated_at = ${now}
           WHERE page_id = ${pageId}
         `;
       } else {
         // Insert new
         await sql`
-          INSERT INTO auto_post_config (page_id, post_mode, post_token, color_bg, share_page_id, color_bg_presets, created_at, updated_at)
-          VALUES (${pageId}, ${postMode ?? null}, ${safePostToken}, ${colorBg || false}, ${sharePageId || null}, ${colorBgPresets || null}, ${now}, ${now})
+          INSERT INTO auto_post_config (page_id, post_mode, post_token, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name, created_at, updated_at)
+          VALUES (${pageId}, ${postMode ?? null}, ${safePostToken}, ${colorBg || false}, ${sharePageId || null}, ${colorBgPresets || null}, ${shareMode || 'both'}, ${req.body.shareScheduleMinutes || null}, ${req.body.pageColor || '#f59e0b'}, ${req.body.pageName || null}, ${now}, ${now})
         `;
       }
 
@@ -147,6 +163,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const pageId = req.query.pageId as string;
+  const targetPageId = req.query.targetPageId as string;
+  
+  // If targetPageId is provided, return all configs that share to this target
+  if (targetPageId) {
+    if (!dbUrl) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+    const sql = postgres(dbUrl, { ssl: 'require' });
+    try {
+      const configs = await sql`
+        SELECT page_id, share_schedule_minutes, page_color, page_name
+        FROM auto_post_config
+        WHERE share_page_id = ${targetPageId}
+      `;
+      await sql.end();
+      return res.status(200).json({ success: true, configs });
+    } catch (err) {
+      await sql.end();
+      console.error('[auto-post-config] targetPageId error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+  }
   
   if (!pageId) {
     return res.status(400).json({ error: 'Missing pageId parameter' });
@@ -161,7 +199,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Get auto-post config for specific page
     const configs = await sql`
-      SELECT page_id, enabled, next_post_at, last_post_at, last_post_type, post_token, post_mode, color_bg, share_page_id, color_bg_presets
+      SELECT page_id, enabled, next_post_at, last_post_at, last_post_type, post_token, post_mode, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name
       FROM auto_post_config 
       WHERE page_id = ${pageId}
       LIMIT 1

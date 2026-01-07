@@ -46,7 +46,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) throw error;
 
-      return res.status(200).json({ success: true, logs: data || [] });
+      // Get share status for each log
+      const logs = data || [];
+      const postIds = logs.filter(l => l.facebook_post_id).map(l => l.facebook_post_id);
+      
+      let shareMap: Record<string, { status: string; shared_at: string | null }> = {};
+      if (postIds.length > 0) {
+        const { data: shareData } = await supabase
+          .from('share_queue')
+          .select('facebook_post_id, status, shared_at')
+          .in('facebook_post_id', postIds);
+        
+        if (shareData) {
+          shareData.forEach(s => {
+            shareMap[s.facebook_post_id] = { status: s.status, shared_at: s.shared_at };
+          });
+        }
+      }
+
+      // Merge share info
+      const logsWithShare = logs.map(log => ({
+        ...log,
+        share_status: shareMap[log.facebook_post_id]?.status || null,
+        shared_at: shareMap[log.facebook_post_id]?.shared_at || null
+      }));
+
+      return res.status(200).json({ success: true, logs: logsWithShare });
     } catch (error) {
       console.error('[auto-post-logs] GET error:', error);
       return res.status(500).json({

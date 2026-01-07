@@ -1276,10 +1276,14 @@
                             </h3>
                             <div class="settings-section-content">
                             <div class="setting-group">
-                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                                     <button type="button" id="postModeImage" class="btn post-mode-btn" data-mode="image">🖼️ รูปอย่างเดียว</button>
                                     <button type="button" id="postModeText" class="btn post-mode-btn" data-mode="text">📝 ข้อความอย่างเดียว</button>
                                     <button type="button" id="postModeAlternate" class="btn post-mode-btn" data-mode="alternate">🔄 สลับ</button>
+                                    <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-size: 0.85rem; color: #666;">🎨 สีเพจ:</span>
+                                        <input type="color" id="pageColorPicker" value="#7c3aed" style="width: 32px; height: 32px; border: none; cursor: pointer; border-radius: 4px;">
+                                    </div>
                                 </div>
                                 <p class="setting-desc" style="margin-top: 0.5rem;">
                                     เลือกโหมดการโพสต์อัตโนมัติ
@@ -1305,6 +1309,87 @@
                                         <select id="sharePageSelect" class="form-input" style="padding: 0.5rem; width: 100%;">
                                             <option value="">-- เลือกเพจที่จะแชร์ไป --</option>
                                         </select>
+                                        <div id="shareScheduleGroup" style="display: none; margin-top: 0.75rem;">
+                                            <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">⏰ เวลาที่จะแชร์:</p>
+                                            <div id="shareLegend" style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                                <span><span style="display: inline-block; width: 12px; height: 12px; background: #7c3aed; border-radius: 2px; vertical-align: middle;"></span> เพจนี้</span>
+                                            </div>
+                                            <div class="minute-grid" id="shareScheduleMinutesGrid" style="font-size: 0.85rem;">
+                                                <label class="minute-checkbox"><input type="checkbox" value="00"><span>00</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="01"><span>01</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="02"><span>02</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="03"><span>03</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="04"><span>04</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="05"><span>05</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="06"><span>06</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="07"><span>07</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="08"><span>08</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="09"><span>09</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="10"><span>10</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="11"><span>11</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="12"><span>12</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="13"><span>13</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="14"><span>14</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="15"><span>15</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="16"><span>16</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="17"><span>17</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="18"><span>18</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="19"><span>19</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="20"><span>20</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="21"><span>21</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="22"><span>22</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="23"><span>23</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="24"><span>24</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="25"><span>25</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="26"><span>26</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="27"><span>27</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="28"><span>28</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="29"><span>29</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="30"><span>30</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="31"><span>31</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="32"><span>32</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="33"><span>33</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="34"><span>34</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="35"><span>35</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="36"><span>36</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="37"><span>37</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="38"><span>38</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="39"><span>39</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="40"><span>40</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="41"><span>41</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="42"><span>42</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="43"><span>43</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="44"><span>44</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="45"><span>45</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="46"><span>46</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="47"><span>47</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="48"><span>48</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="49"><span>49</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="50"><span>50</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="51"><span>51</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="52"><span>52</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="53"><span>53</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="54"><span>54</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="55"><span>55</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="56"><span>56</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="57"><span>57</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="58"><span>58</span></label>
+                                                <label class="minute-checkbox"><input type="checkbox" value="59"><span>59</span></label>
+                                            </div>
+                                        </div>
+                                        <div id="shareModeGroup" style="display: none; margin-top: 0.75rem;">
+                                            <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">แชร์อะไรบ้าง:</p>
+                                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                                    <input type="checkbox" id="shareImage" style="width: 16px; height: 16px;">
+                                                    <span style="font-size: 0.9rem;">🖼️ รูป</span>
+                                                </label>
+                                                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                                    <input type="checkbox" id="shareText" style="width: 16px; height: 16px;">
+                                                    <span style="font-size: 0.9rem;">📝 ข้อความ</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
