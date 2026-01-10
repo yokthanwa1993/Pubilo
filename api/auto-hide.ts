@@ -10,6 +10,7 @@ interface AutoHideConfig {
   page_id: string;
   enabled: boolean;
   post_token: string | null;
+  hide_types: string | null;
 }
 
 // Hide a post on Facebook
@@ -27,7 +28,7 @@ async function hidePost(postId: string, pageToken: string): Promise<boolean> {
 }
 
 // Get recent posts from a page
-async function getRecentPosts(pageId: string, pageToken: string): Promise<string[]> {
+async function getRecentPosts(pageId: string, pageToken: string, hideTypes: string[]): Promise<string[]> {
   const postIds: string[] = [];
   try {
     const url = `https://graph.facebook.com/v21.0/${pageId}/posts?fields=id,status_type&limit=50&access_token=${pageToken}`;
@@ -35,8 +36,7 @@ async function getRecentPosts(pageId: string, pageToken: string): Promise<string
     const data = await response.json();
     
     for (const post of (data.data || [])) {
-      // Only hide certain types: shared_story, mobile_status_update, added_photos
-      if (['shared_story', 'mobile_status_update', 'added_photos'].includes(post.status_type)) {
+      if (hideTypes.includes(post.status_type)) {
         postIds.push(post.id);
       }
     }
@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Get all pages with auto-hide enabled
     const configs = await sql<AutoHideConfig[]>`
-      SELECT page_id, enabled, post_token FROM auto_hide_config WHERE enabled = true
+      SELECT page_id, enabled, post_token, hide_types FROM auto_hide_config WHERE enabled = true
     `;
 
     if (!configs || configs.length === 0) {
@@ -99,7 +99,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const hiddenPostIds = new Set(hiddenPosts.map(p => p.post_id));
 
       // Get recent posts from Facebook
-      const recentPosts = await getRecentPosts(config.page_id, config.post_token);
+      const hideTypes = (config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
+      const recentPosts = await getRecentPosts(config.page_id, config.post_token, hideTypes);
       
       let hiddenCount = 0;
       for (const postId of recentPosts) {

@@ -12,13 +12,11 @@ const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
               process.env.DATABASE_URL || "";
 
 interface AutoPostConfig {
-  id: string;
   page_id: string;
-  enabled: boolean;
-  interval_minutes: number;
-  last_post_type: 'text' | 'image' | null;
-  last_post_at: string | null;
-  next_post_at: string | null;
+  auto_schedule: boolean;
+  schedule_minutes: string;
+  working_hours_start: number;
+  working_hours_end: number;
   post_token: string | null;
   post_mode: 'image' | 'text' | 'alternate' | null;
   color_bg: boolean;
@@ -27,6 +25,9 @@ interface AutoPostConfig {
   share_schedule_minutes: string | null;
   color_bg_presets: string | null;
   color_bg_index: number;
+  page_color: string | null;
+  page_name: string | null;
+  last_post_type: 'text' | 'image' | null;
 }
 
 interface Quote {
@@ -72,12 +73,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     console.log(`[cron-auto-post] Running at ${nowStr} (Thai: ${currentHour}:${currentMinute.toString().padStart(2, '0')})`);
     
-    // Get all enabled configs with their page settings
-    const configs = await sql<(AutoPostConfig & { schedule_minutes?: string; working_hours_start?: number; working_hours_end?: number })[]>`
-      SELECT c.*, s.schedule_minutes, s.working_hours_start, s.working_hours_end
-      FROM auto_post_config c
-      LEFT JOIN page_settings s ON c.page_id = s.page_id
-      WHERE c.enabled = true
+    // Clear share_queue at midnight (00:00)
+    if (currentHour === 0 && currentMinute === 0) {
+      const deleted = await sql`DELETE FROM share_queue WHERE status = 'pending' RETURNING id`;
+      console.log(`[cron-auto-post] Cleared ${deleted.length} pending shares at midnight`);
+    }
+    
+    // Get all enabled configs from page_settings
+    const configs = await sql<AutoPostConfig[]>`
+      SELECT * FROM page_settings WHERE auto_schedule = true AND post_mode IS NOT NULL
     `;
     
     if (!configs || configs.length === 0) {
@@ -190,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const index = config.color_bg_index || 0;
               presetId = presets[index % presets.length];
               // Update index for next post
-              await sql`UPDATE auto_post_config SET color_bg_index = ${(index + 1) % presets.length} WHERE page_id = ${config.page_id}`;
+              await sql`UPDATE page_settings SET color_bg_index = ${(index + 1) % presets.length} WHERE page_id = ${config.page_id}`;
             }
           }
           
@@ -225,11 +229,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Update config state
         await sql`
-          UPDATE auto_post_config
+          UPDATE page_settings
           SET last_post_type = ${nextPostType},
-              last_post_at = ${nowStr},
               updated_at = ${nowStr}
-          WHERE id = ${config.id}::uuid
+          WHERE page_id = ${config.page_id}
         `;
 
         // Mark quote as used
@@ -297,7 +300,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const sourcePagesWithPending = await sql`
         SELECT DISTINCT sq.source_page_id, ac.share_schedule_minutes
         FROM share_queue sq
-        JOIN auto_post_config ac ON sq.source_page_id = ac.page_id
+        JOIN page_settings ac ON sq.source_page_id = ac.page_id
         WHERE sq.status = 'pending'
       `;
       
@@ -317,7 +320,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pendingItems = await sql`
           SELECT sq.id, sq.target_page_id, sq.facebook_post_id, ac_target.post_token as target_token
           FROM share_queue sq
-          JOIN auto_post_config ac_target ON sq.target_page_id = ac_target.page_id
+          JOIN page_settings ac_target ON sq.target_page_id = ac_target.page_id
           WHERE sq.source_page_id = ${source.source_page_id} AND sq.status = 'pending'
           ORDER BY sq.created_at ASC
           LIMIT 1
@@ -328,10 +331,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!item.target_token) continue;
         
         try {
-          await sharePost(item.facebook_post_id, item.target_page_id, item.target_token);
-          await sql`UPDATE share_queue SET status = 'shared', shared_at = NOW() WHERE id = ${item.id}`;
-          shareResults.push({ source_page_id: source.source_page_id, target_page_id: item.target_page_id, post_id: item.facebook_post_id, status: 'shared' });
-          console.log(`[cron-auto-post] Shared queued post ${item.facebook_post_id} to page ${item.target_page_id}`);
+          const sharedPostId = await sharePost(item.facebook_post_id, item.target_page_id, item.target_token);
+          await sql`UPDATE share_queue SET status = 'shared', shared_at = NOW(), shared_post_id = ${sharedPostId} WHERE id = ${item.id}`;
+          shareResults.push({ source_page_id: source.source_page_id, target_page_id: item.target_page_id, post_id: item.facebook_post_id, shared_post_id: sharedPostId, status: 'shared' });
+          console.log(`[cron-auto-post] Shared queued post ${item.facebook_post_id} to page ${item.target_page_id}, shared_post_id: ${sharedPostId}`);
         } catch (err) {
           await sql`UPDATE share_queue SET status = 'failed' WHERE id = ${item.id}`;
           console.error(`[cron-auto-post] Failed to share queued post:`, err);
@@ -539,9 +542,9 @@ async function getImagePrompt(sql: any, pageId: string): Promise<string | null> 
 
 async function getPageName(sql: any, pageId: string): Promise<string | null> {
   try {
-    // First try to get from auto_post_config
+    // First try to get from page_settings
     const result = await sql`
-      SELECT page_name, post_token FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+      SELECT page_name, post_token FROM page_settings WHERE page_id = ${pageId} LIMIT 1
     `;
     
     if (result[0]?.page_name) {
@@ -562,7 +565,7 @@ async function getPageName(sql: any, pageId: string): Promise<string | null> {
           // Update database with fetched name
           if (pageName) {
             await sql`
-              UPDATE auto_post_config 
+              UPDATE page_settings 
               SET page_name = ${pageName}, updated_at = ${new Date().toISOString()}
               WHERE page_id = ${pageId}
             `;

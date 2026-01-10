@@ -174,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const configs = await sql`
         SELECT page_id, share_schedule_minutes, page_color, page_name
-        FROM auto_post_config
+        FROM page_settings
         WHERE share_page_id = ${targetPageId}
       `;
       await sql.end();

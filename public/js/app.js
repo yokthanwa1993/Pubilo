@@ -610,6 +610,9 @@
 
             // Auto-Hide elements
             const autoHideEnabled = document.getElementById("autoHideEnabled");
+            const hideSharedStory = document.getElementById("hideSharedStory");
+            const hideMobileStatus = document.getElementById("hideMobileStatus");
+            const hideAddedPhotos = document.getElementById("hideAddedPhotos");
 
             // Auto-resize textarea function
             function autoResizeTextarea(textarea) {
@@ -693,9 +696,6 @@
                 }
                 
                 // Show share mode only for alternate mode
-                const shareModeGroup = document.getElementById("shareModeGroup");
-                const shareEnabled = document.getElementById("shareEnabled");
-                const sharePageSelect = document.getElementById("sharePageSelect");
                 if (shareModeGroup) {
                     shareModeGroup.style.display = (mode === 'alternate' && shareEnabled?.checked && sharePageSelect?.value) ? 'block' : 'none';
                 }
@@ -721,7 +721,7 @@
                     
                     // Get current page color
                     const pageColorPicker = document.getElementById("pageColorPicker");
-                    const currentPageColor = pageColorPicker?.value || '#7c3aed';
+                    const currentPageColor = pageColorPicker?.value || '#1a1a1a';
                     const currentPageName = document.querySelector('.page-selector-name')?.textContent || 'เพจนี้';
                     
                     if (data.success && data.configs) {
@@ -732,7 +732,8 @@
                             const color = config.page_color || '#f59e0b';
                             const name = config.page_name || config.page_id.slice(-6);
                             mins.forEach(m => {
-                                usedMinutes[m] = { color, name };
+                                if (!usedMinutes[m]) usedMinutes[m] = [];
+                                usedMinutes[m].push({ color, name });
                             });
                         });
                         
@@ -755,11 +756,10 @@
                         shareScheduleMinutesGrid.querySelectorAll('input').forEach(cb => {
                             const label = cb.closest('.minute-checkbox');
                             if (usedMinutes[cb.value]) {
-                                const info = usedMinutes[cb.value];
+                                const infos = usedMinutes[cb.value];
                                 label.classList.add('used-by-others');
-                                label.style.setProperty('--other-color', info.color);
-                                label.title = `ใช้โดย: ${info.name}`;
-                                // Disable if not already checked by current page
+                                label.style.setProperty('--other-color', infos[0].color);
+                                label.title = `ใช้โดย: ${infos.map(i => i.name).join(', ')}`;
                                 if (!cb.checked) {
                                     cb.disabled = true;
                                 }
@@ -769,6 +769,62 @@
                 } catch (err) {
                     console.error('[Share] Failed to load conflicts:', err);
                 }
+                
+                // Update next share time display
+                updateNextShareDisplay();
+            }
+            
+            function updateNextShareDisplay() {
+                const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
+                const nextShareInfo = document.getElementById("nextShareInfo");
+                const nextShareDisplay = document.getElementById("nextShareDisplay");
+                if (!shareScheduleMinutesGrid || !nextShareInfo || !nextShareDisplay) return;
+                
+                const checked = shareScheduleMinutesGrid.querySelectorAll('input:checked');
+                if (checked.length === 0) {
+                    nextShareInfo.style.display = 'none';
+                    return;
+                }
+                
+                const mins = Array.from(checked).map(cb => parseInt(cb.value)).sort((a,b) => a-b);
+                const now = new Date();
+                const currentMin = now.getMinutes();
+                const currentHour = now.getHours();
+                
+                let nextMin = mins.find(m => m > currentMin);
+                let nextHour = currentHour;
+                if (nextMin === undefined) {
+                    nextMin = mins[0];
+                    nextHour = currentHour + 1;
+                }
+                
+                const nextTime = new Date(now);
+                nextTime.setHours(nextHour, nextMin, 0, 0);
+                
+                nextShareInfo.style.display = 'block';
+                nextShareDisplay.textContent = nextTime.toLocaleString('th-TH');
+            }
+
+            // Share to Page elements (defined early for use in loadAutoPostConfig)
+            const shareEnabled = document.getElementById("shareEnabled");
+            const sharePageGroup = document.getElementById("sharePageGroup");
+            const sharePageSelect = document.getElementById("sharePageSelect");
+            const shareModeGroup = document.getElementById("shareModeGroup");
+            const shareImage = document.getElementById("shareImage");
+            const shareText = document.getElementById("shareText");
+
+            function getShareMode() {
+                const img = shareImage?.checked;
+                const txt = shareText?.checked;
+                if (img && txt) return 'both';
+                if (img) return 'image';
+                if (txt) return 'text';
+                return 'none';
+            }
+
+            function setShareMode(mode) {
+                if (shareImage) shareImage.checked = mode === 'both' || mode === 'image';
+                if (shareText) shareText.checked = mode === 'both' || mode === 'text';
             }
 
             async function loadAutoPostConfig() {
@@ -776,15 +832,14 @@
                 if (!pageId) return;
 
                 const colorBgEnabled = document.getElementById("colorBgEnabled");
-                const colorBgPresets = document.getElementById("colorBgPresets");
                 const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
 
                 try {
-                    const response = await fetch(`/api/auto-post-config?pageId=${pageId}`);
+                    const response = await fetch(`/api/page-settings?pageId=${pageId}`);
                     const data = await response.json();
-                    if (data.success && data.config) {
-                        const config = data.config;
-                        const mode = config.post_mode; // null = ไม่เลือก
+                    if (data.success && data.settings) {
+                        const config = data.settings;
+                        const mode = config.post_mode;
                         setAutoPostMode(mode);
                         if (colorBgEnabled) colorBgEnabled.checked = config.color_bg || false;
                         
@@ -802,10 +857,8 @@
                             shareEnabled.checked = true;
                             sharePageGroup.style.display = "block";
                             sharePageSelect.value = config.share_page_id;
-                            // Show share schedule group
                             const shareScheduleGroup = document.getElementById("shareScheduleGroup");
                             if (shareScheduleGroup) shareScheduleGroup.style.display = "block";
-                            // Load share schedule minutes
                             const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
                             if (shareScheduleMinutesGrid) {
                                 const shareMins = (config.share_schedule_minutes || '').split(',').map(s => s.trim()).filter(s => s);
@@ -813,25 +866,20 @@
                                     cb.checked = shareMins.includes(cb.value);
                                 });
                             }
-                            // Load conflicts from other pages
                             await loadShareScheduleConflicts(config.share_page_id);
-                            // Show share mode for alternate mode
                             const shareModeGroup = document.getElementById("shareModeGroup");
                             if (shareModeGroup) {
                                 shareModeGroup.style.display = (mode === 'alternate') ? "block" : "none";
                             }
-                            // Always set share mode
                             setShareMode(config.share_mode || 'both');
                         } else {
                             shareEnabled.checked = false;
                             sharePageGroup.style.display = "none";
                         }
-                        // Load page color
                         const pageColorPicker = document.getElementById("pageColorPicker");
                         if (pageColorPicker && config.page_color) {
                             pageColorPicker.value = config.page_color;
                         }
-                        // Set CSS variable for page color on share schedule grid
                         const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
                         if (shareScheduleMinutesGrid && config.page_color) {
                             shareScheduleMinutesGrid.style.setProperty('--page-color', config.page_color);
@@ -860,14 +908,14 @@
                 if (pageName) body.pageName = pageName;
 
                 try {
-                    const response = await fetch('/api/auto-post-config', {
+                    const response = await fetch('/api/page-settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(body)
                     });
                     const data = await response.json();
                     if (data.success) {
-                        console.log("[Auto-Post] Config saved:", data.config);
+                        console.log("[Auto-Post] Config saved:", data.settings);
                         if (mode !== undefined) setAutoPostMode(mode);
                     } else {
                         console.error("[Auto-Post] Failed to save config:", data.error);
@@ -887,10 +935,23 @@
                     const data = await response.json();
                     if (data.success && data.config) {
                         autoHideEnabled.checked = data.config.enabled || false;
+                        // Load hide types
+                        const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
+                        if (hideSharedStory) hideSharedStory.checked = types.includes('shared_story');
+                        if (hideMobileStatus) hideMobileStatus.checked = types.includes('mobile_status_update');
+                        if (hideAddedPhotos) hideAddedPhotos.checked = types.includes('added_photos');
                     }
                 } catch (err) {
                     console.error("[Auto-Hide] Failed to load config:", err);
                 }
+            }
+
+            function getHideTypes() {
+                const types = [];
+                if (hideSharedStory?.checked) types.push('shared_story');
+                if (hideMobileStatus?.checked) types.push('mobile_status_update');
+                if (hideAddedPhotos?.checked) types.push('added_photos');
+                return types.join(',');
             }
 
             async function saveAutoHideConfig() {
@@ -899,12 +960,13 @@
 
                 const enabled = autoHideEnabled.checked;
                 const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                const hideTypes = getHideTypes();
 
                 try {
                     const response = await fetch('/api/auto-hide-config', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pageId, enabled, postToken: pageToken })
+                        body: JSON.stringify({ pageId, enabled, postToken: pageToken, hideTypes })
                     });
                     const data = await response.json();
                     if (data.success) {
@@ -915,8 +977,11 @@
                 }
             }
 
-            // Auto-hide checkbox change handler
+            // Auto-hide checkbox change handlers
             autoHideEnabled.addEventListener("change", saveAutoHideConfig);
+            if (hideSharedStory) hideSharedStory.addEventListener("change", saveAutoHideConfig);
+            if (hideMobileStatus) hideMobileStatus.addEventListener("change", saveAutoHideConfig);
+            if (hideAddedPhotos) hideAddedPhotos.addEventListener("change", saveAutoHideConfig);
 
             // Post mode button handlers - toggle on/off
             postModeImage.addEventListener("click", () => {
@@ -987,28 +1052,6 @@
                 saveAutoPostConfig(undefined, e.target.checked);
             });
 
-            // Share to Page handlers
-            const shareEnabled = document.getElementById("shareEnabled");
-            const sharePageGroup = document.getElementById("sharePageGroup");
-            const sharePageSelect = document.getElementById("sharePageSelect");
-            const shareModeGroup = document.getElementById("shareModeGroup");
-            const shareImage = document.getElementById("shareImage");
-            const shareText = document.getElementById("shareText");
-
-            function getShareMode() {
-                const img = shareImage?.checked;
-                const txt = shareText?.checked;
-                if (img && txt) return 'both';
-                if (img) return 'image';
-                if (txt) return 'text';
-                return 'none';
-            }
-
-            function setShareMode(mode) {
-                if (shareImage) shareImage.checked = mode === 'both' || mode === 'image';
-                if (shareText) shareText.checked = mode === 'both' || mode === 'text';
-            }
-
             function updateShareModeVisibility() {
                 if (shareModeGroup) {
                     shareModeGroup.style.display = (currentPostMode === 'alternate' && shareEnabled.checked && sharePageSelect.value) ? 'block' : 'none';
@@ -1048,12 +1091,13 @@
             // Share schedule minutes grid handler
             const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
             if (shareScheduleMinutesGrid) {
-                shareScheduleMinutesGrid.querySelectorAll('input').forEach(cb => {
-                    cb.addEventListener('change', () => {
+                shareScheduleMinutesGrid.addEventListener('change', (e) => {
+                    if (e.target.type === 'checkbox') {
                         const selected = [];
-                        shareScheduleMinutesGrid.querySelectorAll('input:checked').forEach(c => selected.push(c.value));
+                        shareScheduleMinutesGrid.querySelectorAll('input:checked:not(:disabled)').forEach(c => selected.push(c.value));
+                        console.log('[Share] Saving schedule:', selected.join(', '));
                         saveAutoPostConfig(undefined, undefined, undefined, undefined, undefined, selected.join(', '));
-                    });
+                    }
                 });
             }
 
@@ -1981,16 +2025,51 @@
                     // Share cell
                     const shareTd = document.createElement("td");
                     if (log.share_status === 'shared' && log.shared_at) {
-                        const shareSpan = document.createElement("span");
-                        shareSpan.className = "pending-table-time";
-                        shareSpan.style.color = "#059669";
-                        shareSpan.textContent = new Date(log.shared_at).toLocaleString("th-TH", {
-                            hour: "2-digit", minute: "2-digit"
-                        });
-                        shareSpan.title = "แชร์แล้ว: " + new Date(log.shared_at).toLocaleString("th-TH");
-                        shareTd.appendChild(shareSpan);
+                        if (log.shared_post_id) {
+                            const shareLink = document.createElement("a");
+                            shareLink.href = `https://facebook.com/${log.shared_post_id}`;
+                            shareLink.target = "_blank";
+                            shareLink.className = "pending-table-link pending-table-share-link";
+                            shareLink.title = "ดูโพสต์ที่แชร์ - " + new Date(log.shared_at).toLocaleString("th-TH");
+                            // Share icon SVG
+                            const svgNS = "http://www.w3.org/2000/svg";
+                            const svg = document.createElementNS(svgNS, "svg");
+                            svg.setAttribute("viewBox", "0 0 24 24");
+                            svg.setAttribute("fill", "none");
+                            svg.setAttribute("stroke", "currentColor");
+                            svg.setAttribute("stroke-width", "2");
+                            svg.setAttribute("width", "16");
+                            svg.setAttribute("height", "16");
+                            const path1 = document.createElementNS(svgNS, "path");
+                            path1.setAttribute("d", "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8");
+                            const polyline = document.createElementNS(svgNS, "polyline");
+                            polyline.setAttribute("points", "16 6 12 2 8 6");
+                            const line = document.createElementNS(svgNS, "line");
+                            line.setAttribute("x1", "12");
+                            line.setAttribute("y1", "2");
+                            line.setAttribute("x2", "12");
+                            line.setAttribute("y2", "15");
+                            svg.appendChild(path1);
+                            svg.appendChild(polyline);
+                            svg.appendChild(line);
+                            shareLink.appendChild(svg);
+                            shareTd.appendChild(shareLink);
+                        } else {
+                            const shareSpan = document.createElement("span");
+                            shareSpan.className = "pending-table-time";
+                            shareSpan.style.color = "#059669";
+                            shareSpan.textContent = new Date(log.shared_at).toLocaleString("th-TH", {
+                                hour: "2-digit", minute: "2-digit"
+                            });
+                            shareSpan.title = "แชร์แล้ว: " + new Date(log.shared_at).toLocaleString("th-TH");
+                            shareTd.appendChild(shareSpan);
+                        }
                     } else if (log.share_status === 'pending') {
-                        shareTd.innerHTML = '<span style="color: #d97706; font-size: 0.8rem;">⏳ รอแชร์</span>';
+                        const pendingSpan = document.createElement("span");
+                        pendingSpan.style.fontSize = "1rem";
+                        pendingSpan.textContent = "⏳";
+                        pendingSpan.title = "รอแชร์";
+                        shareTd.appendChild(pendingSpan);
                     } else {
                         shareTd.textContent = "-";
                         shareTd.style.color = "#999";
@@ -2883,7 +2962,7 @@
                     }
                 } catch (err) {
                     console.error('[News] Generate error:', err);
-                    container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">เกิดข้อผิดพลาด: ${err.message}<br><button onclick="retryNewsGenerate()" style="margin-top: 12px; padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer;">ลองใหม่</button></div>`;
+                    container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">เกิดข้อผิดพลาด: ${err.message}<br><button onclick="retryNewsGenerate()" style="margin-top: 12px; padding: 8px 16px; background: #333333; color: white; border: none; border-radius: 8px; cursor: pointer;">ลองใหม่</button></div>`;
                 } finally {
                     newsIsGenerating = false;
                 }
@@ -2906,7 +2985,7 @@
                 
                 container.innerHTML = newsGeneratedImages.map((img, i) => `
                     <div style="position: relative; cursor: pointer;" onclick="selectNewsImage(${i})">
-                        <img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid ${newsSelectedIndex === i ? '#8b5cf6' : 'transparent'};" id="newsGenImg${i}">
+                        <img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid ${newsSelectedIndex === i ? '#333333' : 'transparent'};" id="newsGenImg${i}">
                     </div>
                 `).join("");
             }
@@ -4883,7 +4962,7 @@
                     );
                     
                     // Sync token to database for cron jobs
-                    fetch('/api/auto-post-config', {
+                    fetch('/api/page-settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ pageId: page.id, postToken: page.access_token })

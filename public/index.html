@@ -1282,7 +1282,7 @@
                                     <button type="button" id="postModeAlternate" class="btn post-mode-btn" data-mode="alternate">🔄 สลับ</button>
                                     <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
                                         <span style="font-size: 0.85rem; color: #666;">🎨 สีเพจ:</span>
-                                        <input type="color" id="pageColorPicker" value="#7c3aed" style="width: 32px; height: 32px; border: none; cursor: pointer; border-radius: 4px;">
+                                        <input type="color" id="pageColorPicker" value="#1a1a1a" style="width: 32px; height: 32px; border: none; cursor: pointer; border-radius: 4px;">
                                     </div>
                                 </div>
                                 <p class="setting-desc" style="margin-top: 0.5rem;">
@@ -1312,7 +1312,7 @@
                                         <div id="shareScheduleGroup" style="display: none; margin-top: 0.75rem;">
                                             <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">⏰ เวลาที่จะแชร์:</p>
                                             <div id="shareLegend" style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                                                <span><span style="display: inline-block; width: 12px; height: 12px; background: #7c3aed; border-radius: 2px; vertical-align: middle;"></span> เพจนี้</span>
+                                                <span><span style="display: inline-block; width: 12px; height: 12px; background: #1a1a1a; border-radius: 2px; vertical-align: middle;"></span> เพจนี้</span>
                                             </div>
                                             <div class="minute-grid" id="shareScheduleMinutesGrid" style="font-size: 0.85rem;">
                                                 <label class="minute-checkbox"><input type="checkbox" value="00"><span>00</span></label>
@@ -1389,6 +1389,10 @@
                                                     <span style="font-size: 0.9rem;">📝 ข้อความ</span>
                                                 </label>
                                             </div>
+                                            <div id="nextShareInfo" style="margin-top: 0.75rem; display: none;">
+                                                <label class="form-label">Next Share Time</label>
+                                                <div id="nextShareDisplay" class="next-schedule-display"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1408,9 +1412,23 @@
                                     <input type="checkbox" id="autoHideEnabled" />
                                     <span>ซ่อนโพสต์อัตโนมัติ</span>
                                 </label>
-                                <p class="setting-desc">
-                                    ซ่อนโพสต์ประเภท shared_story, mobile_status_update, added_photos จาก Timeline
-                                </p>
+                                <p class="setting-desc">ซ่อนโพสต์ประเภทที่เลือกจาก Timeline</p>
+                                <div id="hideTypesGroup" style="margin-top: 0.75rem; margin-left: 1.5rem;">
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" id="hideSharedStory" checked style="width: 16px; height: 16px;">
+                                            <span style="font-size: 0.9rem;">shared_story (แชร์โพสต์)</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" id="hideMobileStatus" checked style="width: 16px; height: 16px;">
+                                            <span style="font-size: 0.9rem;">mobile_status_update (สถานะ)</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" id="hideAddedPhotos" checked style="width: 16px; height: 16px;">
+                                            <span style="font-size: 0.9rem;">added_photos (เพิ่มรูป)</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                             </div>
                         </div>

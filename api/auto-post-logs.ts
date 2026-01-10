@@ -50,16 +50,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const logs = data || [];
       const postIds = logs.filter(l => l.facebook_post_id).map(l => l.facebook_post_id);
       
-      let shareMap: Record<string, { status: string; shared_at: string | null }> = {};
+      let shareMap: Record<string, { status: string; shared_at: string | null; shared_post_id: string | null }> = {};
       if (postIds.length > 0) {
         const { data: shareData } = await supabase
           .from('share_queue')
-          .select('facebook_post_id, status, shared_at')
+          .select('facebook_post_id, status, shared_at, shared_post_id')
           .in('facebook_post_id', postIds);
-        
+
         if (shareData) {
           shareData.forEach(s => {
-            shareMap[s.facebook_post_id] = { status: s.status, shared_at: s.shared_at };
+            shareMap[s.facebook_post_id] = { status: s.status, shared_at: s.shared_at, shared_post_id: s.shared_post_id };
           });
         }
       }
@@ -68,7 +68,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const logsWithShare = logs.map(log => ({
         ...log,
         share_status: shareMap[log.facebook_post_id]?.status || null,
-        shared_at: shareMap[log.facebook_post_id]?.shared_at || null
+        shared_at: shareMap[log.facebook_post_id]?.shared_at || null,
+        shared_post_id: shareMap[log.facebook_post_id]?.shared_post_id || null
       }));
 
       return res.status(200).json({ success: true, logs: logsWithShare });

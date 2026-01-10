@@ -111,6 +111,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.newsImageSize !== undefined) updateFields.news_image_size = req.body.newsImageSize;
       if (req.body.newsVariationCount !== undefined) updateFields.news_variation_count = req.body.newsVariationCount;
       if (req.body.shareScheduleMinutes !== undefined) updateFields.share_schedule_minutes = req.body.shareScheduleMinutes;
+      if (req.body.postMode !== undefined) updateFields.post_mode = req.body.postMode;
+      if (req.body.colorBg !== undefined) updateFields.color_bg = req.body.colorBg;
+      if (req.body.sharePageId !== undefined) updateFields.share_page_id = req.body.sharePageId;
+      if (req.body.colorBgPresets !== undefined) updateFields.color_bg_presets = req.body.colorBgPresets;
+      if (req.body.colorBgIndex !== undefined) updateFields.color_bg_index = req.body.colorBgIndex;
+      if (req.body.shareMode !== undefined) updateFields.share_mode = req.body.shareMode;
+      if (req.body.pageColor !== undefined) updateFields.page_color = req.body.pageColor;
+      if (req.body.pageName !== undefined) updateFields.page_name = req.body.pageName;
+      if (req.body.postToken !== undefined) updateFields.post_token = req.body.postToken;
+      if (req.body.hideTypes !== undefined) updateFields.hide_types = req.body.hideTypes;
 
       const { data, error } = await supabase
         .from('page_settings')

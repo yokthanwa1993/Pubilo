@@ -36,19 +36,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST - Save config
   if (req.method === 'POST') {
-    const { pageId, enabled, postToken } = req.body;
+    const { pageId, enabled, postToken, hideTypes } = req.body;
     if (!pageId) {
       return res.status(400).json({ success: false, error: 'Missing pageId' });
     }
 
+    const updateData: any = {
+      page_id: pageId,
+      enabled: enabled === true,
+      updated_at: new Date().toISOString()
+    };
+    if (postToken !== undefined) updateData.post_token = postToken || null;
+    if (hideTypes !== undefined) updateData.hide_types = hideTypes;
+
     const { data, error } = await supabase
       .from('auto_hide_config')
-      .upsert({
-        page_id: pageId,
-        enabled: enabled === true,
-        post_token: postToken || null,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'page_id' })
+      .upsert(updateData, { onConflict: 'page_id' })
       .select()
       .single();
 
