@@ -5508,7 +5508,130 @@
                 // Close modal with Escape key
                 document.addEventListener("keydown", (e) => {
                     if (e.key === "Escape") closeTokenModal();
+                    if (e.key === "Escape") closeApiKeyModal();
                 });
+            }
+
+            // API Key Modal Functions
+            async function openApiKeyModal() {
+                const modal = document.getElementById("apiKeyModal");
+                const input = document.getElementById("apiKeyModalInput");
+                const status = document.getElementById("apiKeyStatus");
+
+                modal.classList.add("show");
+
+                // Load current API key from database
+                try {
+                    const response = await fetch('/api/global-settings?key=gemini_api_key');
+                    const data = await response.json();
+                    if (data.success && data.value) {
+                        input.value = data.value;
+                        status.textContent = "Valid";
+                        status.className = "token-status valid";
+                    } else {
+                        input.value = "";
+                        status.textContent = "Not Set";
+                        status.className = "token-status invalid";
+                    }
+                } catch (e) {
+                    console.error('Failed to load API key:', e);
+                    status.textContent = "Error";
+                    status.className = "token-status invalid";
+                }
+            }
+
+            function closeApiKeyModal() {
+                const modal = document.getElementById("apiKeyModal");
+                modal.classList.remove("show");
+            }
+
+            function toggleApiKeyModalVisibility() {
+                const input = document.getElementById("apiKeyModalInput");
+                const toggle = document.getElementById("apiKeyModalToggle");
+                const isPassword = input.type === "password";
+                input.type = isPassword ? "text" : "password";
+                toggle.textContent = isPassword ? "Hide" : "Show";
+            }
+
+            async function saveApiKeyModal() {
+                const input = document.getElementById("apiKeyModalInput");
+                const status = document.getElementById("apiKeyStatus");
+                const value = input.value.trim();
+
+                if (!value) {
+                    alert("กรุณาใส่ API Key");
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/global-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            key: 'gemini_api_key',
+                            value: value
+                        })
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        status.textContent = "Saved!";
+                        status.className = "token-status valid";
+                        // Update the indicator
+                        const indicator = document.getElementById("apiKeyIndicator");
+                        if (indicator) {
+                            indicator.classList.remove("invalid");
+                            indicator.classList.add("valid");
+                        }
+                        setTimeout(() => {
+                            closeApiKeyModal();
+                        }, 1000);
+                    } else {
+                        alert("บันทึกไม่สำเร็จ: " + data.error);
+                    }
+                } catch (e) {
+                    console.error('Failed to save API key:', e);
+                    alert("บันทึกไม่สำเร็จ กรุณาลองใหม่");
+                }
+            }
+
+            // Setup API Key modal click handler
+            function setupApiKeyModalHandler() {
+                const apiKeyIndicator = document.getElementById("apiKeyIndicator");
+                if (apiKeyIndicator) {
+                    apiKeyIndicator.addEventListener("click", openApiKeyModal);
+                }
+
+                // Close modal when clicking outside
+                const modalOverlay = document.getElementById("apiKeyModal");
+                if (modalOverlay) {
+                    modalOverlay.addEventListener("click", (e) => {
+                        if (e.target === modalOverlay) closeApiKeyModal();
+                    });
+                }
+
+                // Update indicator status on load
+                updateApiKeyIndicator();
+            }
+
+            async function updateApiKeyIndicator() {
+                const indicator = document.getElementById("apiKeyIndicator");
+                if (!indicator) return;
+
+                try {
+                    const response = await fetch('/api/global-settings?key=gemini_api_key');
+                    const data = await response.json();
+                    if (data.success && data.value) {
+                        indicator.classList.remove("invalid");
+                        indicator.classList.add("valid");
+                    } else {
+                        indicator.classList.remove("valid");
+                        indicator.classList.add("invalid");
+                    }
+                } catch (e) {
+                    indicator.classList.remove("valid");
+                    indicator.classList.add("invalid");
+                }
             }
 
             // Initialize modal handlers when DOM is ready
@@ -5517,8 +5640,13 @@
                     "DOMContentLoaded",
                     setupTokenModalHandlers,
                 );
+                document.addEventListener(
+                    "DOMContentLoaded",
+                    setupApiKeyModalHandler,
+                );
             } else {
                 setupTokenModalHandlers();
+                setupApiKeyModalHandler();
             }
 
             // Load saved data from localStorage on page load

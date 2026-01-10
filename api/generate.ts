@@ -1,4 +1,30 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_ANON_KEY!;
+
+// Helper function to get API key from database or fallback to env
+async function getApiKey(): Promise<string | null> {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data, error } = await supabase
+      .from('global_settings')
+      .select('setting_value')
+      .eq('setting_key', 'gemini_api_key')
+      .single();
+
+    if (data?.setting_value) {
+      console.log('[Pubilo] Using API key from database');
+      return data.setting_value;
+    }
+  } catch (e) {
+    console.log('[Pubilo] Database API key lookup failed, using env variable');
+  }
+
+  // Fallback to environment variable
+  return process.env.GEMINI_API_KEY || null;
+}
 
 // Inline CONFIG to avoid any import issues
 const CONFIG = {
@@ -259,11 +285,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  // Get API key from database first, fallback to env variable
+  const GEMINI_API_KEY = await getApiKey();
   console.log('[Pubilo] API Key exists:', !!GEMINI_API_KEY);
 
   if (!GEMINI_API_KEY) {
-    return res.status(400).json({ error: 'GEMINI_API_KEY not configured' });
+    return res.status(400).json({ error: 'GEMINI_API_KEY not configured. Please set it in Settings or as an environment variable.' });
   }
 
   try {

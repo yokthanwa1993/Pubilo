@@ -6,54 +6,6 @@ const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
               process.env.POSTGRES_URL ||
               process.env.DATABASE_URL || "";
 
-// Get scheduled posts from Facebook API
-async function getScheduledPostsFromFacebook(pageId: string, pageToken: string): Promise<number[]> {
-  try {
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}/scheduled_posts?fields=scheduled_publish_time&access_token=${pageToken}`
-    );
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.data || []).map((post: any) => parseInt(post.scheduled_publish_time));
-  } catch {
-    return [];
-  }
-}
-
-// Find next available time slot
-function findNextAvailableTimeSlot(scheduleMinutesStr: string, scheduledTimestamps: number[]): Date {
-  const scheduledMinutes = scheduleMinutesStr
-    .split(',')
-    .map(m => parseInt(m.trim()))
-    .filter(m => !isNaN(m) && m >= 0 && m < 60)
-    .sort((a, b) => a - b);
-
-  if (scheduledMinutes.length === 0) {
-    return new Date(Date.now() + 60 * 60 * 1000);
-  }
-
-  const now = new Date();
-  const minTime = new Date(now.getTime() + 10 * 60 * 1000);
-
-  for (let hourOffset = 0; hourOffset < 24; hourOffset++) {
-    for (const minute of scheduledMinutes) {
-      const candidate = new Date(now);
-      candidate.setUTCHours(now.getUTCHours() + hourOffset, minute, 0, 0);
-
-      if (candidate.getTime() < minTime.getTime()) continue;
-
-      const candidateTimestamp = Math.floor(candidate.getTime() / 1000);
-      const isTaken = scheduledTimestamps.some(ts => Math.abs(ts - candidateTimestamp) < 120);
-
-      if (!isTaken) {
-        return candidate;
-      }
-    }
-  }
-
-  return new Date(Date.now() + 60 * 60 * 1000);
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -68,80 +20,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Database not configured' });
   }
 
-  // POST - Save auto-post config
+  const sql = postgres(dbUrl, { ssl: 'require' });
+
+  // POST - Save auto-post config (now uses page_settings)
   if (req.method === 'POST') {
-    const { pageId, enabled, postToken, postMode, colorBg, sharePageId, colorBgPresets, shareMode } = req.body;
-    
+    const { pageId, enabled, postToken, postMode, colorBg, sharePageId, colorBgPresets, shareMode, shareScheduleMinutes, pageColor, pageName } = req.body;
+
     if (!pageId) {
+      await sql.end();
       return res.status(400).json({ error: 'Missing pageId' });
     }
 
-    // Check if values were explicitly provided
-    const hasPostMode = 'postMode' in req.body;
-    const hasColorBg = 'colorBg' in req.body;
-    const hasSharePageId = 'sharePageId' in req.body;
-    const hasColorBgPresets = 'colorBgPresets' in req.body;
-    const hasShareMode = 'shareMode' in req.body;
-    const hasShareScheduleMinutes = 'shareScheduleMinutes' in req.body;
-    const hasPageColor = 'pageColor' in req.body;
-    const hasPageName = 'pageName' in req.body;
-    const safePostToken = postToken ?? null;
-
-    const sql = postgres(dbUrl, { ssl: 'require' });
-
     try {
-      // Check if config exists
-      const existing = await sql`
-        SELECT id, post_mode, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
-      `;
-
       const now = new Date().toISOString();
 
-      if (existing.length > 0) {
-        // Update existing - only update fields that were explicitly provided
-        const currentMode = existing[0].post_mode;
-        const currentColorBg = existing[0].color_bg;
-        const currentSharePageId = existing[0].share_page_id;
-        const currentColorBgPresets = existing[0].color_bg_presets;
-        const currentShareMode = existing[0].share_mode;
-        const currentShareScheduleMinutes = existing[0].share_schedule_minutes;
-        const currentPageColor = existing[0].page_color;
-        const currentPageName = existing[0].page_name;
-        
-        const newMode = hasPostMode ? (postMode ?? null) : currentMode;
-        const newColorBg = hasColorBg ? colorBg : currentColorBg;
-        const newSharePageId = hasSharePageId ? (sharePageId || null) : currentSharePageId;
-        const newColorBgPresets = hasColorBgPresets ? (colorBgPresets || null) : currentColorBgPresets;
-        const newShareMode = hasShareMode ? (shareMode || 'both') : currentShareMode;
-        const newShareScheduleMinutes = hasShareScheduleMinutes ? (req.body.shareScheduleMinutes || null) : currentShareScheduleMinutes;
-        const newPageColor = hasPageColor ? (req.body.pageColor || '#f59e0b') : currentPageColor;
-        const newPageName = hasPageName ? (req.body.pageName || null) : currentPageName;
-        
-        await sql`
-          UPDATE auto_post_config
-          SET post_mode = ${newMode},
-              post_token = COALESCE(${safePostToken}, post_token),
-              color_bg = ${newColorBg},
-              share_page_id = ${newSharePageId},
-              color_bg_presets = ${newColorBgPresets},
-              share_mode = ${newShareMode},
-              share_schedule_minutes = ${newShareScheduleMinutes},
-              page_color = ${newPageColor},
-              page_name = COALESCE(${newPageName}, page_name),
-              updated_at = ${now}
-          WHERE page_id = ${pageId}
-        `;
-      } else {
-        // Insert new
-        await sql`
-          INSERT INTO auto_post_config (page_id, post_mode, post_token, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name, created_at, updated_at)
-          VALUES (${pageId}, ${postMode ?? null}, ${safePostToken}, ${colorBg || false}, ${sharePageId || null}, ${colorBgPresets || null}, ${shareMode || 'both'}, ${req.body.shareScheduleMinutes || null}, ${req.body.pageColor || '#f59e0b'}, ${req.body.pageName || null}, ${now}, ${now})
-        `;
+      // Build update object with only provided fields
+      const updates: string[] = ['updated_at = $1'];
+      const values: any[] = [now];
+      let paramIndex = 2;
+
+      if ('enabled' in req.body) {
+        updates.push(`auto_schedule = $${paramIndex++}`);
+        values.push(enabled === true || enabled === 'true');
+      }
+      if ('postMode' in req.body) {
+        updates.push(`post_mode = $${paramIndex++}`);
+        values.push(postMode ?? null);
+      }
+      if ('postToken' in req.body && postToken) {
+        updates.push(`post_token = $${paramIndex++}`);
+        values.push(postToken);
+      }
+      if ('colorBg' in req.body) {
+        updates.push(`color_bg = $${paramIndex++}`);
+        values.push(colorBg || false);
+      }
+      if ('sharePageId' in req.body) {
+        updates.push(`share_page_id = $${paramIndex++}`);
+        values.push(sharePageId || null);
+      }
+      if ('colorBgPresets' in req.body) {
+        updates.push(`color_bg_presets = $${paramIndex++}`);
+        values.push(colorBgPresets || null);
+      }
+      if ('shareMode' in req.body) {
+        updates.push(`share_mode = $${paramIndex++}`);
+        values.push(shareMode || 'both');
+      }
+      if ('shareScheduleMinutes' in req.body) {
+        updates.push(`share_schedule_minutes = $${paramIndex++}`);
+        values.push(shareScheduleMinutes || null);
+      }
+      if ('pageColor' in req.body) {
+        updates.push(`page_color = $${paramIndex++}`);
+        values.push(pageColor || '#f59e0b');
+      }
+      if ('pageName' in req.body) {
+        updates.push(`page_name = $${paramIndex++}`);
+        values.push(pageName || null);
       }
 
-      // Get updated config
+      // Use upsert to page_settings
+      await sql`
+        INSERT INTO page_settings (page_id, updated_at)
+        VALUES (${pageId}, ${now})
+        ON CONFLICT (page_id) DO NOTHING
+      `;
+
+      // Update the fields
+      if (updates.length > 1) {
+        const updateQuery = `UPDATE page_settings SET ${updates.join(', ')} WHERE page_id = $${paramIndex}`;
+        values.push(pageId);
+        await sql.unsafe(updateQuery, values);
+      }
+
+      // Get updated config (map to old format for compatibility)
       const configs = await sql`
-        SELECT * FROM auto_post_config WHERE page_id = ${pageId} LIMIT 1
+        SELECT
+          page_id,
+          auto_schedule as enabled,
+          NULL as next_post_at,
+          NULL as last_post_at,
+          last_post_type,
+          post_token,
+          post_mode,
+          color_bg,
+          share_page_id,
+          color_bg_presets,
+          share_mode,
+          share_schedule_minutes,
+          page_color,
+          page_name
+        FROM page_settings
+        WHERE page_id = ${pageId}
+        LIMIT 1
       `;
 
       await sql.end();
@@ -157,20 +129,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // GET - Read auto-post config
+  // GET - Read auto-post config (now from page_settings)
   if (req.method !== 'GET') {
+    await sql.end();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const pageId = req.query.pageId as string;
   const targetPageId = req.query.targetPageId as string;
-  
+
   // If targetPageId is provided, return all configs that share to this target
   if (targetPageId) {
-    if (!dbUrl) {
-      return res.status(500).json({ error: 'Database not configured' });
-    }
-    const sql = postgres(dbUrl, { ssl: 'require' });
     try {
       const configs = await sql`
         SELECT page_id, share_schedule_minutes, page_color, page_name
@@ -185,72 +154,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Database error' });
     }
   }
-  
+
   if (!pageId) {
+    await sql.end();
     return res.status(400).json({ error: 'Missing pageId parameter' });
   }
 
-  if (!dbUrl) {
-    return res.status(500).json({ error: 'Database not configured' });
-  }
-
-  const sql = postgres(dbUrl, { ssl: 'require' });
-
   try {
-    // Get auto-post config for specific page
+    // Get config from page_settings (map to old format for compatibility)
     const configs = await sql`
-      SELECT page_id, enabled, next_post_at, last_post_at, last_post_type, post_token, post_mode, color_bg, share_page_id, color_bg_presets, share_mode, share_schedule_minutes, page_color, page_name
-      FROM auto_post_config 
+      SELECT
+        page_id,
+        auto_schedule as enabled,
+        NULL as next_post_at,
+        NULL as last_post_at,
+        last_post_type,
+        post_token,
+        post_mode,
+        color_bg,
+        share_page_id,
+        color_bg_presets,
+        share_mode,
+        share_schedule_minutes,
+        page_color,
+        page_name
+      FROM page_settings
       WHERE page_id = ${pageId}
       LIMIT 1
     `;
 
     if (configs.length === 0) {
       await sql.end();
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         config: null,
-        message: 'No auto-post config found for this page'
+        message: 'No config found for this page'
       });
     }
 
-    const config = configs[0];
-
-    // If enabled and has token, refresh next_post_at by checking Facebook scheduled posts
-    if (config.enabled && config.post_token) {
-      try {
-        // Get page settings
-        const settingsResult = await sql`
-          SELECT schedule_minutes FROM page_settings WHERE page_id = ${pageId} LIMIT 1
-        `;
-        const scheduleMinutesStr = settingsResult[0]?.schedule_minutes || '00, 15, 30, 45';
-
-        // Get current scheduled posts from Facebook
-        const scheduledTimestamps = await getScheduledPostsFromFacebook(pageId, config.post_token);
-        
-        // Calculate fresh next available time
-        const nextAvailable = findNextAvailableTimeSlot(scheduleMinutesStr, scheduledTimestamps);
-        const freshNextPostAt = nextAvailable.toISOString();
-
-        // Update if different from stored value
-        if (freshNextPostAt !== config.next_post_at) {
-          await sql`
-            UPDATE auto_post_config
-            SET next_post_at = ${freshNextPostAt}, updated_at = ${new Date().toISOString()}
-            WHERE page_id = ${pageId}
-          `;
-          config.next_post_at = freshNextPostAt;
-          console.log(`[auto-post-config] Updated next_post_at for ${pageId}: ${freshNextPostAt}`);
-        }
-      } catch (error) {
-        console.error(`[auto-post-config] Failed to refresh next_post_at for ${pageId}:`, error);
-      }
-    }
-
     await sql.end();
-    return res.status(200).json({ 
-      success: true, 
-      config
+    return res.status(200).json({
+      success: true,
+      config: configs[0]
     });
 
   } catch (error) {

@@ -78,7 +78,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Index for token lookup by user_id
       "CREATE INDEX IF NOT EXISTS idx_tokens_user ON tokens(user_id)",
       // Add page_name column to auto_post_config
-      "ALTER TABLE auto_post_config ADD COLUMN IF NOT EXISTS page_name TEXT"
+      "ALTER TABLE auto_post_config ADD COLUMN IF NOT EXISTS page_name TEXT",
+      // Global settings table for system-wide configurations (like API keys)
+      `CREATE TABLE IF NOT EXISTS global_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        setting_key TEXT NOT NULL UNIQUE,
+        setting_value TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      // Index for fast lookup by key
+      "CREATE INDEX IF NOT EXISTS idx_global_settings_key ON global_settings(setting_key)"
     ];
 
     const results = [];
