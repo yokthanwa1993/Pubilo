@@ -94,7 +94,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // OG Image Generator background URL
       "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_background_url TEXT",
       // OG Image Generator font
-      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_font TEXT DEFAULT 'noto-sans-thai'"
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_font TEXT DEFAULT 'noto-sans-thai'",
+      // Earnings history table - store daily earnings for pages with auto_schedule enabled
+      `CREATE TABLE IF NOT EXISTS earnings_history (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        page_id TEXT NOT NULL,
+        page_name TEXT,
+        date DATE NOT NULL,
+        daily_earnings DECIMAL(12, 8) DEFAULT 0,
+        weekly_earnings DECIMAL(12, 8) DEFAULT 0,
+        monthly_earnings DECIMAL(12, 8) DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(page_id, date)
+      )`,
+      // Index for earnings queries
+      "CREATE INDEX IF NOT EXISTS idx_earnings_history_page_date ON earnings_history(page_id, date DESC)"
     ];
 
     const results = [];
