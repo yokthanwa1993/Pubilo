@@ -1648,6 +1648,22 @@
                 flex-shrink: 0;
             }
 
+            #earningsPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #earningsPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #earningsContent {
+                overflow-y: auto;
+                flex: 1;
+            }
+
             .text-post-form {
                 padding: 1rem 0;
                 flex: 1;
