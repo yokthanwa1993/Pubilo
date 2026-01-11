@@ -181,6 +181,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       continue;
     }
 
+    // Special command: get LINE user ID
+    if (text.toLowerCase() === 'id' || text.toLowerCase() === '/id') {
+      const userId = event.source?.userId || 'Unknown';
+      console.log('[line-webhook] User ID request from:', userId);
+
+      const idFlexMessage = {
+        type: 'flex',
+        altText: `Your LINE User ID: ${userId}`,
+        contents: {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [{ type: 'text', text: '🆔 LINE USER ID', weight: 'bold', size: 'lg', color: '#ffffff', align: 'center' }],
+            backgroundColor: '#3498DB'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: 'Your LINE User ID:', size: 'sm', color: '#999999' },
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [{ type: 'text', text: userId, size: 'sm', color: '#333333', wrap: true }],
+                backgroundColor: '#F5F5F5',
+                paddingAll: 'md',
+                cornerRadius: 'md',
+                margin: 'sm'
+              },
+              { type: 'text', text: 'เอา ID นี้ไปใส่ใน Vercel Environment Variables:', size: 'xs', color: '#999999', margin: 'xl', wrap: true },
+              { type: 'text', text: 'LINE_USER_ID', size: 'sm', color: '#E74C3C', weight: 'bold', margin: 'sm' }
+            ]
+          }
+        }
+      };
+
+      await fetch('https://api.line.me/v2/bot/message/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          replyToken: event.replyToken,
+          messages: [idFlexMessage],
+        }),
+      });
+      continue;
+    }
+
     try {
       console.log('[line-webhook] Inserting to DB, text bytes:', Buffer.from(text).length);
       const { data, error } = await supabase.from('quotes').insert({ quote_text: text }).select();
