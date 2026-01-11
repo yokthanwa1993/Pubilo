@@ -623,6 +623,10 @@
             }
             const nextScheduleInfoPanel = document.getElementById("nextScheduleInfoPanel");
             const nextScheduleDisplayPanel = document.getElementById("nextScheduleDisplayPanel");
+            const imageSourceGroupPanel = document.getElementById("imageSourceGroupPanel");
+            const imageSourceSelectPanel = document.getElementById("imageSourceSelectPanel");
+            const ogBackgroundGroupPanel = document.getElementById("ogBackgroundGroupPanel");
+            const ogBackgroundUrlPanel = document.getElementById("ogBackgroundUrlPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
             const imagePromptInput = document.getElementById("imagePromptInput");
             const newsAnalysisPromptInput = document.getElementById("newsAnalysisPromptInput");
@@ -1172,7 +1176,9 @@
                             newsAnalysisPrompt: data.settings.news_analysis_prompt,
                             newsGenerationPrompt: data.settings.news_generation_prompt,
                             newsImageSize: data.settings.news_image_size,
-                            newsVariationCount: data.settings.news_variation_count
+                            newsVariationCount: data.settings.news_variation_count,
+                            imageSource: data.settings.image_source,
+                            ogBackgroundUrl: data.settings.og_background_url
                         };
                         // Update cache
                         cachedPageSettings = settings;
@@ -1188,20 +1194,27 @@
                     scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
                     if (workingHoursStart) workingHoursStart.value = settings.workingHoursStart ?? 6;
                     if (workingHoursEnd) workingHoursEnd.value = settings.workingHoursEnd ?? 24;
+                    imageSourceSelectPanel.value = settings.imageSource || "ai";
+                    ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
                 } else {
                     autoScheduleEnabledPanel.checked = false;
                     scheduleMinutesPanel.value = "00, 15, 30, 45";
                     if (workingHoursStart) workingHoursStart.value = 6;
                     if (workingHoursEnd) workingHoursEnd.value = 24;
+                    imageSourceSelectPanel.value = "ai";
+                    ogBackgroundUrlPanel.value = "";
                 }
                 // Sync minute grid with hidden input
                 if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
                 // Update visibility
-                scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                workingHoursGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                if (autoScheduleEnabledPanel.checked) {
+                const enabled = autoScheduleEnabledPanel.checked;
+                scheduleIntervalGroupPanel.style.display = enabled ? "block" : "none";
+                workingHoursGroupPanel.style.display = enabled ? "block" : "none";
+                nextScheduleInfoPanel.style.display = enabled ? "block" : "none";
+                imageSourceGroupPanel.style.display = enabled ? "block" : "none";
+                ogBackgroundGroupPanel.style.display = (enabled && imageSourceSelectPanel.value === "og") ? "block" : "none";
+                if (enabled) {
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
 
@@ -1263,12 +1276,21 @@
 
             // Auto schedule checkbox change handler for panel
             autoScheduleEnabledPanel.addEventListener("change", () => {
-                scheduleIntervalGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                workingHoursGroupPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                nextScheduleInfoPanel.style.display = autoScheduleEnabledPanel.checked ? "block" : "none";
-                if (autoScheduleEnabledPanel.checked) {
+                const enabled = autoScheduleEnabledPanel.checked;
+                scheduleIntervalGroupPanel.style.display = enabled ? "block" : "none";
+                workingHoursGroupPanel.style.display = enabled ? "block" : "none";
+                nextScheduleInfoPanel.style.display = enabled ? "block" : "none";
+                imageSourceGroupPanel.style.display = enabled ? "block" : "none";
+                ogBackgroundGroupPanel.style.display = (enabled && imageSourceSelectPanel.value === "og") ? "block" : "none";
+                if (enabled) {
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
+            });
+
+            // Image source change handler for panel
+            imageSourceSelectPanel.addEventListener("change", () => {
+                ogBackgroundGroupPanel.style.display =
+                    (autoScheduleEnabledPanel.checked && imageSourceSelectPanel.value === "og") ? "block" : "none";
             });
 
             // Schedule minutes change handler for panel
@@ -1298,6 +1320,8 @@
                 const newsAnalysisPrompt = newsAnalysisPromptInput?.value?.trim() || "";
                 const newsGenerationPrompt = newsGenerationPromptInput?.value?.trim() || "";
                 const newsVarCount = parseInt(newsVariationCount?.value) || 4;
+                const imageSource = imageSourceSelectPanel.value || "ai";
+                const ogBgUrl = ogBackgroundUrlPanel.value || "";
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -1313,7 +1337,9 @@
                     newsImageSize,
                     newsAnalysisPrompt,
                     newsGenerationPrompt,
-                    newsVariationCount: newsVarCount
+                    newsVariationCount: newsVarCount,
+                    imageSource,
+                    ogBackgroundUrl: ogBgUrl
                 };
 
                 // Also update the modal settings (keep in sync)
@@ -1342,7 +1368,9 @@
                             newsImageSize,
                             newsAnalysisPrompt,
                             newsGenerationPrompt,
-                            newsVariationCount: newsVarCount
+                            newsVariationCount: newsVarCount,
+                            imageSource,
+                            ogBackgroundUrl: ogBgUrl
                         })
                     });
                     const data = await response.json();
