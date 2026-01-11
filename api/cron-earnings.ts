@@ -194,8 +194,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Check if we should send LINE notification (default: true for backwards compatibility)
   const shouldNotify = req.query.notify !== 'false';
+  // Check if we should read from database instead of fetching from Facebook
+  const fromDatabase = req.query.source === 'db';
 
-  console.log(`[cron-earnings] Starting earnings collection... (notify: ${shouldNotify})`);
+  console.log(`[cron-earnings] Starting... (notify: ${shouldNotify}, source: ${fromDatabase ? 'database' : 'facebook'})`);
 
   try {
     // Get all pages with auto_schedule enabled and post_token
@@ -216,81 +218,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log(`[cron-earnings] Processing ${pages.length} pages`);
-    const results = [];
+    const results: any[] = [];
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    for (const page of pages) {
-      if (!page.post_token) continue;
+    if (fromDatabase) {
+      // Read from database (for notification only)
+      console.log('[cron-earnings] Reading from database...');
+      const { data: earnings, error: earningsError } = await supabase
+        .from('earnings_history')
+        .select('*')
+        .eq('date', today);
 
-      try {
-        // Fetch monetization data from Facebook
-        const fbUrl = `https://graph.facebook.com/v21.0/${page.page_id}/insights?metric=monetization_approximate_earnings&access_token=${page.post_token}`;
-        const fbResponse = await fetch(fbUrl);
-        const fbData = await fbResponse.json();
+      if (earningsError) {
+        console.error('[cron-earnings] Error reading earnings:', earningsError);
+        return res.status(500).json({ error: 'Failed to read earnings' });
+      }
 
-        if (fbData.error) {
-          console.error(`[cron-earnings] FB error for page ${page.page_id}:`, fbData.error.message);
-          results.push({
-            pageId: page.page_id,
-            pageName: page.page_name,
-            error: fbData.error.message
-          });
-          continue;
-        }
-
-        // Parse earnings data
-        const dailyData = fbData.data?.find((d: any) => d.period === 'day');
-        const weeklyData = fbData.data?.find((d: any) => d.period === 'week');
-        const monthlyData = fbData.data?.find((d: any) => d.period === 'days_28');
-
-        const latestDaily = dailyData?.values?.[dailyData.values.length - 1];
-        const latestWeekly = weeklyData?.values?.[weeklyData.values.length - 1];
-        const latestMonthly = monthlyData?.values?.[monthlyData.values.length - 1];
-
-        const dailyEarnings = latestDaily?.value || 0;
-        const weeklyEarnings = latestWeekly?.value || 0;
-        const monthlyEarnings = latestMonthly?.value || 0;
-
-        // Upsert to earnings_history
-        const { error: upsertError } = await supabase
-          .from('earnings_history')
-          .upsert({
-            page_id: page.page_id,
-            page_name: page.page_name || page.page_id,
-            date: today,
-            daily_earnings: dailyEarnings,
-            weekly_earnings: weeklyEarnings,
-            monthly_earnings: monthlyEarnings
-          }, {
-            onConflict: 'page_id,date'
-          });
-
-        if (upsertError) {
-          console.error(`[cron-earnings] Upsert error for page ${page.page_id}:`, upsertError);
-          results.push({
-            pageId: page.page_id,
-            pageName: page.page_name,
-            error: upsertError.message
-          });
-        } else {
-          console.log(`[cron-earnings] Saved earnings for ${page.page_name}: daily=$${dailyEarnings.toFixed(2)}`);
-          results.push({
-            pageId: page.page_id,
-            pageName: page.page_name,
-            pageColor: page.page_color || '#666666',
-            daily: dailyEarnings,
-            weekly: weeklyEarnings,
-            monthly: monthlyEarnings,
-            saved: true
-          });
-        }
-      } catch (err) {
-        console.error(`[cron-earnings] Error processing page ${page.page_id}:`, err);
+      // Map earnings to results format with page colors
+      for (const earning of earnings || []) {
+        const pageInfo = pages.find(p => p.page_id === earning.page_id);
         results.push({
-          pageId: page.page_id,
-          pageName: page.page_name,
-          error: err instanceof Error ? err.message : 'Unknown error'
+          pageId: earning.page_id,
+          pageName: earning.page_name,
+          pageColor: pageInfo?.page_color || '#666666',
+          daily: earning.daily_earnings || 0,
+          weekly: earning.weekly_earnings || 0,
+          monthly: earning.monthly_earnings || 0,
+          saved: true,
+          fromDb: true
         });
+      }
+      console.log(`[cron-earnings] Loaded ${results.length} records from database`);
+    } else {
+      // Fetch from Facebook and save to database
+      for (const page of pages) {
+        if (!page.post_token) continue;
+
+        try {
+          // Fetch monetization data from Facebook
+          const fbUrl = `https://graph.facebook.com/v21.0/${page.page_id}/insights?metric=monetization_approximate_earnings&access_token=${page.post_token}`;
+          const fbResponse = await fetch(fbUrl);
+          const fbData = await fbResponse.json();
+
+          if (fbData.error) {
+            console.error(`[cron-earnings] FB error for page ${page.page_id}:`, fbData.error.message);
+            results.push({
+              pageId: page.page_id,
+              pageName: page.page_name,
+              error: fbData.error.message
+            });
+            continue;
+          }
+
+          // Parse earnings data
+          const dailyData = fbData.data?.find((d: any) => d.period === 'day');
+          const weeklyData = fbData.data?.find((d: any) => d.period === 'week');
+          const monthlyData = fbData.data?.find((d: any) => d.period === 'days_28');
+
+          const latestDaily = dailyData?.values?.[dailyData.values.length - 1];
+          const latestWeekly = weeklyData?.values?.[weeklyData.values.length - 1];
+          const latestMonthly = monthlyData?.values?.[monthlyData.values.length - 1];
+
+          const dailyEarnings = latestDaily?.value || 0;
+          const weeklyEarnings = latestWeekly?.value || 0;
+          const monthlyEarnings = latestMonthly?.value || 0;
+
+          // Upsert to earnings_history
+          const { error: upsertError } = await supabase
+            .from('earnings_history')
+            .upsert({
+              page_id: page.page_id,
+              page_name: page.page_name || page.page_id,
+              date: today,
+              daily_earnings: dailyEarnings,
+              weekly_earnings: weeklyEarnings,
+              monthly_earnings: monthlyEarnings
+            }, {
+              onConflict: 'page_id,date'
+            });
+
+          if (upsertError) {
+            console.error(`[cron-earnings] Upsert error for page ${page.page_id}:`, upsertError);
+            results.push({
+              pageId: page.page_id,
+              pageName: page.page_name,
+              error: upsertError.message
+            });
+          } else {
+            console.log(`[cron-earnings] Saved earnings for ${page.page_name}: daily=$${dailyEarnings.toFixed(2)}`);
+            results.push({
+              pageId: page.page_id,
+              pageName: page.page_name,
+              pageColor: page.page_color || '#666666',
+              daily: dailyEarnings,
+              weekly: weeklyEarnings,
+              monthly: monthlyEarnings,
+              saved: true
+            });
+          }
+        } catch (err) {
+          console.error(`[cron-earnings] Error processing page ${page.page_id}:`, err);
+          results.push({
+            pageId: page.page_id,
+            pageName: page.page_name,
+            error: err instanceof Error ? err.message : 'Unknown error'
+          });
+        }
       }
     }
 
@@ -299,7 +332,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send LINE notification only if notify=true
     if (shouldNotify) {
-      await sendLineEarningsSummary(results, today);
+      // Sort by daily earnings (highest first)
+      const sortedResults = [...results].sort((a, b) => (b.daily || 0) - (a.daily || 0));
+      await sendLineEarningsSummary(sortedResults, today);
     } else {
       console.log('[cron-earnings] Skipping LINE notification (notify=false)');
     }
