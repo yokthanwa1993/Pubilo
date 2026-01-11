@@ -627,6 +627,8 @@
             const imageSourceSelectPanel = document.getElementById("imageSourceSelectPanel");
             const ogBackgroundGroupPanel = document.getElementById("ogBackgroundGroupPanel");
             const ogBackgroundUrlPanel = document.getElementById("ogBackgroundUrlPanel");
+            const ogFontGroupPanel = document.getElementById("ogFontGroupPanel");
+            const ogFontSelectPanel = document.getElementById("ogFontSelectPanel");
             const linkPromptInput = document.getElementById("linkPromptInput");
             const imagePromptInput = document.getElementById("imagePromptInput");
             const newsAnalysisPromptInput = document.getElementById("newsAnalysisPromptInput");
@@ -1178,7 +1180,8 @@
                             newsImageSize: data.settings.news_image_size,
                             newsVariationCount: data.settings.news_variation_count,
                             imageSource: data.settings.image_source,
-                            ogBackgroundUrl: data.settings.og_background_url
+                            ogBackgroundUrl: data.settings.og_background_url,
+                            ogFont: data.settings.og_font
                         };
                         // Update cache
                         cachedPageSettings = settings;
@@ -1196,6 +1199,7 @@
                     if (workingHoursEnd) workingHoursEnd.value = settings.workingHoursEnd ?? 24;
                     imageSourceSelectPanel.value = settings.imageSource || "ai";
                     ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
+                    ogFontSelectPanel.value = settings.ogFont || "noto-sans-thai";
                 } else {
                     autoScheduleEnabledPanel.checked = false;
                     scheduleMinutesPanel.value = "00, 15, 30, 45";
@@ -1203,17 +1207,20 @@
                     if (workingHoursEnd) workingHoursEnd.value = 24;
                     imageSourceSelectPanel.value = "ai";
                     ogBackgroundUrlPanel.value = "";
+                    ogFontSelectPanel.value = "noto-sans-thai";
                 }
                 // Sync minute grid with hidden input
                 if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
                 // Update visibility
                 const enabled = autoScheduleEnabledPanel.checked;
+                const isOg = imageSourceSelectPanel.value === "og";
                 scheduleIntervalGroupPanel.style.display = enabled ? "block" : "none";
                 workingHoursGroupPanel.style.display = enabled ? "block" : "none";
                 nextScheduleInfoPanel.style.display = enabled ? "block" : "none";
                 imageSourceGroupPanel.style.display = enabled ? "block" : "none";
-                ogBackgroundGroupPanel.style.display = (enabled && imageSourceSelectPanel.value === "og") ? "block" : "none";
+                ogBackgroundGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
+                ogFontGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
                 if (enabled) {
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
@@ -1277,11 +1284,13 @@
             // Auto schedule checkbox change handler for panel
             autoScheduleEnabledPanel.addEventListener("change", () => {
                 const enabled = autoScheduleEnabledPanel.checked;
+                const isOg = imageSourceSelectPanel.value === "og";
                 scheduleIntervalGroupPanel.style.display = enabled ? "block" : "none";
                 workingHoursGroupPanel.style.display = enabled ? "block" : "none";
                 nextScheduleInfoPanel.style.display = enabled ? "block" : "none";
                 imageSourceGroupPanel.style.display = enabled ? "block" : "none";
-                ogBackgroundGroupPanel.style.display = (enabled && imageSourceSelectPanel.value === "og") ? "block" : "none";
+                ogBackgroundGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
+                ogFontGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
                 if (enabled) {
                     nextScheduleDisplayPanel.textContent = calculateNextScheduleForPanel();
                 }
@@ -1289,8 +1298,10 @@
 
             // Image source change handler for panel
             imageSourceSelectPanel.addEventListener("change", () => {
-                ogBackgroundGroupPanel.style.display =
-                    (autoScheduleEnabledPanel.checked && imageSourceSelectPanel.value === "og") ? "block" : "none";
+                const isOg = imageSourceSelectPanel.value === "og";
+                const enabled = autoScheduleEnabledPanel.checked;
+                ogBackgroundGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
+                ogFontGroupPanel.style.display = (enabled && isOg) ? "block" : "none";
             });
 
             // Schedule minutes change handler for panel
@@ -1322,6 +1333,7 @@
                 const newsVarCount = parseInt(newsVariationCount?.value) || 4;
                 const imageSource = imageSourceSelectPanel.value || "ai";
                 const ogBgUrl = ogBackgroundUrlPanel.value || "";
+                const ogFont = ogFontSelectPanel.value || "noto-sans-thai";
 
                 // Update cache immediately
                 cachedPageSettings = {
@@ -1339,7 +1351,8 @@
                     newsGenerationPrompt,
                     newsVariationCount: newsVarCount,
                     imageSource,
-                    ogBackgroundUrl: ogBgUrl
+                    ogBackgroundUrl: ogBgUrl,
+                    ogFont
                 };
 
                 // Also update the modal settings (keep in sync)
@@ -1370,7 +1383,8 @@
                             newsGenerationPrompt,
                             newsVariationCount: newsVarCount,
                             imageSource,
-                            ogBackgroundUrl: ogBgUrl
+                            ogBackgroundUrl: ogBgUrl,
+                            ogFont
                         })
                     });
                     const data = await response.json();

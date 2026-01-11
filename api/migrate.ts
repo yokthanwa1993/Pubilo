@@ -92,7 +92,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Image source setting: 'ai' for Gemini AI, 'og' for OG Image Generator
       "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS image_source TEXT DEFAULT 'ai'",
       // OG Image Generator background URL
-      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_background_url TEXT"
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_background_url TEXT",
+      // OG Image Generator font
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_font TEXT DEFAULT 'noto-sans-thai'"
     ];
 
     const results = [];

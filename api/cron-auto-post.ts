@@ -30,6 +30,7 @@ interface AutoPostConfig {
   last_post_type: 'text' | 'image' | null;
   image_source: 'ai' | 'og' | null;
   og_background_url: string | null;
+  og_font: string | null;
 }
 
 interface Quote {
@@ -211,7 +212,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (imageSource === 'og' && config.og_background_url) {
             // Use OG Image Generator
-            imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url);
+            const ogFont = config.og_font || 'noto-sans-thai';
+            imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, ogFont);
           } else {
             // Use AI (Gemini) to generate image
             const customPrompt = await getImagePrompt(sql, config.page_id);
@@ -544,12 +546,12 @@ async function uploadImageToHost(base64Data: string): Promise<string> {
   return result.image.url;
 }
 
-async function generateOGImage(quoteText: string, backgroundUrl: string): Promise<string> {
-  console.log('[cron-auto-post] Generating OG image...');
+async function generateOGImage(quoteText: string, backgroundUrl: string, font: string = 'noto-sans-thai'): Promise<string> {
+  console.log(`[cron-auto-post] Generating OG image with font: ${font}...`);
 
   const params = new URLSearchParams({
     text: quoteText,
-    font: 'prompt',
+    font: font,
     image: backgroundUrl,
     output: 'json'
   });

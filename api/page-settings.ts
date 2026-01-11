@@ -123,6 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.hideTypes !== undefined) updateFields.hide_types = req.body.hideTypes;
       if (req.body.imageSource !== undefined) updateFields.image_source = req.body.imageSource;
       if (req.body.ogBackgroundUrl !== undefined) updateFields.og_background_url = req.body.ogBackgroundUrl;
+      if (req.body.ogFont !== undefined) updateFields.og_font = req.body.ogFont;
 
       const { data, error } = await supabase
         .from('page_settings')
