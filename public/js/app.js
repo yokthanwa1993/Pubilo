@@ -144,6 +144,10 @@
             const scheduleIntervalGroup = document.getElementById(
                 "scheduleIntervalGroup",
             );
+            const imageSourceGroup = document.getElementById("imageSourceGroup");
+            const imageSourceSelect = document.getElementById("imageSourceSelect");
+            const ogBackgroundGroup = document.getElementById("ogBackgroundGroup");
+            const ogBackgroundUrl = document.getElementById("ogBackgroundUrl");
 
             // Sync minute checkboxes with hidden input
             function syncMinuteGridToInput(grid, input) {
@@ -305,6 +309,8 @@
                     autoScheduleEnabled.checked = false;
                     scheduleMinutes.value = "00, 15, 30, 45";
                     scheduleIntervalGroup.style.display = "none";
+                    imageSourceGroup.style.display = "none";
+                    ogBackgroundGroup.style.display = "none";
                     nextScheduleInfo.style.display = "none";
                     return;
                 }
@@ -316,18 +322,26 @@
                     if (data.success && data.settings) {
                         const enabled = data.settings.auto_schedule === true;
                         const mins = data.settings.schedule_minutes || "00, 15, 30, 45";
+                        const imgSource = data.settings.image_source || "ai";
+                        const ogBgUrl = data.settings.og_background_url || "";
 
                         // Update cache
                         cachedPageSettings = {
                             pageId,
                             autoSchedule: enabled,
-                            scheduleMinutes: mins
+                            scheduleMinutes: mins,
+                            imageSource: imgSource,
+                            ogBackgroundUrl: ogBgUrl
                         };
 
                         autoScheduleEnabled.checked = enabled;
                         scheduleMinutes.value = mins;
                         if (scheduleMinutesGrid) syncInputToMinuteGrid(scheduleMinutes, scheduleMinutesGrid);
+                        imageSourceSelect.value = imgSource;
+                        ogBackgroundUrl.value = ogBgUrl;
                         scheduleIntervalGroup.style.display = enabled ? "block" : "none";
+                        imageSourceGroup.style.display = enabled ? "block" : "none";
+                        ogBackgroundGroup.style.display = (enabled && imgSource === "og") ? "block" : "none";
                         nextScheduleInfo.style.display = enabled ? "block" : "none";
                     }
                 } catch (error) {
@@ -336,11 +350,17 @@
                     cachedPageSettings = {
                         pageId,
                         autoSchedule: false,
-                        scheduleMinutes: "00, 15, 30, 45"
+                        scheduleMinutes: "00, 15, 30, 45",
+                        imageSource: "ai",
+                        ogBackgroundUrl: ""
                     };
                     autoScheduleEnabled.checked = false;
                     scheduleMinutes.value = "00, 15, 30, 45";
+                    imageSourceSelect.value = "ai";
+                    ogBackgroundUrl.value = "";
                     scheduleIntervalGroup.style.display = "none";
+                    imageSourceGroup.style.display = "none";
+                    ogBackgroundGroup.style.display = "none";
                     nextScheduleInfo.style.display = "none";
                 }
 
@@ -520,12 +540,17 @@
 
 
             autoScheduleEnabled.addEventListener("change", () => {
-                scheduleIntervalGroup.style.display =
-                    autoScheduleEnabled.checked ? "block" : "none";
-                nextScheduleInfo.style.display = autoScheduleEnabled.checked
-                    ? "block"
-                    : "none";
+                const enabled = autoScheduleEnabled.checked;
+                scheduleIntervalGroup.style.display = enabled ? "block" : "none";
+                imageSourceGroup.style.display = enabled ? "block" : "none";
+                ogBackgroundGroup.style.display = (enabled && imageSourceSelect.value === "og") ? "block" : "none";
+                nextScheduleInfo.style.display = enabled ? "block" : "none";
                 updateNextScheduleDisplay();
+            });
+
+            imageSourceSelect.addEventListener("change", () => {
+                ogBackgroundGroup.style.display =
+                    (autoScheduleEnabled.checked && imageSourceSelect.value === "og") ? "block" : "none";
             });
 
             scheduleMinutes.addEventListener(
@@ -538,12 +563,16 @@
                 if (pageId) {
                     const autoSchedule = autoScheduleEnabled.checked;
                     const mins = scheduleMinutes.value || "00, 15, 30, 45";
+                    const imgSource = imageSourceSelect.value || "ai";
+                    const ogBgUrl = ogBackgroundUrl.value || "";
 
                     // Update cache immediately
                     cachedPageSettings = {
                         pageId,
                         autoSchedule,
-                        scheduleMinutes: mins
+                        scheduleMinutes: mins,
+                        imageSource: imgSource,
+                        ogBackgroundUrl: ogBgUrl
                     };
 
                     // Save to database via API
@@ -554,7 +583,9 @@
                             body: JSON.stringify({
                                 pageId,
                                 autoSchedule,
-                                scheduleMinutes: mins
+                                scheduleMinutes: mins,
+                                imageSource: imgSource,
+                                ogBackgroundUrl: ogBgUrl
                             })
                         });
                         const data = await response.json();

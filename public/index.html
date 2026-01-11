@@ -1762,6 +1762,37 @@
                             เลือกนาทีที่ต้องการโพสต์ (ทุกชั่วโมง)
                         </p>
                     </div>
+                    <!-- Image Source Selection -->
+                    <div
+                        class="setting-group"
+                        id="imageSourceGroup"
+                        style="display: none"
+                    >
+                        <label class="form-label">แหล่งรูปภาพ (Image Post)</label>
+                        <select id="imageSourceSelect" class="form-input" style="padding: 0.5rem;">
+                            <option value="ai">AI Generate (Gemini)</option>
+                            <option value="og">OG Image Generator (ประหยัด API)</option>
+                        </select>
+                        <p class="setting-desc">
+                            เลือกวิธีสร้างรูปภาพสำหรับ Auto Post
+                        </p>
+                    </div>
+                    <div
+                        class="setting-group"
+                        id="ogBackgroundGroup"
+                        style="display: none"
+                    >
+                        <label class="form-label">OG Background URL</label>
+                        <input
+                            type="text"
+                            id="ogBackgroundUrl"
+                            class="form-input"
+                            placeholder="https://example.com/background.jpg"
+                        />
+                        <p class="setting-desc">
+                            URL รูปพื้นหลังสำหรับ OG Image Generator
+                        </p>
+                    </div>
                     <div
                         class="setting-group"
                         id="nextScheduleInfo"

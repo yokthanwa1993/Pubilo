@@ -28,6 +28,8 @@ interface AutoPostConfig {
   page_color: string | null;
   page_name: string | null;
   last_post_type: 'text' | 'image' | null;
+  image_source: 'ai' | 'og' | null;
+  og_background_url: string | null;
 }
 
 interface Quote {
@@ -202,21 +204,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, presetId);
         } else {
           // Create image post (immediate)
-          const customPrompt = await getImagePrompt(sql, config.page_id);
-          const pageName = await getPageName(sql, config.page_id);
+          let imageUrl: string;
 
-          // Generate AI image with page settings
-          const base64Image = await generateAIImage(
-            unusedQuote.quote_text,
-            customPrompt || undefined,
-            imageSize,
-            pageName || undefined,
-            aiModel,
-            aiResolution
-          );
+          const imageSource = config.image_source || 'ai';
+          console.log(`[cron-auto-post] Page ${config.page_id}: imageSource=${imageSource}`);
 
-          // Upload to image host
-          const imageUrl = await uploadImageToHost(base64Image);
+          if (imageSource === 'og' && config.og_background_url) {
+            // Use OG Image Generator
+            imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url);
+          } else {
+            // Use AI (Gemini) to generate image
+            const customPrompt = await getImagePrompt(sql, config.page_id);
+            const pageName = await getPageName(sql, config.page_id);
+
+            // Generate AI image with page settings
+            const base64Image = await generateAIImage(
+              unusedQuote.quote_text,
+              customPrompt || undefined,
+              imageSize,
+              pageName || undefined,
+              aiModel,
+              aiResolution
+            );
+
+            // Upload to image host
+            imageUrl = await uploadImageToHost(base64Image);
+          }
 
           // Post to Facebook (immediate - no scheduledTime)
           facebookPostId = await createImagePost(
@@ -528,6 +541,35 @@ async function uploadImageToHost(base64Data: string): Promise<string> {
     throw new Error('No URL returned from image host');
   }
 
+  return result.image.url;
+}
+
+async function generateOGImage(quoteText: string, backgroundUrl: string): Promise<string> {
+  console.log('[cron-auto-post] Generating OG image...');
+
+  const params = new URLSearchParams({
+    text: quoteText,
+    font: 'prompt',
+    image: backgroundUrl,
+    output: 'json'
+  });
+
+  const ogUrl = `https://og-image-azure.vercel.app/api/og?${params.toString()}`;
+
+  const response = await fetch(ogUrl);
+
+  if (!response.ok) {
+    throw new Error(`OG Image generation failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+
+  // The OG service returns the image URL in result.image.url
+  if (!result.image?.url) {
+    throw new Error('No URL returned from OG Image service');
+  }
+
+  console.log('[cron-auto-post] OG image generated:', result.image.url);
   return result.image.url;
 }
 

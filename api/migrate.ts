@@ -88,7 +88,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )`,
       // Index for fast lookup by key
-      "CREATE INDEX IF NOT EXISTS idx_global_settings_key ON global_settings(setting_key)"
+      "CREATE INDEX IF NOT EXISTS idx_global_settings_key ON global_settings(setting_key)",
+      // Image source setting: 'ai' for Gemini AI, 'og' for OG Image Generator
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS image_source TEXT DEFAULT 'ai'",
+      // OG Image Generator background URL
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS og_background_url TEXT"
     ];
 
     const results = [];
