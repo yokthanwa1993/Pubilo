@@ -6,6 +6,152 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+const LINE_USER_ID = process.env.LINE_USER_ID || ''; // Your LINE user ID for push messages
+
+async function sendLineEarningsSummary(results: any[], date: string) {
+  if (!LINE_CHANNEL_ACCESS_TOKEN || !LINE_USER_ID) {
+    console.log('[cron-earnings] LINE credentials not configured, skipping notification');
+    return;
+  }
+
+  // Filter successful results
+  const successResults = results.filter(r => r.saved && !r.error);
+  if (successResults.length === 0) return;
+
+  // Calculate totals
+  const totalDaily = successResults.reduce((sum, r) => sum + (r.daily || 0), 0);
+  const totalWeekly = successResults.reduce((sum, r) => sum + (r.weekly || 0), 0);
+  const totalMonthly = successResults.reduce((sum, r) => sum + (r.monthly || 0), 0);
+
+  // Format date for display
+  const displayDate = new Date().toLocaleDateString('th-TH', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  // Build page earnings rows
+  const pageContents = successResults.map(r => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: r.pageName || r.pageId, size: 'sm', color: '#555555', flex: 3 },
+      { type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'sm', color: '#111111', align: 'end', flex: 2 }
+    ],
+    margin: 'md'
+  }));
+
+  const flexMessage = {
+    type: 'flex',
+    altText: `📊 รายได้วันนี้: $${totalDaily.toFixed(2)}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: '💰 EARNINGS REPORT', weight: 'bold', size: 'lg', color: '#ffffff', align: 'center' },
+          { type: 'text', text: displayDate, size: 'xs', color: '#ffffff', align: 'center', margin: 'sm' }
+        ],
+        backgroundColor: '#27AE60',
+        paddingAll: 'lg'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          // Summary section
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: 'Daily', size: 'xs', color: '#999999', align: 'center' },
+                  { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xl', weight: 'bold', color: '#27AE60', align: 'center' }
+                ],
+                flex: 1
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: 'Weekly', size: 'xs', color: '#999999', align: 'center' },
+                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#3498DB', align: 'center' }
+                ],
+                flex: 1
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: '28-Day', size: 'xs', color: '#999999', align: 'center' },
+                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#E74C3C', align: 'center' }
+                ],
+                flex: 1
+              }
+            ],
+            margin: 'md'
+          },
+          // Separator
+          { type: 'separator', margin: 'xl' },
+          // Page header
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: 'เพจ', size: 'sm', color: '#999999', weight: 'bold', flex: 3 },
+              { type: 'text', text: 'รายได้วันนี้', size: 'sm', color: '#999999', weight: 'bold', align: 'end', flex: 2 }
+            ],
+            margin: 'xl'
+          },
+          // Page earnings list
+          ...pageContents,
+          // Total separator
+          { type: 'separator', margin: 'xl' },
+          // Total row
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: '📊 รวมทั้งหมด', size: 'md', color: '#27AE60', weight: 'bold', flex: 3 },
+              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'md', color: '#27AE60', weight: 'bold', align: 'end', flex: 2 }
+            ],
+            margin: 'lg'
+          }
+        ],
+        paddingAll: 'lg'
+      }
+    }
+  };
+
+  try {
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+      },
+      body: JSON.stringify({
+        to: LINE_USER_ID,
+        messages: [flexMessage],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[cron-earnings] LINE push failed:', errorText);
+    } else {
+      console.log('[cron-earnings] LINE notification sent successfully');
+    }
+  } catch (err) {
+    console.error('[cron-earnings] LINE push error:', err);
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify cron secret or allow manual trigger
   const authHeader = req.headers.authorization;
@@ -116,6 +262,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const successCount = results.filter(r => r.saved).length;
     console.log(`[cron-earnings] Completed. ${successCount}/${pages.length} pages saved successfully`);
+
+    // Send LINE notification
+    await sendLineEarningsSummary(results, today);
 
     return res.status(200).json({
       success: true,
