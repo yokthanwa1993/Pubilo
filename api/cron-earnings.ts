@@ -155,20 +155,7 @@ async function sendLineEarningsSummary(results: any[], date: string) {
             paddingBottom: 'sm'
           },
           // Page earnings list
-          ...pageContents,
-          // Total section
-          {
-            type: 'box',
-            layout: 'horizontal',
-            contents: [
-              { type: 'text', text: '💵 รวมทั้งหมด', size: 'md', color: '#333333', weight: 'bold', flex: 3 },
-              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'lg', color: '#1DB954', weight: 'bold', align: 'end', flex: 2 }
-            ],
-            backgroundColor: '#E8F5E9',
-            paddingAll: 'md',
-            cornerRadius: 'lg',
-            margin: 'lg'
-          }
+          ...pageContents
         ],
         paddingAll: 'lg',
         backgroundColor: '#ffffff'
