@@ -1449,11 +1449,13 @@
             const pendingNavItem = document.getElementById("pendingNavItem");
             const publishedNavItem = document.getElementById("publishedNavItem");
             const quotesNavItem = document.getElementById("quotesNavItem");
+            const earningsNavItem = document.getElementById("earningsNavItem");
             const pendingBadge = document.getElementById("pendingBadge");
             const pendingPanel = document.getElementById("pendingPanel");
             const publishedPanel = document.getElementById("publishedPanel");
             const publishedTableContainer = document.getElementById("publishedTableContainer");
             const quotesPanel = document.getElementById("quotesPanel");
+            const earningsPanel = document.getElementById("earningsPanel");
             const settingsPanel = document.getElementById("settingsPanel");
             const pendingTableContainer = document.getElementById(
                 "pendingTableContainer",
@@ -1892,10 +1894,11 @@
                 document.querySelectorAll(".mode-container").forEach((c) => {
                     c.classList.remove("active");
                 });
-                // Hide quotes, settings, published and text panels
+                // Hide quotes, settings, published, earnings and text panels
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
                 publishedPanel.style.display = "none";
+                earningsPanel.style.display = "none";
                 const tp = document.getElementById("textPanel");
                 if (tp) tp.style.display = "none";
                 // Lock body scroll
@@ -1950,6 +1953,7 @@
                 publishedPanel.style.display = "none";
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                earningsPanel.style.display = "none";
                 const tp = document.getElementById("textPanel");
                 if (tp) tp.style.display = "none";
                 const textModePanel = document.getElementById("textModePanel");
@@ -1962,6 +1966,137 @@
                 appLayout.classList.remove("pending-mode");
             }
 
+            // Show earnings panel
+            function showEarningsPanel() {
+                // Hide all mode containers
+                document.querySelectorAll(".mode-container").forEach((c) => {
+                    c.classList.remove("active");
+                });
+                pendingPanel.style.display = "none";
+                publishedPanel.style.display = "none";
+                settingsPanel.style.display = "none";
+                quotesPanel.style.display = "none";
+                const tp = document.getElementById("textPanel");
+                if (tp) tp.style.display = "none";
+                earningsPanel.style.display = "flex";
+                appLayout.classList.add("pending-mode");
+                document.body.style.overflow = "hidden";
+                loadEarnings();
+            }
+
+            // Escape HTML to prevent XSS
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Load earnings data
+            async function loadEarnings() {
+                const loadingEl = document.getElementById("earningsLoading");
+                const dataEl = document.getElementById("earningsData");
+
+                loadingEl.style.display = "block";
+                dataEl.style.display = "none";
+
+                try {
+                    const response = await fetch(`${API_BASE}/api/earnings`);
+                    const result = await response.json();
+
+                    if (!result.success || !result.earnings || result.earnings.length === 0) {
+                        loadingEl.textContent = 'No earnings data available';
+                        return;
+                    }
+
+                    loadingEl.style.display = "none";
+                    dataEl.style.display = "block";
+
+                    // Calculate totals
+                    let totalDaily = 0;
+                    let totalWeekly = 0;
+                    let totalMonthly = 0;
+
+                    result.earnings.forEach(e => {
+                        if (!e.error) {
+                            totalDaily += e.daily || 0;
+                            totalWeekly += e.weekly || 0;
+                            totalMonthly += e.monthly || 0;
+                        }
+                    });
+
+                    // Clear existing content
+                    dataEl.textContent = '';
+
+                    // Create summary cards
+                    const summaryGrid = document.createElement('div');
+                    summaryGrid.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;';
+
+                    const dailyCard = document.createElement('div');
+                    dailyCard.style.cssText = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;';
+                    dailyCard.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.9;">Daily Total</div><div style="font-size: 1.8rem; font-weight: bold;">$${totalDaily.toFixed(2)}</div>`;
+
+                    const weeklyCard = document.createElement('div');
+                    weeklyCard.style.cssText = 'background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;';
+                    weeklyCard.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.9;">Weekly Total</div><div style="font-size: 1.8rem; font-weight: bold;">$${totalWeekly.toFixed(2)}</div>`;
+
+                    const monthlyCard = document.createElement('div');
+                    monthlyCard.style.cssText = 'background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;';
+                    monthlyCard.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.9;">28-Day Total</div><div style="font-size: 1.8rem; font-weight: bold;">$${totalMonthly.toFixed(2)}</div>`;
+
+                    summaryGrid.appendChild(dailyCard);
+                    summaryGrid.appendChild(weeklyCard);
+                    summaryGrid.appendChild(monthlyCard);
+                    dataEl.appendChild(summaryGrid);
+
+                    // Add header
+                    const header = document.createElement('h3');
+                    header.textContent = 'Per Page Earnings';
+                    header.style.cssText = 'margin: 0 0 1rem 0; color: #333;';
+                    dataEl.appendChild(header);
+
+                    // Create page cards container
+                    const pagesContainer = document.createElement('div');
+                    pagesContainer.style.cssText = 'display: flex; flex-direction: column; gap: 1rem;';
+
+                    result.earnings.forEach(e => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 1rem;';
+
+                        const nameEl = document.createElement('div');
+                        nameEl.style.cssText = 'font-weight: 600; color: #333; margin-bottom: 0.75rem;';
+                        nameEl.textContent = e.pageName || e.pageId;
+                        card.appendChild(nameEl);
+
+                        if (e.error) {
+                            const errorEl = document.createElement('div');
+                            errorEl.style.cssText = 'color: #e74c3c; font-size: 0.9rem;';
+                            errorEl.textContent = 'Error: ' + e.error;
+                            card.appendChild(errorEl);
+                        } else {
+                            const statsGrid = document.createElement('div');
+                            statsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center;';
+                            statsGrid.innerHTML = `
+                                <div><div style="font-size: 0.75rem; color: #999;">Daily</div><div style="font-weight: 600; color: #667eea;">$${(e.daily || 0).toFixed(2)}</div></div>
+                                <div><div style="font-size: 0.75rem; color: #999;">Weekly</div><div style="font-weight: 600; color: #11998e;">$${(e.weekly || 0).toFixed(2)}</div></div>
+                                <div><div style="font-size: 0.75rem; color: #999;">28-Day</div><div style="font-weight: 600; color: #ee0979;">$${(e.monthly || 0).toFixed(2)}</div></div>
+                            `;
+                            card.appendChild(statsGrid);
+                        }
+
+                        pagesContainer.appendChild(card);
+                    });
+
+                    dataEl.appendChild(pagesContainer);
+                } catch (err) {
+                    console.error('Error loading earnings:', err);
+                    loadingEl.textContent = 'Failed to load earnings data';
+                    loadingEl.style.color = '#e74c3c';
+                }
+            }
+
+            // Refresh earnings button
+            document.getElementById("refreshEarningsBtn")?.addEventListener("click", loadEarnings);
+
             // Show quotes panel
             function showQuotesPanel() {
                 // Hide all mode containers
@@ -1971,6 +2106,7 @@
                 pendingPanel.style.display = "none";
                 publishedPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                earningsPanel.style.display = "none";
                 const tp = document.getElementById("textPanel");
                 if (tp) tp.style.display = "none";
                 quotesPanel.style.display = "flex";
@@ -1990,6 +2126,7 @@
                 pendingPanel.style.display = "none";
                 quotesPanel.style.display = "none";
                 settingsPanel.style.display = "none";
+                earningsPanel.style.display = "none";
                 const tp = document.getElementById("textPanel");
                 if (tp) tp.style.display = "none";
                 publishedPanel.style.display = "flex";
@@ -2228,6 +2365,7 @@
                 pendingPanel.style.display = "none";
                 publishedPanel.style.display = "none";
                 quotesPanel.style.display = "none";
+                earningsPanel.style.display = "none";
                 textPanel.style.display = "none";
                 const textModePanel = document.getElementById("textModePanel");
                 if (textModePanel) textModePanel.style.display = "none";
@@ -2860,6 +2998,9 @@
                 } else if (hash === "quotes") {
                     quotesNavItem.classList.add("active");
                     showQuotesPanel();
+                } else if (hash === "earnings") {
+                    earningsNavItem.classList.add("active");
+                    showEarningsPanel();
                 } else if (hash === "settings") {
                     document.getElementById("settingsNavBtn").classList.add("active");
                     showSettingsPanel();
@@ -2910,6 +3051,12 @@
             quotesNavItem.addEventListener("click", (e) => {
                 e.preventDefault();
                 navigateTo("quotes");
+            });
+
+            // Earnings nav item click
+            earningsNavItem.addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo("earnings");
             });
 
             // Settings nav item click
