@@ -2,6 +2,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
+// Disable automatic body parsing to get raw body for signature verification
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -14,6 +21,20 @@ function verifySignature(body: string, signature: string): boolean {
   if (!LINE_CHANNEL_SECRET) return true; // Skip if not configured
   const hash = crypto.createHmac('sha256', LINE_CHANNEL_SECRET).update(body).digest('base64');
   return hash === signature;
+}
+
+// Helper to get raw body from request
+async function getRawBody(req: VercelRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', reject);
+  });
 }
 
 async function replyMessage(replyToken: string, text: string) {
@@ -103,18 +124,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).end();
     }
 
+    // Get raw body for signature verification
+    const rawBody = await getRawBody(req);
+    console.log('[line-webhook] Raw body length:', rawBody.length);
+    console.log('[line-webhook] Raw body preview:', rawBody.substring(0, 500));
+
     const signature = req.headers['x-line-signature'] as string;
-    const bodyStr = JSON.stringify(req.body);
 
-    console.log('[line-webhook] Body length:', bodyStr.length);
-    console.log('[line-webhook] Received:', bodyStr.substring(0, 800));
+    // Verify signature using raw body
+    if (!verifySignature(rawBody, signature)) {
+      console.log('[line-webhook] Invalid signature');
+      return res.status(401).end();
+    }
 
-  if (!verifySignature(bodyStr, signature)) {
-    console.log('[line-webhook] Invalid signature');
-    return res.status(401).end();
-  }
+    // Parse body after signature verification
+    const body = JSON.parse(rawBody);
+    console.log('[line-webhook] Parsed body, events:', body.events?.length);
 
-  const { events } = req.body;
+    const { events } = body;
 
   for (const event of events || []) {
     console.log('[line-webhook] Event type:', event.type, 'Message type:', event.message?.type);
