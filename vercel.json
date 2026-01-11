@@ -14,8 +14,12 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron-earnings",
-      "schedule": "0 17,23 * * *"
+      "path": "/api/cron-earnings?notify=false",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron-earnings?notify=true",
+      "schedule": "0 1 * * *"
     }
   ],
   "functions": {

@@ -7,10 +7,11 @@ const supabase = createClient(
 );
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
-const LINE_USER_ID = process.env.LINE_USER_ID || ''; // Your LINE user ID for push messages
+// Support multiple LINE user IDs (comma-separated)
+const LINE_USER_IDS = (process.env.LINE_USER_IDS || process.env.LINE_USER_ID || '').split(',').map(id => id.trim()).filter(Boolean);
 
 async function sendLineEarningsSummary(results: any[], date: string) {
-  if (!LINE_CHANNEL_ACCESS_TOKEN || !LINE_USER_ID) {
+  if (!LINE_CHANNEL_ACCESS_TOKEN || LINE_USER_IDS.length === 0) {
     console.log('[cron-earnings] LINE credentials not configured, skipping notification');
     return;
   }
@@ -24,17 +25,13 @@ async function sendLineEarningsSummary(results: any[], date: string) {
   const totalWeekly = successResults.reduce((sum, r) => sum + (r.weekly || 0), 0);
   const totalMonthly = successResults.reduce((sum, r) => sum + (r.monthly || 0), 0);
 
-  // Format date for display
+  // Format date for display (date only, no time)
   const displayDate = new Date().toLocaleDateString('th-TH', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-    hour: '2-digit', minute: '2-digit'
+    day: '2-digit', month: '2-digit', year: '2-digit'
   });
 
-  // Page colors for visual distinction
-  const pageColors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
-
-  // Build page earnings rows with beautiful cards
-  const pageContents = successResults.map((r, idx) => ({
+  // Build page earnings rows with beautiful cards (using page_color from database)
+  const pageContents = successResults.map((r) => ({
     type: 'box',
     layout: 'horizontal',
     contents: [
@@ -42,7 +39,7 @@ async function sendLineEarningsSummary(results: any[], date: string) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '●', size: 'xs', color: pageColors[idx % pageColors.length] }
+          { type: 'text', text: '●', size: 'xs', color: r.pageColor || '#666666' }
         ],
         width: '20px',
         alignItems: 'center',
@@ -60,7 +57,7 @@ async function sendLineEarningsSummary(results: any[], date: string) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'md', color: pageColors[idx % pageColors.length], weight: 'bold', align: 'end' }
+          { type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'md', color: r.pageColor || '#666666', weight: 'bold', align: 'end' }
         ],
         flex: 3
       }
@@ -144,7 +141,7 @@ async function sendLineEarningsSummary(results: any[], date: string) {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'แยกตามเพจ', size: 'xs', color: '#999999' }
+              { type: 'text', text: 'PAGE', size: 'xs', color: '#999999' }
             ],
             paddingTop: 'lg',
             paddingBottom: 'md'
@@ -158,27 +155,30 @@ async function sendLineEarningsSummary(results: any[], date: string) {
     }
   };
 
-  try {
-    const response = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify({
-        to: LINE_USER_ID,
-        messages: [flexMessage],
-      }),
-    });
+  // Send to all configured LINE user IDs
+  for (const userId of LINE_USER_IDS) {
+    try {
+      const response = await fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [flexMessage],
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[cron-earnings] LINE push failed:', errorText);
-    } else {
-      console.log('[cron-earnings] LINE notification sent successfully');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[cron-earnings] LINE push failed for ${userId}:`, errorText);
+      } else {
+        console.log(`[cron-earnings] LINE notification sent to ${userId}`);
+      }
+    } catch (err) {
+      console.error(`[cron-earnings] LINE push error for ${userId}:`, err);
     }
-  } catch (err) {
-    console.error('[cron-earnings] LINE push error:', err);
   }
 }
 
@@ -192,13 +192,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[cron-earnings] No auth header, proceeding anyway for testing');
   }
 
-  console.log('[cron-earnings] Starting earnings collection...');
+  // Check if we should send LINE notification (default: true for backwards compatibility)
+  const shouldNotify = req.query.notify !== 'false';
+
+  console.log(`[cron-earnings] Starting earnings collection... (notify: ${shouldNotify})`);
 
   try {
     // Get all pages with auto_schedule enabled and post_token
     const { data: pages, error: pagesError } = await supabase
       .from('page_settings')
-      .select('page_id, page_name, post_token')
+      .select('page_id, page_name, post_token, page_color')
       .eq('auto_schedule', true)
       .not('post_token', 'is', null);
 
@@ -274,6 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           results.push({
             pageId: page.page_id,
             pageName: page.page_name,
+            pageColor: page.page_color || '#666666',
             daily: dailyEarnings,
             weekly: weeklyEarnings,
             monthly: monthlyEarnings,
@@ -293,8 +297,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const successCount = results.filter(r => r.saved).length;
     console.log(`[cron-earnings] Completed. ${successCount}/${pages.length} pages saved successfully`);
 
-    // Send LINE notification
-    await sendLineEarningsSummary(results, today);
+    // Send LINE notification only if notify=true
+    if (shouldNotify) {
+      await sendLineEarningsSummary(results, today);
+    } else {
+      console.log('[cron-earnings] Skipping LINE notification (notify=false)');
+    }
 
     return res.status(200).json({
       success: true,
