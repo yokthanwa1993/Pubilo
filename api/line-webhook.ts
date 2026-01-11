@@ -117,21 +117,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { events } = req.body;
 
   for (const event of events || []) {
-    console.log('[line-webhook] Event type:', event.type, event.message?.type);
-    if (event.type !== 'message' || event.message.type !== 'text') continue;
+    console.log('[line-webhook] Event type:', event.type, 'Message type:', event.message?.type);
+
+    if (event.type !== 'message') continue;
+
+    // Handle stickers - reply that we don't support them
+    if (event.message.type === 'sticker') {
+      console.log('[line-webhook] Sticker received, skipping');
+      try {
+        await replyMessage(event.replyToken, '⚠️ ไม่รองรับ Sticker กรุณาส่งเป็นข้อความ');
+      } catch (e) {
+        console.error('[line-webhook] Failed to reply sticker message');
+      }
+      continue;
+    }
+
+    // Only process text messages
+    if (event.message.type !== 'text') {
+      console.log('[line-webhook] Non-text message type:', event.message.type);
+      continue;
+    }
 
     let text = event.message.text || '';
+    console.log('[line-webhook] Raw text:', JSON.stringify(text));
+    console.log('[line-webhook] Text bytes:', Buffer.from(text).toString('hex').substring(0, 100));
 
-    // Handle LINE emoji - replace $ placeholders with actual emoji if available
+    // Handle LINE emoji - they appear as placeholders in text
     if (event.message.emojis && Array.isArray(event.message.emojis)) {
       console.log('[line-webhook] LINE emojis found:', JSON.stringify(event.message.emojis));
-      // LINE emoji are shown as $ in text, we'll keep them as-is since they're proprietary
-      // Unicode emoji will pass through normally
     }
 
     text = text.trim();
-    console.log('[line-webhook] Text:', text, '| Length:', text.length);
-    if (!text) continue;
+    console.log('[line-webhook] After trim, length:', text.length);
+    if (!text) {
+      console.log('[line-webhook] Empty text after trim, skipping');
+      continue;
+    }
 
     try {
       console.log('[line-webhook] Inserting to DB, text bytes:', Buffer.from(text).length);
