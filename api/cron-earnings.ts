@@ -77,41 +77,31 @@ async function sendLineEarningsSummary(results: any[], date: string) {
     contents: {
       type: 'bubble',
       size: 'mega',
-      header: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          { type: 'text', text: '💰', size: '3xl', align: 'center' },
-          { type: 'text', text: 'EARNINGS REPORT', weight: 'bold', size: 'xl', color: '#ffffff', align: 'center', margin: 'sm' },
-          { type: 'text', text: displayDate, size: 'sm', color: '#ffffffcc', align: 'center', margin: 'sm' }
-        ],
-        backgroundColor: '#1DB954',
-        paddingAll: 'xl'
-      },
       body: {
         type: 'box',
         layout: 'vertical',
         contents: [
-          // Summary cards
+          // Minimal header
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              {
-                type: 'box',
-                layout: 'vertical',
-                contents: [
-                  { type: 'text', text: '📅 Today', size: 'xs', color: '#666666', align: 'center' },
-                  { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xxl', weight: 'bold', color: '#1DB954', align: 'center' }
-                ],
-                flex: 1,
-                backgroundColor: '#E8F5E9',
-                paddingAll: 'md',
-                cornerRadius: 'lg'
-              }
+              { type: 'text', text: '💰 Earnings', size: 'md', color: '#333333', weight: 'bold', flex: 1 },
+              { type: 'text', text: displayDate, size: 'xs', color: '#999999', align: 'end', gravity: 'center' }
             ],
-            margin: 'md'
+            paddingBottom: 'lg'
           },
+          // Daily - Large
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: 'TODAY', size: 'xxs', color: '#1DB954', weight: 'bold' },
+              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: '3xl', weight: 'bold', color: '#333333' }
+            ],
+            paddingBottom: 'md'
+          },
+          // Weekly + Monthly row
           {
             type: 'box',
             layout: 'horizontal',
@@ -120,39 +110,34 @@ async function sendLineEarningsSummary(results: any[], date: string) {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                  { type: 'text', text: '📆 Weekly', size: 'xxs', color: '#666666', align: 'center' },
-                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#2196F3', align: 'center' }
+                  { type: 'text', text: 'WEEKLY', size: 'xxs', color: '#2196F3', weight: 'bold' },
+                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#333333' }
                 ],
-                flex: 1,
-                backgroundColor: '#E3F2FD',
-                paddingAll: 'sm',
-                cornerRadius: 'md'
+                flex: 1
               },
-              { type: 'box', layout: 'vertical', contents: [], width: '8px' },
               {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                  { type: 'text', text: '📊 28-Day', size: 'xxs', color: '#666666', align: 'center' },
-                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#FF5722', align: 'center' }
+                  { type: 'text', text: '28-DAY', size: 'xxs', color: '#FF5722', weight: 'bold' },
+                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#333333' }
                 ],
-                flex: 1,
-                backgroundColor: '#FBE9E7',
-                paddingAll: 'sm',
-                cornerRadius: 'md'
+                flex: 1
               }
             ],
-            margin: 'md'
+            paddingBottom: 'xl'
           },
+          // Separator
+          { type: 'separator', color: '#EEEEEE' },
           // Page list header
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '📱 รายได้แยกตามเพจ', size: 'sm', color: '#666666', weight: 'bold' }
+              { type: 'text', text: 'แยกตามเพจ', size: 'xs', color: '#999999' }
             ],
-            margin: 'xl',
-            paddingBottom: 'sm'
+            paddingTop: 'lg',
+            paddingBottom: 'md'
           },
           // Page earnings list
           ...pageContents
