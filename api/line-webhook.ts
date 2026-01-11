@@ -130,20 +130,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!text) continue;
 
     try {
-      const { error } = await supabase.from('quotes').insert({ quote_text: text });
-      
+      console.log('[line-webhook] Inserting to DB, text bytes:', Buffer.from(text).length);
+      const { data, error } = await supabase.from('quotes').insert({ quote_text: text }).select();
+
       if (error) {
-        console.error('[line-webhook] DB Error:', error);
+        console.error('[line-webhook] DB Error:', JSON.stringify(error));
         throw error;
       }
-      
+
+      console.log('[line-webhook] DB insert success:', JSON.stringify(data));
+      console.log('[line-webhook] Sending reply...');
       await replyMessage(event.replyToken, text);
+      console.log('[line-webhook] Reply sent successfully');
     } catch (err) {
-      console.error('[line-webhook] Error:', err);
+      console.error('[line-webhook] Error:', err instanceof Error ? err.message : JSON.stringify(err));
+      console.error('[line-webhook] Error stack:', err instanceof Error ? err.stack : 'N/A');
       // ลองตอบกลับแม้ insert ไม่สำเร็จ
       try {
         await replyMessage(event.replyToken, '❌ เกิดข้อผิดพลาด: ' + (err instanceof Error ? err.message : 'Unknown'));
-      } catch {}
+      } catch (replyErr) {
+        console.error('[line-webhook] Reply error also failed:', replyErr instanceof Error ? replyErr.message : JSON.stringify(replyErr));
+      }
     }
   }
 
