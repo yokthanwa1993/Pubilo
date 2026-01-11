@@ -92,18 +92,22 @@ async function replyMessage(replyToken: string, text: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'GET') {
-    return res.status(200).send('LINE Webhook OK');
-  }
+  console.log('[line-webhook] === REQUEST START ===', req.method);
 
-  if (req.method !== 'POST') {
-    return res.status(405).end();
-  }
+  try {
+    if (req.method === 'GET') {
+      return res.status(200).send('LINE Webhook OK');
+    }
 
-  const signature = req.headers['x-line-signature'] as string;
-  const bodyStr = JSON.stringify(req.body);
+    if (req.method !== 'POST') {
+      return res.status(405).end();
+    }
 
-  console.log('[line-webhook] Received:', bodyStr.substring(0, 500));
+    const signature = req.headers['x-line-signature'] as string;
+    const bodyStr = JSON.stringify(req.body);
+
+    console.log('[line-webhook] Body length:', bodyStr.length);
+    console.log('[line-webhook] Received:', bodyStr.substring(0, 800));
 
   if (!verifySignature(bodyStr, signature)) {
     console.log('[line-webhook] Invalid signature');
@@ -154,5 +158,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(200).end();
+    return res.status(200).end();
+  } catch (globalErr) {
+    console.error('[line-webhook] === GLOBAL ERROR ===', globalErr instanceof Error ? globalErr.message : JSON.stringify(globalErr));
+    console.error('[line-webhook] Stack:', globalErr instanceof Error ? globalErr.stack : 'N/A');
+    return res.status(500).json({ error: 'Internal error' });
+  }
 }
