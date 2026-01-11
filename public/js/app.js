@@ -1997,10 +1997,18 @@
                 const dataEl = document.getElementById("earningsData");
 
                 loadingEl.style.display = "block";
+                loadingEl.style.color = '';
                 dataEl.style.display = "none";
 
+                const pageId = getCurrentPageId();
+                if (!pageId) {
+                    loadingEl.textContent = 'Please select a Page first';
+                    loadingEl.style.color = '#e74c3c';
+                    return;
+                }
+
                 try {
-                    const response = await fetch('/api/earnings');
+                    const response = await fetch(`/api/earnings?pageId=${pageId}`);
                     const result = await response.json();
 
                     if (!result.success || !result.earnings || result.earnings.length === 0) {
@@ -2048,45 +2056,14 @@
                     summaryGrid.appendChild(monthlyCard);
                     dataEl.appendChild(summaryGrid);
 
-                    // Add header
-                    const header = document.createElement('h3');
-                    header.textContent = 'Per Page Earnings';
-                    header.style.cssText = 'margin: 0 0 1rem 0; color: #333;';
-                    dataEl.appendChild(header);
-
-                    // Create page cards container
-                    const pagesContainer = document.createElement('div');
-                    pagesContainer.style.cssText = 'display: flex; flex-direction: column; gap: 1rem;';
-
-                    result.earnings.forEach(e => {
-                        const card = document.createElement('div');
-                        card.style.cssText = 'background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 1rem;';
-
-                        const nameEl = document.createElement('div');
-                        nameEl.style.cssText = 'font-weight: 600; color: #333; margin-bottom: 0.75rem;';
-                        nameEl.textContent = e.pageName || e.pageId;
-                        card.appendChild(nameEl);
-
-                        if (e.error) {
-                            const errorEl = document.createElement('div');
-                            errorEl.style.cssText = 'color: #e74c3c; font-size: 0.9rem;';
-                            errorEl.textContent = 'Error: ' + e.error;
-                            card.appendChild(errorEl);
-                        } else {
-                            const statsGrid = document.createElement('div');
-                            statsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center;';
-                            statsGrid.innerHTML = `
-                                <div><div style="font-size: 0.75rem; color: #999;">Daily</div><div style="font-weight: 600; color: #667eea;">$${(e.daily || 0).toFixed(2)}</div></div>
-                                <div><div style="font-size: 0.75rem; color: #999;">Weekly</div><div style="font-weight: 600; color: #11998e;">$${(e.weekly || 0).toFixed(2)}</div></div>
-                                <div><div style="font-size: 0.75rem; color: #999;">28-Day</div><div style="font-weight: 600; color: #ee0979;">$${(e.monthly || 0).toFixed(2)}</div></div>
-                            `;
-                            card.appendChild(statsGrid);
-                        }
-
-                        pagesContainer.appendChild(card);
-                    });
-
-                    dataEl.appendChild(pagesContainer);
+                    // Show error if any
+                    const pageData = result.earnings[0];
+                    if (pageData && pageData.error) {
+                        const errorEl = document.createElement('div');
+                        errorEl.style.cssText = 'color: #e74c3c; text-align: center; padding: 1rem;';
+                        errorEl.textContent = 'Error: ' + pageData.error;
+                        dataEl.appendChild(errorEl);
+                    }
                 } catch (err) {
                     console.error('Error loading earnings:', err);
                     loadingEl.textContent = 'Failed to load earnings data';
