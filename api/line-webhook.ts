@@ -116,8 +116,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[line-webhook] Event type:', event.type, event.message?.type);
     if (event.type !== 'message' || event.message.type !== 'text') continue;
 
-    const text = event.message.text.trim();
-    console.log('[line-webhook] Text:', text);
+    let text = event.message.text || '';
+
+    // Handle LINE emoji - replace $ placeholders with actual emoji if available
+    if (event.message.emojis && Array.isArray(event.message.emojis)) {
+      console.log('[line-webhook] LINE emojis found:', JSON.stringify(event.message.emojis));
+      // LINE emoji are shown as $ in text, we'll keep them as-is since they're proprietary
+      // Unicode emoji will pass through normally
+    }
+
+    text = text.trim();
+    console.log('[line-webhook] Text:', text, '| Length:', text.length);
     if (!text) continue;
 
     try {
