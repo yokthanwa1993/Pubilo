@@ -2000,7 +2000,7 @@
                 loadingEl.style.color = '';
                 dataEl.style.display = "none";
 
-                const pageId = getCurrentPageId();
+                const pageId = getCurrentPageId() || localStorage.getItem("fewfeed_selectedPageId");
                 if (!pageId) {
                     loadingEl.textContent = 'Please select a Page first';
                     loadingEl.style.color = '#e74c3c';
