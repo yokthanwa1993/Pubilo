@@ -91,15 +91,17 @@ async function sendLineEarningsSummary(results: any[], date: string) {
             ],
             paddingBottom: 'lg'
           },
-          // Daily - Large
+          // Daily - Large centered card
           {
             type: 'box',
             layout: 'vertical',
             contents: [
-              { type: 'text', text: 'TODAY', size: 'xxs', color: '#1DB954', weight: 'bold' },
-              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: '3xl', weight: 'bold', color: '#333333' }
+              { type: 'text', text: 'TODAY', size: 'xs', color: '#666666', align: 'center' },
+              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xxl', weight: 'bold', color: '#1DB954', align: 'center' }
             ],
-            paddingBottom: 'md'
+            backgroundColor: '#E8F5E9',
+            paddingAll: 'lg',
+            cornerRadius: 'lg'
           },
           // Weekly + Monthly row
           {
@@ -110,22 +112,30 @@ async function sendLineEarningsSummary(results: any[], date: string) {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                  { type: 'text', text: 'WEEKLY', size: 'xxs', color: '#2196F3', weight: 'bold' },
-                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#333333' }
+                  { type: 'text', text: 'WEEKLY', size: 'xxs', color: '#666666', align: 'center' },
+                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#2196F3', align: 'center' }
                 ],
-                flex: 1
+                flex: 1,
+                backgroundColor: '#E3F2FD',
+                paddingAll: 'md',
+                cornerRadius: 'md'
               },
+              { type: 'box', layout: 'vertical', contents: [], width: '8px' },
               {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                  { type: 'text', text: '28-DAY', size: 'xxs', color: '#FF5722', weight: 'bold' },
-                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#333333' }
+                  { type: 'text', text: '28-DAY', size: 'xxs', color: '#666666', align: 'center' },
+                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#FF5722', align: 'center' }
                 ],
-                flex: 1
+                flex: 1,
+                backgroundColor: '#FBE9E7',
+                paddingAll: 'md',
+                cornerRadius: 'md'
               }
             ],
-            paddingBottom: 'xl'
+            margin: 'md',
+            paddingBottom: 'lg'
           },
           // Separator
           { type: 'separator', color: '#EEEEEE' },
