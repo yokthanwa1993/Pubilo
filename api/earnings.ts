@@ -20,7 +20,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { pageId } = req.query;
+    const { pageId, listAutoSchedule } = req.query;
+
+    // If listAutoSchedule=true, return pages with auto_schedule enabled
+    if (listAutoSchedule === 'true') {
+      const { data: autoPages, error } = await supabase
+        .from('page_settings')
+        .select('page_id, page_name, auto_schedule')
+        .eq('auto_schedule', true);
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to fetch pages' });
+      }
+      return res.status(200).json({ success: true, pages: autoPages || [] });
+    }
 
     // Get all pages with tokens if no specific pageId
     const { data: pages, error: pagesError } = await supabase
