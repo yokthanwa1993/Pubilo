@@ -2000,7 +2000,7 @@
                 dataEl.style.display = "none";
 
                 try {
-                    const response = await fetch(`${API_BASE}/api/earnings`);
+                    const response = await fetch('/api/earnings');
                     const result = await response.json();
 
                     if (!result.success || !result.earnings || result.earnings.length === 0) {
