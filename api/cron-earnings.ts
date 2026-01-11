@@ -30,20 +30,50 @@ async function sendLineEarningsSummary(results: any[], date: string) {
     hour: '2-digit', minute: '2-digit'
   });
 
-  // Build page earnings rows
-  const pageContents = successResults.map(r => ({
+  // Page colors for visual distinction
+  const pageColors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
+
+  // Build page earnings rows with beautiful cards
+  const pageContents = successResults.map((r, idx) => ({
     type: 'box',
     layout: 'horizontal',
     contents: [
-      { type: 'text', text: r.pageName || r.pageId, size: 'sm', color: '#555555', flex: 3 },
-      { type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'sm', color: '#111111', align: 'end', flex: 2 }
+      {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: '●', size: 'xs', color: pageColors[idx % pageColors.length] }
+        ],
+        width: '20px',
+        alignItems: 'center',
+        justifyContent: 'center'
+      },
+      {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: r.pageName || r.pageId, size: 'sm', color: '#333333', weight: 'bold' }
+        ],
+        flex: 4
+      },
+      {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'md', color: pageColors[idx % pageColors.length], weight: 'bold', align: 'end' }
+        ],
+        flex: 3
+      }
     ],
-    margin: 'md'
+    backgroundColor: '#F8F9FA',
+    paddingAll: 'md',
+    cornerRadius: 'lg',
+    margin: 'sm'
   }));
 
   const flexMessage = {
     type: 'flex',
-    altText: `📊 รายได้วันนี้: $${totalDaily.toFixed(2)}`,
+    altText: `💰 รายได้วันนี้: $${totalDaily.toFixed(2)}`,
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -51,17 +81,18 @@ async function sendLineEarningsSummary(results: any[], date: string) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '💰 EARNINGS REPORT', weight: 'bold', size: 'lg', color: '#ffffff', align: 'center' },
-          { type: 'text', text: displayDate, size: 'xs', color: '#ffffff', align: 'center', margin: 'sm' }
+          { type: 'text', text: '💰', size: '3xl', align: 'center' },
+          { type: 'text', text: 'EARNINGS REPORT', weight: 'bold', size: 'xl', color: '#ffffff', align: 'center', margin: 'sm' },
+          { type: 'text', text: displayDate, size: 'sm', color: '#ffffffcc', align: 'center', margin: 'sm' }
         ],
-        backgroundColor: '#27AE60',
-        paddingAll: 'lg'
+        backgroundColor: '#1DB954',
+        paddingAll: 'xl'
       },
       body: {
         type: 'box',
         layout: 'vertical',
         contents: [
-          // Summary section
+          // Summary cards
           {
             type: 'box',
             layout: 'horizontal',
@@ -70,60 +101,77 @@ async function sendLineEarningsSummary(results: any[], date: string) {
                 type: 'box',
                 layout: 'vertical',
                 contents: [
-                  { type: 'text', text: 'Daily', size: 'xs', color: '#999999', align: 'center' },
-                  { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xl', weight: 'bold', color: '#27AE60', align: 'center' }
+                  { type: 'text', text: '📅 Today', size: 'xs', color: '#666666', align: 'center' },
+                  { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xxl', weight: 'bold', color: '#1DB954', align: 'center' }
                 ],
-                flex: 1
-              },
-              {
-                type: 'box',
-                layout: 'vertical',
-                contents: [
-                  { type: 'text', text: 'Weekly', size: 'xs', color: '#999999', align: 'center' },
-                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#3498DB', align: 'center' }
-                ],
-                flex: 1
-              },
-              {
-                type: 'box',
-                layout: 'vertical',
-                contents: [
-                  { type: 'text', text: '28-Day', size: 'xs', color: '#999999', align: 'center' },
-                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#E74C3C', align: 'center' }
-                ],
-                flex: 1
+                flex: 1,
+                backgroundColor: '#E8F5E9',
+                paddingAll: 'md',
+                cornerRadius: 'lg'
               }
             ],
             margin: 'md'
           },
-          // Separator
-          { type: 'separator', margin: 'xl' },
-          // Page header
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'เพจ', size: 'sm', color: '#999999', weight: 'bold', flex: 3 },
-              { type: 'text', text: 'รายได้วันนี้', size: 'sm', color: '#999999', weight: 'bold', align: 'end', flex: 2 }
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: '📆 Weekly', size: 'xxs', color: '#666666', align: 'center' },
+                  { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#2196F3', align: 'center' }
+                ],
+                flex: 1,
+                backgroundColor: '#E3F2FD',
+                paddingAll: 'sm',
+                cornerRadius: 'md'
+              },
+              { type: 'box', layout: 'vertical', contents: [], width: '8px' },
+              {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: '📊 28-Day', size: 'xxs', color: '#666666', align: 'center' },
+                  { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#FF5722', align: 'center' }
+                ],
+                flex: 1,
+                backgroundColor: '#FBE9E7',
+                paddingAll: 'sm',
+                cornerRadius: 'md'
+              }
             ],
-            margin: 'xl'
+            margin: 'md'
+          },
+          // Page list header
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: '📱 รายได้แยกตามเพจ', size: 'sm', color: '#666666', weight: 'bold' }
+            ],
+            margin: 'xl',
+            paddingBottom: 'sm'
           },
           // Page earnings list
           ...pageContents,
-          // Total separator
-          { type: 'separator', margin: 'xl' },
-          // Total row
+          // Total section
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '📊 รวมทั้งหมด', size: 'md', color: '#27AE60', weight: 'bold', flex: 3 },
-              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'md', color: '#27AE60', weight: 'bold', align: 'end', flex: 2 }
+              { type: 'text', text: '💵 รวมทั้งหมด', size: 'md', color: '#333333', weight: 'bold', flex: 3 },
+              { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'lg', color: '#1DB954', weight: 'bold', align: 'end', flex: 2 }
             ],
+            backgroundColor: '#E8F5E9',
+            paddingAll: 'md',
+            cornerRadius: 'lg',
             margin: 'lg'
           }
         ],
-        paddingAll: 'lg'
+        paddingAll: 'lg',
+        backgroundColor: '#ffffff'
       }
     }
   };
