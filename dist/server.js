@@ -181,7 +181,7 @@ class GeminiGenerator {
 }
 
 // src/server.ts
-var PORT = 3000;
+var PORT = parseInt(process.env.PORT || "3000");
 var config = {
   accessToken: Bun.env.ACCESS_TOKEN || "",
   accessToken2: Bun.env.ACCESS_TOKEN2 || "",

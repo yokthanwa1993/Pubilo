@@ -108,7 +108,7 @@ const POSTCRON_OAUTH_URL = "https://postcron.com/api/v2.0/social-accounts/url-re
 const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback";
 
 // App URLs - supports both local dev and production
-const APP_URLS = ["http://localhost:3000/*", "https://pubilo.vercel.app/*"];
+const APP_URLS = ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.vercel.app/*"];
 const PRODUCTION_URL = "https://pubilo.vercel.app/";
 
 // When extension icon is clicked

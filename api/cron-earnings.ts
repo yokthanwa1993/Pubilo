@@ -25,10 +25,9 @@ async function sendLineEarningsSummary(results: any[], earningsDate: string) {
   const totalWeekly = successResults.reduce((sum, r) => sum + (r.weekly || 0), 0);
   const totalMonthly = successResults.reduce((sum, r) => sum + (r.monthly || 0), 0);
 
-  // Format date from Facebook's end_time
-  const displayDate = new Date(earningsDate).toLocaleDateString('th-TH', {
-    day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'Asia/Bangkok'
-  });
+  // Format date as DD/MM/YYYY (CE)
+  const d = new Date(earningsDate);
+  const displayDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 
   // Build page earnings rows with beautiful cards (using page_color from database)
   const pageContents = successResults.map((r) => ({
@@ -284,13 +283,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const weeklyEarnings = latestWeekly?.value || 0;
           const monthlyEarnings = latestMonthly?.value || 0;
 
+          // Use Facebook's date (dailyDate) instead of today
+          const fbDate = dailyDate ? dailyDate.split('T')[0] : today;
+
           // Upsert to earnings_history
           const { error: upsertError } = await supabase
             .from('earnings_history')
             .upsert({
               page_id: page.page_id,
               page_name: page.page_name || page.page_id,
-              date: today,
+              date: fbDate,
               daily_earnings: dailyEarnings,
               weekly_earnings: weeklyEarnings,
               monthly_earnings: monthlyEarnings

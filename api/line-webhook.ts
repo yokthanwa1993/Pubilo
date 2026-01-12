@@ -181,6 +181,115 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       continue;
     }
 
+    // Special command: earnings summary
+    if (text.toLowerCase() === 'earnings' || text.toLowerCase() === '/earnings') {
+      console.log('[line-webhook] Earnings request');
+      try {
+        // Get pages with tokens and colors
+        const { data: pages } = await supabase
+          .from('page_settings')
+          .select('page_id, page_name, page_color, post_token')
+          .eq('auto_schedule', true)
+          .not('post_token', 'is', null);
+
+        if (!pages || pages.length === 0) {
+          await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}` },
+            body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: '❌ ไม่มีเพจที่เปิด auto_schedule' }] }),
+          });
+          continue;
+        }
+
+        // Fetch from Facebook directly
+        const results: any[] = [];
+        let earningsDate = '';
+        
+        for (const page of pages) {
+          try {
+            const fbUrl = `https://graph.facebook.com/v21.0/${page.page_id}/insights?metric=monetization_approximate_earnings&access_token=${page.post_token}`;
+            const fbResponse = await fetch(fbUrl);
+            const fbData = await fbResponse.json();
+            
+            if (fbData.error) continue;
+            
+            const dailyData = fbData.data?.find((d: any) => d.period === 'day');
+            const weeklyData = fbData.data?.find((d: any) => d.period === 'week');
+            const monthlyData = fbData.data?.find((d: any) => d.period === 'days_28');
+            
+            const latestDaily = dailyData?.values?.[dailyData.values.length - 1];
+            if (latestDaily?.end_time && !earningsDate) earningsDate = latestDaily.end_time;
+            
+            results.push({
+              pageName: page.page_name,
+              pageColor: page.page_color || '#666666',
+              daily: latestDaily?.value || 0,
+              weekly: weeklyData?.values?.[weeklyData.values.length - 1]?.value || 0,
+              monthly: monthlyData?.values?.[monthlyData.values.length - 1]?.value || 0
+            });
+          } catch (e) { continue; }
+        }
+
+        if (results.length === 0) {
+          await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}` },
+            body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลรายได้ได้' }] }),
+          });
+          continue;
+        }
+
+        results.sort((a, b) => b.daily - a.daily);
+        const totalDaily = results.reduce((sum, r) => sum + r.daily, 0);
+        const totalWeekly = results.reduce((sum, r) => sum + r.weekly, 0);
+        const totalMonthly = results.reduce((sum, r) => sum + r.monthly, 0);
+        const d = new Date(earningsDate);
+        const displayDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+
+        const pageContents = results.map(r => ({
+          type: 'box', layout: 'horizontal',
+          contents: [
+            { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: '●', size: 'xs', color: r.pageColor }], width: '20px', alignItems: 'center', justifyContent: 'center' },
+            { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: r.pageName, size: 'sm', color: '#333333', weight: 'bold' }], flex: 4 },
+            { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: `$${r.daily.toFixed(2)}`, size: 'md', color: r.pageColor, weight: 'bold', align: 'end' }], flex: 3 }
+          ],
+          backgroundColor: '#F8F9FA', paddingAll: 'md', cornerRadius: 'lg', margin: 'sm'
+        }));
+
+        const flexMessage = {
+          type: 'flex', altText: `💰 รายได้วันนี้: $${totalDaily.toFixed(2)}`,
+          contents: {
+            type: 'bubble', size: 'mega',
+            body: {
+              type: 'box', layout: 'vertical', paddingAll: 'lg', backgroundColor: '#ffffff',
+              contents: [
+                { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '💰 Earnings', size: 'md', color: '#333333', weight: 'bold', flex: 1 }, { type: 'text', text: displayDate, size: 'xs', color: '#999999', align: 'end', gravity: 'center' }], paddingBottom: 'lg' },
+                { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'TODAY', size: 'xs', color: '#666666', align: 'center' }, { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: 'xxl', weight: 'bold', color: '#1DB954', align: 'center' }], backgroundColor: '#E8F5E9', paddingAll: 'lg', cornerRadius: 'lg' },
+                { type: 'box', layout: 'horizontal', contents: [{ type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'WEEKLY', size: 'xxs', color: '#666666', align: 'center' }, { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#2196F3', align: 'center' }], flex: 1, backgroundColor: '#E3F2FD', paddingAll: 'md', cornerRadius: 'md' }, { type: 'box', layout: 'vertical', contents: [], width: '8px' }, { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: '28-DAY', size: 'xxs', color: '#666666', align: 'center' }, { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#FF5722', align: 'center' }], flex: 1, backgroundColor: '#FBE9E7', paddingAll: 'md', cornerRadius: 'md' }], margin: 'md', paddingBottom: 'lg' },
+                { type: 'separator', color: '#EEEEEE' },
+                { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'PAGE', size: 'xs', color: '#999999' }], paddingTop: 'lg', paddingBottom: 'md' },
+                ...pageContents
+              ]
+            }
+          }
+        };
+
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}` },
+          body: JSON.stringify({ replyToken: event.replyToken, messages: [flexMessage] }),
+        });
+      } catch (err) {
+        console.error('[line-webhook] Earnings error:', err);
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}` },
+          body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาด' }] }),
+        });
+      }
+      continue;
+    }
+
     // Special command: get LINE user ID
     if (text.toLowerCase() === 'id' || text.toLowerCase() === '/id') {
       const userId = event.source?.userId || 'Unknown';

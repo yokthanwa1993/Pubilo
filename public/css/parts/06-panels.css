@@ -1,0 +1,318 @@
+            /* Pending list */
+            .pending-item {
+                display: flex;
+                gap: 0.75rem;
+                padding: 0.75rem;
+                background: #f9fafb;
+                border-radius: 8px;
+                margin-bottom: 0.5rem;
+            }
+
+            .pending-item-thumb {
+                width: 48px;
+                height: 48px;
+                border-radius: 6px;
+                object-fit: cover;
+                background: #e5e5e5;
+            }
+
+            .pending-item-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .pending-item-title {
+                font-weight: 500;
+                font-size: 0.875rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .pending-item-time {
+                font-size: 0.75rem;
+                color: #6b7280;
+            }
+
+            .pending-item-delete {
+                background: none;
+                border: none;
+                color: #ef4444;
+                cursor: pointer;
+                padding: 0.25rem;
+            }
+
+            .pending-empty {
+                text-align: center;
+                color: #6b7280;
+                padding: 2rem;
+            }
+
+            /* Pending Panel (replaces preview + form) */
+            .pending-panel {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                padding: 1.5rem;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .pending-panel-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .pending-panel-header h2 {
+                font-size: 1.25rem;
+                font-weight: 600;
+            }
+
+            .sort-toggle-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.4rem 0.75rem;
+                background: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                color: #666;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-left: auto;
+            }
+            .sort-toggle-btn:hover {
+                background: #eee;
+                border-color: #ccc;
+            }
+            .sort-toggle-btn .sort-icon {
+                font-size: 1rem;
+            }
+
+            .pending-table-container {
+                overflow-y: auto;
+                flex: 1;
+                width: 100%;
+            }
+
+            #pendingPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #pendingPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #publishedPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #publishedPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #publishedPanel .pending-table-container {
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .pending-table-container .pending-table th {
+                position: sticky;
+                top: 0;
+                background: #fff;
+                z-index: 1;
+            }
+
+            .quotes-table-container {
+                overflow-y: auto;
+                flex: 1;
+                width: 100%;
+            }
+
+            #quotesPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #quotesPanel .pending-panel-header,
+            #quotesPanel .quotes-form {
+                flex-shrink: 0;
+            }
+
+            #settingsPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+                flex: 1;
+            }
+
+            #settingsPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #textPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #textPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #earningsPanel {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px - 1rem);
+                overflow: hidden;
+            }
+
+            #earningsPanel .pending-panel-header {
+                flex-shrink: 0;
+            }
+
+            #earningsContent {
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .text-post-form {
+                padding: 1rem 0;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .settings-content {
+                overflow-y: auto;
+                flex: 1;
+                padding-top: 0.5rem;
+            }
+
+            .settings-section {
+                background: #f9fafb;
+                border-radius: 8px;
+                padding: 0;
+                margin-bottom: 0.5rem;
+                overflow: hidden;
+            }
+
+            .settings-section.collapsible .settings-section-title {
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.25rem;
+                margin: 0;
+                border-bottom: none;
+                user-select: none;
+            }
+
+            .settings-section.collapsible .settings-section-title:hover {
+                background: #f3f4f6;
+            }
+
+            .settings-section.collapsible .collapse-icon {
+                font-size: 1.2rem;
+                color: #9ca3af;
+                transition: transform 0.2s;
+            }
+
+            .settings-section.collapsible.open .collapse-icon {
+                transform: rotate(90deg);
+            }
+
+            .settings-section.collapsible .settings-section-content {
+                display: none;
+                padding: 0 1.25rem 1.25rem;
+            }
+
+            .settings-section.collapsible.open .settings-section-content {
+                display: block;
+            }
+
+            .settings-section-title {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .pending-table {
+                width: 100%;
+                border-collapse: collapse;
+                overflow: visible;
+            }
+
+            .pending-table th,
+            .pending-table td {
+                padding: 0.75rem 1rem;
+                text-align: left;
+                border-bottom: 1px solid #e5e5e5;
+                overflow: visible;
+            }
+
+            .pending-table td:first-child {
+                overflow: visible;
+                position: relative;
+            }
+
+            .pending-table th {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #6b7280;
+                text-transform: uppercase;
+                background: #f9fafb;
+            }
+
+            .quotes-table-container .pending-table th {
+                position: sticky;
+                top: 0;
+                z-index: 1;
+            }
+
+            .quote-text-cell {
+                cursor: default;
+            }
+
+            /* Used quote styling */
+            .quote-row-used {
+                background: rgba(16, 185, 129, 0.15) !important;
+            }
+            .quote-row-used td {
+                border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+            }
+            .quote-used-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                background: #10b981;
+                color: white;
+                border-radius: 4px;
+                font-size: 0.7rem;
+                margin-left: 0.5rem;
+                vertical-align: middle;
+            }
+            .pending-table-thumb {
+                width: 56px;
+                height: 56px;
+                border-radius: 8px;
+                object-fit: cover;
+                background: #e5e5e5;
+                cursor: pointer;
+            }
+

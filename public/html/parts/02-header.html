@@ -1,0 +1,106 @@
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                    />
+                </svg>
+                Pubilo<span>v3</span>
+            </div>
+            <div class="header-right">
+                <div class="status-indicators" id="statusIndicators">
+                    <div
+                        class="status-indicator invalid"
+                        id="tokenIndicator"
+                        title="Token"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+                            />
+                        </svg>
+                        <span>Token</span>
+                    </div>
+                    <div
+                        class="status-indicator invalid"
+                        id="cookieIndicator"
+                        title="Cookie"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <circle cx="12" cy="12" r="10" />
+                            <circle cx="8" cy="9" r="1.5" fill="currentColor" />
+                            <circle cx="15" cy="8" r="1" fill="currentColor" />
+                            <circle cx="10" cy="14" r="1" fill="currentColor" />
+                            <circle
+                                cx="16"
+                                cy="13"
+                                r="1.5"
+                                fill="currentColor"
+                            />
+                            <circle cx="13" cy="17" r="1" fill="currentColor" />
+                        </svg>
+                        <span>Cookie</span>
+                    </div>
+                    <div
+                        class="status-indicator invalid"
+                        id="postTokenIndicator"
+                        title="Post Token"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M12 20h9" />
+                            <path
+                                d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                            />
+                        </svg>
+                        <span>Post</span>
+                    </div>
+                    <div
+                        class="status-indicator"
+                        id="apiKeyIndicator"
+                        title="AI API Key"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                            <path d="M2 17l10 5 10-5" />
+                            <path d="M2 12l10 5 10-5" />
+                        </svg>
+                        <span>AI</span>
+                    </div>
+                </div>
+                <div class="user-avatar" id="headerUserAvatar">
+                    <img
+                        id="headerAvatarImg"
+                        src=""
+                        alt=""
+                        style="
+                            width: 100%;
+                            height: 100%;
+                            border-radius: 50%;
+                            object-fit: cover;
+                            display: none;
+                        "
+                    />
+                    <span id="headerAvatarInitial">U</span>
+                </div>
+            </div>
+        </header>
+        <!-- Token Info Modal -->

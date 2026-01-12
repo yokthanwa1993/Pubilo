@@ -1,0 +1,136 @@
+                    class="pending-panel"
+                    id="textPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>เพิ่มข้อความ</h2>
+                    </div>
+                    <div class="text-form-container" style="padding: 1rem;">
+                        <textarea
+                            id="textQuoteInput"
+                            placeholder="พิมพ์ข้อความหรือคำคมที่ต้องการเพิ่ม..."
+                            style="width: 100%; min-height: 150px; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"
+                        ></textarea>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                            <button
+                                id="textQuoteClearBtn"
+                                type="button"
+                                style="padding: 0.75rem 1.5rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                            >
+                                ล้าง
+                            </button>
+                            <button
+                                id="textQuoteSubmitBtn"
+                                type="button"
+                                style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                            >
+                                บันทึกไป Quotes
+                            </button>
+                        </div>
+                        <div id="textQuoteStatus" style="margin-top: 1rem; text-align: center; color: #666;"></div>
+                    </div>
+                </div>
+
+                <!-- Pending Panel (replaces preview + form) -->
+                <div
+                    class="pending-panel"
+                    id="pendingPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Pending Posts</h2>
+                        <button class="sort-toggle-btn" id="sortToggleBtn">
+                            <span class="sort-icon">↓</span>
+                            <span class="sort-label">ล่าสุดก่อน</span>
+                        </button>
+                    </div>
+                    <div
+                        class="pending-table-container"
+                        id="pendingTableContainer"
+                    >
+                        <div class="pending-empty">No pending posts</div>
+                    </div>
+                </div>
+
+                <!-- Published Panel -->
+                <div class="pending-panel" id="publishedPanel" style="display: none">
+                    <div class="pending-panel-header">
+                        <h2>Published</h2>
+                    </div>
+                    <div class="pending-table-container" id="publishedTableContainer">
+                        <div class="pending-empty">No published posts</div>
+                    </div>
+                </div>
+
+                <!-- Earnings Panel -->
+                <div
+                    class="pending-panel"
+                    id="earningsPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Earnings</h2>
+                        <button id="refreshEarningsBtn" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="earningsContent" style="padding: 1rem;">
+                        <div id="earningsLoading" style="text-align: center; padding: 2rem; color: #666;">
+                            Loading earnings data...
+                        </div>
+                        <div id="earningsData" style="display: none;">
+                            <!-- Earnings cards will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quotes Panel - List only (add via #text) -->
+                <div
+                    class="pending-panel"
+                    id="quotesPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Quotes</h2>
+                        <button id="addQuoteBtn" style="padding: 0.5rem 1rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                            + เพิ่มคำคม
+                        </button>
+                    </div>
+                    <!-- Add Quote Modal -->
+                    <div id="addQuoteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+                        <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 500px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0;">เพิ่มคำคม</h3>
+                                <button id="closeQuoteModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                            </div>
+                            <textarea id="newQuoteText" placeholder="พิมพ์คำคมที่ต้องการเพิ่ม..." style="width: 100%; min-height: 120px; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit; box-sizing: border-box;"></textarea>
+                            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                                <button id="cancelQuoteBtn" style="padding: 0.75rem 1.5rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer;">ยกเลิก</button>
+                                <button id="saveQuoteBtn" style="padding: 0.75rem 1.5rem; background: #1877f2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">บันทึก</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="quotes-tabs" style="display: flex; gap: 0; border-bottom: 1px solid #ddd; margin-bottom: 1rem;">
+                        <button id="quotesTabUnused" class="quotes-tab active" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; color: #1877f2; border-bottom: 2px solid #1877f2;">ยังไม่ใช้ <span id="quotesCountUnused" style="background: #e3f2fd; color: #1877f2; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.8rem; margin-left: 0.3rem;">0</span></button>
+                        <button id="quotesTabUsed" class="quotes-tab" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; color: #666; border-bottom: 2px solid transparent;">ใช้แล้ว <span id="quotesCountUsed" style="background: #f5f5f5; color: #666; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.8rem; margin-left: 0.3rem;">0</span></button>
+                    </div>
+                    <div
+                        class="quotes-table-container"
+                        id="quotesTableContainer"
+                    >
+                        <div class="pending-empty">ยังไม่มีคำคม</div>
+                    </div>
+                </div>
+
+                <!-- Settings Panel -->
+                <div
+                    class="pending-panel"
+                    id="settingsPanel"
+                    style="display: none"
+                >
+                    <div class="pending-panel-header">
+                        <h2>Settings</h2>
+                    </div>
+                    <div class="settings-content">
+                        <!-- Schedule Settings -->
+                        <div class="settings-section collapsible">

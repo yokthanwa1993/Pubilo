@@ -1,0 +1,60 @@
+                <!-- ========== NEWS MODE ========== -->
+                <div class="mode-container" id="newsModeContainer">
+                    <div class="preview-panel">
+                        <div class="card-preview">
+                            <div class="card-image-area" id="newsCardImageArea">
+                                <div class="upload-prompt" id="newsUploadPrompt">
+                                    <div class="upload-buttons">
+                                        <button class="upload-btn upload-from-device" id="newsUploadFromDevice">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="17 8 12 3 7 8"/>
+                                                <line x1="12" y1="3" x2="12" y2="15"/>
+                                            </svg>
+                                            <span>อัพโหลดจากเครื่อง</span>
+                                        </button>
+                                        <button class="upload-btn upload-from-gemini" id="newsUploadFromGemini">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                            </svg>
+                                            <span>เจนจาก Gemini</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="full-image-view" id="newsFullImageView" style="display: none"></div>
+                            </div>
+                            <div class="card-link-info" id="newsCardLinkInfo">
+                                <div class="card-link-details">
+                                    <div class="card-link-caption editable-text" id="newsPreviewCaption">S.LAZADA.CO.TH</div>
+                                    <div class="card-link-title">
+                                        <span class="description-prefix">พิกัด :&nbsp;</span>
+                                        <span class="description-input" id="newsPreviewDescription"></span>
+                                    </div>
+                                </div>
+                                <div class="card-button-wrapper">
+                                    <button class="btn-learn-more" id="newsPreviewCardButton">Shop Now</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-panel">
+                        <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+                            <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 1rem;">
+                                <button class="btn-publish disabled" id="newsPublishBtn" disabled>SCHEDULE</button>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Link URL</label>
+                                <input type="text" class="form-input" id="newsUrlInput" placeholder="">
+                                <small id="newsLazadaStatus" style="color: #888; margin-top: 4px; display: block;"></small>
+                            </div>
+                            <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+                                <label class="form-label">Primary Text</label>
+                                <textarea class="form-textarea" id="newsPrimaryText" placeholder="Write something about your post..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End newsModeContainer -->
+
+                <!-- ========== LINK MODE ========== -->
+                <div class="mode-container active" id="linkModeContainer">

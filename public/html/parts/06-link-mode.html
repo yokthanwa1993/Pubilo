@@ -1,0 +1,213 @@
+                    <!-- Preview Panel - Center -->
+                    <div class="preview-panel">
+                        <!-- Card Preview -->
+                        <div class="card-preview">
+                            <div class="card-image-area" id="cardImageArea">
+                                <div class="upload-prompt" id="uploadPrompt">
+                                    <div class="upload-buttons">
+                                        <button
+                                            class="upload-btn upload-from-device"
+                                            id="uploadFromDevice"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                                />
+                                                <polyline
+                                                    points="17 8 12 3 7 8"
+                                                />
+                                                <line
+                                                    x1="12"
+                                                    y1="3"
+                                                    x2="12"
+                                                    y2="15"
+                                                />
+                                            </svg>
+                                            <span>อัพโหลดจากเครื่อง</span>
+                                        </button>
+                                        <button
+                                            class="upload-btn upload-from-gemini"
+                                            id="uploadFromGemini"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <polygon
+                                                    points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                                                />
+                                            </svg>
+                                            <span>เจนจาก Gemini</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    class="generate-overlay"
+                                    id="generateOverlay"
+                                    style="display: none"
+                                >
+                                    <button
+                                        class="btn-generate"
+                                        id="generateBtn"
+                                    >
+                                        <svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <polygon
+                                                points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                                            />
+                                        </svg>
+                                        Generate
+                                    </button>
+                                </div>
+                                <div
+                                    class="ref-thumbs-row"
+                                    id="refThumbsRow"
+                                    style="display: none"
+                                ></div>
+                                <div
+                                    class="generated-grid"
+                                    id="generatedGrid"
+                                    style="display: none"
+                                ></div>
+                                <div
+                                    class="skeleton-grid"
+                                    id="skeletonGrid"
+                                    style="display: none"
+                                >
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                </div>
+                                <div
+                                    class="full-image-view"
+                                    id="fullImageView"
+                                    style="display: none"
+                                ></div>
+                            </div>
+                            <div class="card-link-info" id="cardLinkInfo">
+                                <div class="card-link-details">
+                                    <div
+                                        class="card-link-caption editable-text"
+                                        id="previewCaption"
+                                    >
+                                        S.LAZADA.CO.TH
+                                    </div>
+                                    <div class="card-link-title">
+                                        <span class="description-prefix">พิกัด :&nbsp;</span>
+                                        <span
+                                            class="description-input"
+                                            id="previewDescription"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <div class="card-button-wrapper">
+                                    <button
+                                        class="btn-learn-more"
+                                        id="previewCardButton"
+                                    >
+                                        Shop Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel - Form -->
+                    <div class="form-panel">
+                        <!-- Hidden values from server config -->
+                        <input type="hidden" id="pageSelect" value="" />
+                        <input type="hidden" id="adAccountSelect" value="" />
+
+                        <div class="card">
+                            <div
+                                style="
+                                    display: flex;
+                                    justify-content: flex-start;
+                                    align-items: center;
+                                    margin-bottom: 1rem;
+                                "
+                            >
+                                <button class="btn-publish" id="publishBtn">
+                                    PUBLISH
+                                </button>
+                            </div>
+                            <!-- Link-only fields (hidden in Image mode) -->
+                            <div id="linkOnlyFields">
+                                <div class="form-group">
+                                    <label class="form-label">Link URL</label>
+                                    <input
+                                        type="text"
+                                        class="form-input"
+                                        id="linkUrl"
+                                        placeholder=""
+                                    />
+                                    <small
+                                        id="lazadaStatus"
+                                        style="
+                                            color: #888;
+                                            margin-top: 4px;
+                                            display: block;
+                                        "
+                                    ></small>
+                                </div>
+                                <!-- Hidden inputs for Link Name, Caption, Description (editable via double-click in preview) -->
+                                <input
+                                    type="hidden"
+                                    id="linkName"
+                                    value="S.LAZADA.CO.TH"
+                                />
+                                <input
+                                    type="hidden"
+                                    id="caption"
+                                    value="S.LAZADA.CO.TH"
+                                />
+                                <input
+                                    type="hidden"
+                                    id="description"
+                                    value=""
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Primary Text</label>
+                                <textarea
+                                    class="form-textarea"
+                                    id="primaryText"
+                                    placeholder="Write something about your post..."
+                                ></textarea>
+                            </div>
+                            <!-- Card Button - now controlled from preview -->
+                            <div
+                                id="cardButtonGroup"
+                                class="form-group"
+                                style="display: none"
+                            >
+                                <select class="form-select" id="cardButton">
+                                    <option value="LEARN_MORE">
+                                        Learn More
+                                    </option>
+                                    <option value="SHOP_NOW" selected>Shop Now</option>
+                                    <option value="SIGN_UP">Sign Up</option>
+                                    <option value="BOOK_NOW">Book Now</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End linkModeContainer -->
+
+                <!-- ========== TEXT MODE ========== -->
+                <div class="pending-panel" id="textModePanel" style="display: none;">

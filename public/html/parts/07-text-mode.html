@@ -1,0 +1,43 @@
+                    <div class="pending-panel-header">
+                        <h2>Text Post</h2>
+                    </div>
+                    <div style="padding: 1.5rem; max-width: 800px; margin: 0 auto;">
+                        <!-- Input -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">ข้อความ</label>
+                            <textarea
+                                id="textMessageTextarea"
+                                placeholder="พิมพ์ข้อความที่ต้องการโพสต์..."
+                                style="width: 100%; min-height: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; box-sizing: border-box;"
+                            ></textarea>
+                        </div>
+
+                        <!-- Share to Pages -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">แชร์ไปเพจอื่น (เลือกได้หลายเพจ)</label>
+                            <div id="sharePagesList" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fafafa;"></div>
+                        </div>
+
+                        <!-- i_user for GraphQL Edit -->
+                        <div style="background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">i_user (Profile Plus ID)</label>
+                            <input type="text" id="iUserInput" placeholder="เช่น 61554708539220" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                            <small style="color: #666; margin-top: 4px; display: block;">ดูจาก URL เมื่อสลับเป็นเพจ หรือเปิด Extension เพื่อ sync ข้อมูลใหม่</small>
+                        </div>
+
+                        <!-- Publish Button -->
+                        <button class="publish-btn" id="textPublishBtn" style="width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)';" onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                            <span>📝</span> Publish Text Post
+                        </button>
+                        
+                        <!-- Status -->
+                        <div id="textPublishStatus" style="margin-top: 12px; padding: 12px; border-radius: 8px; display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- Old text mode container - hidden -->
+                <div class="mode-container" id="textModeContainer" style="display: none !important;"></div>
+                <!-- End textModeContainer -->
+
+                <!-- ========== IMAGE MODE ========== -->
+                <div class="mode-container" id="imageModeContainer">

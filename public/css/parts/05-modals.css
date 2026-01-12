@@ -1,0 +1,192 @@
+            /* Settings Modal */
+            .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+
+            .modal {
+                background: #fff;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 400px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+
+            .modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 1rem 1.25rem;
+                border-bottom: 1px solid #e5e5e5;
+            }
+
+            .modal-header h3 {
+                font-size: 1.125rem;
+                font-weight: 600;
+            }
+
+            .modal-close {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: #6b7280;
+                line-height: 1;
+            }
+
+            .modal-body {
+                padding: 1.25rem;
+            }
+
+            .modal-footer {
+                padding: 1rem 1.25rem;
+                border-top: 1px solid #e5e5e5;
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .setting-group {
+                margin-bottom: 1rem;
+            }
+
+            .setting-label {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-weight: 500;
+                cursor: pointer;
+            }
+
+            .setting-label input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                accent-color: #1a1a1a;
+            }
+
+            .setting-desc {
+                font-size: 0.75rem;
+                color: #6b7280;
+                margin-top: 0.25rem;
+            }
+
+            .minute-grid {
+                display: grid;
+                grid-template-columns: repeat(10, 1fr);
+                gap: 0.25rem;
+                margin-top: 0.5rem;
+            }
+
+            .minute-checkbox {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.25rem 0.35rem;
+                border: 1px solid #e5e7eb;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: white;
+            }
+
+            .minute-checkbox:hover {
+                border-color: #666666;
+                background: #f5f5f5;
+            }
+
+            .minute-checkbox input {
+                display: none;
+            }
+
+            .minute-checkbox input:checked + span {
+                color: white;
+            }
+
+            .minute-checkbox:has(input:checked) {
+                background: var(--page-color, #1a1a1a);
+                border-color: var(--page-color, #1a1a1a);
+                color: white;
+            }
+
+            .minute-checkbox.used-by-others {
+                background: var(--other-color, #f59e0b);
+                border-color: var(--other-color, #f59e0b);
+                color: white;
+                cursor: not-allowed;
+                opacity: 0.8;
+            }
+
+            .minute-checkbox.used-by-others span {
+                color: white;
+            }
+
+            .minute-checkbox.used-by-others:has(input:checked) {
+                background: var(--other-color, #f59e0b);
+                border-color: var(--other-color, #f59e0b);
+            }
+
+            .minute-checkbox span {
+                font-weight: 500;
+                font-size: 0.7rem;
+            }
+
+            .radio-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .radio-option {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.4rem 0.75rem;
+                background: #f3f4f6;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.875rem;
+                transition: all 0.15s;
+            }
+
+            .radio-option:hover {
+                background: #e5e7eb;
+            }
+
+            .radio-option:has(input:checked) {
+                background: #1a1a1a;
+                color: #fff;
+            }
+
+            .radio-option input[type="radio"] {
+                display: none;
+            }
+
+            .next-schedule-display {
+                background: #e5e5e5;
+                color: #1a1a1a;
+                padding: 0.5rem 0.75rem;
+                border-radius: 6px;
+                font-weight: 500;
+            }
+
+            .btn-save {
+                background: #1a1a1a;
+                color: #fff;
+                border: none;
+                padding: 0.625rem 1.25rem;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+            }
+
+            .btn-save:hover {
+                background: #000000;
+            }
+

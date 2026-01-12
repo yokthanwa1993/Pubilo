@@ -1,23 +1,4 @@
 // ============================================
-// PUBILO - Facebook Page Management App
-// ============================================
-//
-// Table of Contents:
-// 1. THUMB PREVIEW - Hover preview for thumbnails
-// 2. DOM ELEMENTS - All element references
-// 3. VALIDATION - Form validation functions
-// 4. SETTINGS - Settings modal & panel
-// 5. SCHEDULE - Schedule calculation & caching
-// 6. AUTO-POST - Auto post configuration
-// 7. QUOTES - Quotes management
-// 8. EARNINGS - Earnings display
-// 9. PENDING - Scheduled posts management
-// 10. PUBLISH - Publishing functionality
-// 11. IMAGE GENERATION - AI image generation
-// 12. NAVIGATION - Panel navigation
-// ============================================
-
-// ============================================
 // 1. THUMB PREVIEW
 // ============================================
 const thumbPreviewPopup = document.getElementById("thumbPreviewPopup");

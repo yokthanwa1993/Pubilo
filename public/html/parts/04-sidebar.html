@@ -1,0 +1,210 @@
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Page Selector at top of sidebar -->
+                <div class="sidebar-page-selector">
+                    <div
+                        class="page-selector-skeleton"
+                        id="pageSelectorSkeleton"
+                    >
+                        <div class="sk-avatar"></div>
+                        <div class="sk-lines">
+                            <div class="sk-line"></div>
+                            <div class="sk-line"></div>
+                        </div>
+                    </div>
+                    <div
+                        class="page-selector"
+                        id="pageSelector"
+                        style="display: none"
+                    >
+                        <img
+                            class="preview-avatar-img"
+                            id="previewAvatarImg"
+                            src=""
+                            alt=""
+                        />
+                        <div class="preview-page-info">
+                            <h3 id="previewPageName">Select Page</h3>
+                            <p id="previewPageId">-</p>
+                        </div>
+                        <svg
+                            class="page-dropdown-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </div>
+                    <div class="page-dropdown" id="pageDropdown"></div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">Post</div>
+                        <a href="#" class="nav-item" id="newsNavItem">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 12h10"/>
+                            </svg>
+                            โพสต์ข่าว
+                        </a>
+                        <a
+                            href="#"
+                            class="nav-item active"
+                            id="dashboardNavItem"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                                />
+                                <path
+                                    d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                                />
+                            </svg>
+                            Link
+                        </a>
+                        <a href="#" class="nav-item" id="imageNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect
+                                    x="3"
+                                    y="3"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                    ry="2"
+                                />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            Image
+                        </a>
+                        <a href="#" class="nav-item" id="textNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <polyline points="4 7 4 4 20 4 20 7" />
+                                <line x1="9" y1="20" x2="15" y2="20" />
+                                <line x1="12" y1="4" x2="12" y2="20" />
+                            </svg>
+                            Text
+                        </a>
+                        <a href="#" class="nav-item" id="reelsNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect
+                                    x="2"
+                                    y="2"
+                                    width="20"
+                                    height="20"
+                                    rx="2.18"
+                                    ry="2.18"
+                                />
+                                <line x1="7" y1="2" x2="7" y2="22" />
+                                <line x1="17" y1="2" x2="17" y2="22" />
+                                <line x1="2" y1="12" x2="22" y2="12" />
+                                <line x1="2" y1="7" x2="7" y2="7" />
+                                <line x1="2" y1="17" x2="7" y2="17" />
+                                <line x1="17" y1="7" x2="22" y2="7" />
+                                <line x1="17" y1="17" x2="22" y2="17" />
+                            </svg>
+                            Reels
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Queue</div>
+                        <a href="#" class="nav-item" id="pendingNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            Pending
+                            <span
+                                class="badge"
+                                id="pendingBadge"
+                                style="display: none"
+                                >0</span
+                            >
+                        </a>
+                        <a href="#published" class="nav-item" id="publishedNavItem">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            Published
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Tools</div>
+                        <a href="#earnings" class="nav-item" id="earningsNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Earnings
+                        </a>
+                        <a href="#quotes" class="nav-item" id="quotesNavItem">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
+                                <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" />
+                            </svg>
+                            Quotes
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">SETTINGS</div>
+                        <a href="#settings" class="nav-item" id="settingsNavBtn">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                                />
+                            </svg>
+                            Settings
+                        </a>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">

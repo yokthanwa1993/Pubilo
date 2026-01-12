@@ -16,6 +16,7 @@
     "https://adsmanager.facebook.com/*",
     "https://business.facebook.com/*",
     "http://localhost:3000/*",
+    "http://localhost:3005/*",
     "https://pubilo.vercel.app/*",
     "https://*.lazada.co.th/*",
     "https://api.lazada.co.th/*",
@@ -27,7 +28,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost:3000/*", "https://pubilo.vercel.app/*"],
+      "matches": ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.vercel.app/*"],
       "js": ["content.js"],
       "run_at": "document_end"
     },
