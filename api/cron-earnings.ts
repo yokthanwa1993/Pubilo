@@ -10,7 +10,7 @@ const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 // Support multiple LINE user IDs (comma-separated)
 const LINE_USER_IDS = (process.env.LINE_USER_IDS || process.env.LINE_USER_ID || '').split(',').map(id => id.trim()).filter(Boolean);
 
-async function sendLineEarningsSummary(results: any[], date: string) {
+async function sendLineEarningsSummary(results: any[], earningsDate: string) {
   if (!LINE_CHANNEL_ACCESS_TOKEN || LINE_USER_IDS.length === 0) {
     console.log('[cron-earnings] LINE credentials not configured, skipping notification');
     return;
@@ -25,9 +25,9 @@ async function sendLineEarningsSummary(results: any[], date: string) {
   const totalWeekly = successResults.reduce((sum, r) => sum + (r.weekly || 0), 0);
   const totalMonthly = successResults.reduce((sum, r) => sum + (r.monthly || 0), 0);
 
-  // Format date for display (date only, no time)
-  const displayDate = new Date().toLocaleDateString('th-TH', {
-    day: '2-digit', month: '2-digit', year: '2-digit'
+  // Format date from Facebook's end_time
+  const displayDate = new Date(earningsDate).toLocaleDateString('th-TH', {
+    day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'Asia/Bangkok'
   });
 
   // Build page earnings rows with beautiful cards (using page_color from database)
@@ -280,6 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const latestMonthly = monthlyData?.values?.[monthlyData.values.length - 1];
 
           const dailyEarnings = latestDaily?.value || 0;
+          const dailyDate = latestDaily?.end_time || '';
           const weeklyEarnings = latestWeekly?.value || 0;
           const monthlyEarnings = latestMonthly?.value || 0;
 
@@ -308,6 +309,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log(`[cron-earnings] Saved earnings for ${page.page_name}: daily=$${dailyEarnings.toFixed(2)}`);
             results.push({
               pageId: page.page_id,
+              dailyDate,
               pageName: page.page_name,
               pageColor: page.page_color || '#666666',
               daily: dailyEarnings,
@@ -334,7 +336,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (shouldNotify) {
       // Sort by daily earnings (highest first)
       const sortedResults = [...results].sort((a, b) => (b.daily || 0) - (a.daily || 0));
-      await sendLineEarningsSummary(sortedResults, today);
+      const earningsDate = sortedResults.find(r => r.dailyDate)?.dailyDate || today;
+      await sendLineEarningsSummary(sortedResults, earningsDate);
     } else {
       console.log('[cron-earnings] Skipping LINE notification (notify=false)');
     }
