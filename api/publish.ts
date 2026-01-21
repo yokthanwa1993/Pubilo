@@ -120,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let scheduleTime: Date;
 
         if (dbUrl) {
-          const sql = postgres(dbUrl, { ssl: 'require' });
+          const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
           try {
             // Get schedule_minutes from page_settings
             const settingsResult = await sql`

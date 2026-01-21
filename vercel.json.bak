@@ -4,7 +4,20 @@
   "installCommand": "echo 'Skip install'",
   "outputDirectory": "public",
   "regions": ["sin1"],
-  "crons": [],
+  "crons": [
+    {
+      "path": "/api/cron-auto-post",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/auto-hide",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron-earnings?notify=true",
+      "schedule": "0 11 * * *"
+    }
+  ],
   "functions": {
     "api/upload-image.ts": {
       "maxDuration": 60

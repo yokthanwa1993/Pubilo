@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Database not configured' });
   }
 
-  const sql = postgres(dbUrl, { ssl: 'require' });
+  const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   try {
     const now = new Date();
@@ -556,7 +556,7 @@ async function generateOGImage(quoteText: string, backgroundUrl: string, font: s
     output: 'json'
   });
 
-  const ogUrl = `https://og-image-azure.vercel.app/api/og?${params.toString()}`;
+  const ogUrl = `https://og-image.lslly.com/api/og?${params.toString()}`;
 
   const response = await fetch(ogUrl);
 

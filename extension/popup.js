@@ -229,7 +229,7 @@ openBtn.addEventListener("click", async () => {
   }
 
   // Open Pubilo
-  chrome.tabs.create({ url: "https://pubilo.vercel.app/" }, () => {
+  chrome.tabs.create({ url: "https://pubilo.lslly.com/" }, () => {
     window.close();
   });
 });

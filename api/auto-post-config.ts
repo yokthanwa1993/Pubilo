@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Database not configured' });
   }
 
-  const sql = postgres(dbUrl, { ssl: 'require' });
+  const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   // POST - Save auto-post config (now uses page_settings)
   if (req.method === 'POST') {

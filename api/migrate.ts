@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let sql;
   try {
     // Connect to PostgreSQL directly
-    sql = postgres(dbUrl, { ssl: 'require' });
+    sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
     // SQL migrations to run
     const migrations = [

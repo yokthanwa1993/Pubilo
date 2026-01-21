@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Database not configured' });
   }
 
-  const sql = postgres(dbUrl, { ssl: 'require' });
+  const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   try {
     // Get config for this page

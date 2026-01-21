@@ -355,11 +355,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await replyMessage(event.replyToken, text);
       console.log('[line-webhook] Reply sent successfully');
     } catch (err) {
-      console.error('[line-webhook] Error:', err instanceof Error ? err.message : JSON.stringify(err));
+      const errorMsg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+      console.error('[line-webhook] Error:', errorMsg);
       console.error('[line-webhook] Error stack:', err instanceof Error ? err.stack : 'N/A');
       // ลองตอบกลับแม้ insert ไม่สำเร็จ
       try {
-        await replyMessage(event.replyToken, '❌ เกิดข้อผิดพลาด: ' + (err instanceof Error ? err.message : 'Unknown'));
+        await replyMessage(event.replyToken, '❌ เกิดข้อผิดพลาด: ' + errorMsg);
       } catch (replyErr) {
         console.error('[line-webhook] Reply error also failed:', replyErr instanceof Error ? replyErr.message : JSON.stringify(replyErr));
       }

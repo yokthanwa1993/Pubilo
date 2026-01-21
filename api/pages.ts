@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, error: 'Missing userId' });
   }
 
-  const sql = postgres(dbUrl, { ssl: 'require' });
+  const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   try {
     // ดึง post_token ของ user (ใช้ c_user เป็น key)
