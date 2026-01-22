@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
+              process.env.SUPABASE_POSTGRES_URL ||
+              process.env.POSTGRES_URL ||
+              process.env.DATABASE_URL || "";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,52 +15,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // GET - Load config
-  if (req.method === 'GET') {
-    const { pageId } = req.query;
-    if (!pageId) {
-      return res.status(400).json({ success: false, error: 'Missing pageId' });
+  if (!dbUrl) {
+    return res.status(500).json({ success: false, error: 'Database not configured' });
+  }
+
+  const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
+
+  try {
+    // GET - Load config
+    if (req.method === 'GET') {
+      const { pageId } = req.query;
+      if (!pageId) {
+        await sql.end();
+        return res.status(400).json({ success: false, error: 'Missing pageId' });
+      }
+
+      const result = await sql`
+        SELECT * FROM auto_hide_config WHERE page_id = ${pageId as string} LIMIT 1
+      `;
+
+      await sql.end();
+      return res.status(200).json({
+        success: true,
+        config: result[0] || { page_id: pageId, enabled: false }
+      });
     }
 
-    const { data, error } = await supabase
-      .from('auto_hide_config')
-      .select('*')
-      .eq('page_id', pageId)
-      .single();
+    // POST - Save config
+    if (req.method === 'POST') {
+      const { pageId, enabled, postToken, hideTypes } = req.body;
+      if (!pageId) {
+        await sql.end();
+        return res.status(400).json({ success: false, error: 'Missing pageId' });
+      }
 
-    return res.status(200).json({
-      success: true,
-      config: data || { page_id: pageId, enabled: false }
+      const nowStr = new Date().toISOString();
+
+      const result = await sql`
+        INSERT INTO auto_hide_config (page_id, enabled, post_token, hide_types, updated_at)
+        VALUES (${pageId}, ${enabled === true}, ${postToken || null}, ${hideTypes || null}, ${nowStr})
+        ON CONFLICT (page_id) DO UPDATE SET
+          enabled = ${enabled === true},
+          post_token = COALESCE(${postToken || null}, auto_hide_config.post_token),
+          hide_types = COALESCE(${hideTypes || null}, auto_hide_config.hide_types),
+          updated_at = ${nowStr}
+        RETURNING *
+      `;
+
+      await sql.end();
+      return res.status(200).json({ success: true, config: result[0] });
+    }
+
+    await sql.end();
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error) {
+    await sql.end();
+    console.error('[auto-hide-config] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-
-  // POST - Save config
-  if (req.method === 'POST') {
-    const { pageId, enabled, postToken, hideTypes } = req.body;
-    if (!pageId) {
-      return res.status(400).json({ success: false, error: 'Missing pageId' });
-    }
-
-    const updateData: any = {
-      page_id: pageId,
-      enabled: enabled === true,
-      updated_at: new Date().toISOString()
-    };
-    if (postToken !== undefined) updateData.post_token = postToken || null;
-    if (hideTypes !== undefined) updateData.hide_types = hideTypes;
-
-    const { data, error } = await supabase
-      .from('auto_hide_config')
-      .upsert(updateData, { onConflict: 'page_id' })
-      .select()
-      .single();
-
-    if (error) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-
-    return res.status(200).json({ success: true, config: data });
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 }

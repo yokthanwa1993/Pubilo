@@ -10,7 +10,7 @@ const apiFiles = [
   "auto-hide-config", "auto-hide", "auto-post-config", "auto-post-logs",
   "check-pending-shares", "cron-auto-post", "cron-earnings", "delete-post",
   "earnings", "generate-news", "generate", "global-settings", "line-webhook",
-  "page-settings", "pages", "prompts", "publish", "quotes", "scheduled-posts",
+  "migrate", "page-settings", "pages", "prompts", "publish", "quotes", "scheduled-posts",
   "tokens", "update-post-time", "upload-image"
 ];
 

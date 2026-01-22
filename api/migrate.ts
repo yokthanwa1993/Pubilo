@@ -108,7 +108,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         UNIQUE(page_id, date)
       )`,
       // Index for earnings queries
-      "CREATE INDEX IF NOT EXISTS idx_earnings_history_page_date ON earnings_history(page_id, date DESC)"
+      "CREATE INDEX IF NOT EXISTS idx_earnings_history_page_date ON earnings_history(page_id, date DESC)",
+      // Auto-hide config table
+      `CREATE TABLE IF NOT EXISTS auto_hide_config (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        page_id TEXT NOT NULL UNIQUE,
+        enabled BOOLEAN DEFAULT false,
+        post_token TEXT,
+        hide_types TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      // Hidden posts tracking table
+      `CREATE TABLE IF NOT EXISTS hidden_posts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        page_id TEXT NOT NULL,
+        post_id TEXT NOT NULL UNIQUE,
+        hidden_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      // Add unique constraint if not exists
+      "ALTER TABLE auto_hide_config ADD CONSTRAINT auto_hide_config_page_id_unique UNIQUE (page_id)",
+      // Add unique constraint for hidden_posts
+      "ALTER TABLE hidden_posts ADD CONSTRAINT hidden_posts_post_id_unique UNIQUE (post_id)"
     ];
 
     const results = [];
