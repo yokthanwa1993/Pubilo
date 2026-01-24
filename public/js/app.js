@@ -923,10 +923,9 @@ async function saveAutoPostConfig(mode, colorBg, sharePageId, colorBgPresets, sh
     const pageId = getCurrentPageId();
     if (!pageId) return;
 
-    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
     const pageName = document.querySelector('.page-selector-name')?.textContent || null;
 
-    const body = { pageId, postToken: pageToken };
+    const body = { pageId };
     if (mode !== undefined) body.postMode = mode;
     if (colorBg !== undefined) body.colorBg = colorBg;
     if (sharePageId !== undefined) body.sharePageId = sharePageId;
@@ -994,8 +993,6 @@ async function saveAutoHideConfig() {
     if (!pageId) return;
 
     const enabled = autoHideEnabled.checked;
-    const customToken = autoHideTokenInput?.value?.trim() || "";
-    const pageToken = customToken || localStorage.getItem("fewfeed_selectedPageToken");
     const hideTypes = getHideTypes();
 
     // Show/hide token group based on enabled status
@@ -1007,7 +1004,7 @@ async function saveAutoHideConfig() {
         const response = await fetch('/api/auto-hide-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId, enabled, postToken: pageToken, customToken, hideTypes })
+            body: JSON.stringify({ pageId, enabled, hideTypes })
         });
         const data = await response.json();
         if (data.success) {
@@ -1176,6 +1173,9 @@ async function loadSettingsPanel() {
                 pageId,
                 autoSchedule: data.settings.auto_schedule,
                 scheduleMinutes: data.settings.schedule_minutes,
+                workingHoursStart: data.settings.working_hours_start,
+                workingHoursEnd: data.settings.working_hours_end,
+                postToken: data.settings.post_token,
                 aiModel: data.settings.ai_model,
                 aiResolution: data.settings.ai_resolution,
                 linkImageSize: data.settings.link_image_size,
@@ -1206,6 +1206,26 @@ async function loadSettingsPanel() {
         ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
         ogFontSelectPanel.value = settings.ogFont || "noto-sans-thai";
     } else {
+        // If no settings, set defaults
+        settings = {
+            pageId,
+            autoSchedule: false,
+            scheduleMinutes: "00, 15, 30, 45",
+            workingHoursStart: 6,
+            workingHoursEnd: 24,
+            postToken: "",
+            aiModel: "gemini-2.0-flash-exp",
+            aiResolution: "2K",
+            linkImageSize: "1:1",
+            imageImageSize: "1:1",
+            newsAnalysisPrompt: "",
+            newsGenerationPrompt: "",
+            newsImageSize: "1:1",
+            newsVariationCount: 4,
+            imageSource: "ai",
+            ogBackgroundUrl: "",
+            ogFont: "noto-sans-thai"
+        };
         autoScheduleEnabledPanel.checked = false;
         scheduleMinutesPanel.value = "00, 15, 30, 45";
         if (workingHoursStart) workingHoursStart.value = 6;
@@ -1213,6 +1233,11 @@ async function loadSettingsPanel() {
         imageSourceSelectPanel.value = "ai";
         ogBackgroundUrlPanel.value = "";
         ogFontSelectPanel.value = "noto-sans-thai";
+    }
+    // Page Token input - show saved token (manual only)
+    if (pageTokenInputPanel) {
+        pageTokenInputPanel.value = settings?.postToken || "";
+        console.log("[Settings Panel] Loaded postToken:", settings?.postToken ? `${settings.postToken.substring(0, 10)}...` : "(empty)");
     }
     // Sync minute grid with hidden input
     if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
@@ -1326,7 +1351,8 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
     const autoSchedule = autoScheduleEnabledPanel.checked;
     const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
-    const postToken = pageTokenInputPanel?.value?.trim() || null;
+    const postToken = pageTokenInputPanel?.value?.trim() ?? "";
+    console.log("[Settings Panel] Saving postToken:", postToken ? `${postToken.substring(0, 10)}...` : "(empty)");
     const workingStart = parseInt(workingHoursStart.value) || 6;
     const workingEnd = parseInt(workingHoursEnd.value) || 24;
     const linkPrompt = linkPromptInput.value.trim();
@@ -1348,6 +1374,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
         scheduleMinutes: mins,
         workingHoursStart: workingStart,
         workingHoursEnd: workingEnd,
+        postToken,
         aiModel: aiModelSelect.value,
         aiResolution: aiResolutionSelect.value,
         linkImageSize,
@@ -1371,30 +1398,36 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
     // Save to database via API
     try {
         // Save page settings to database
+        const requestBody = {
+            pageId,
+            autoSchedule,
+            scheduleMinutes: mins,
+            postToken,
+            workingHoursStart: workingStart,
+            workingHoursEnd: workingEnd,
+            aiModel: aiModelSelect.value,
+            aiResolution: aiResolutionSelect.value,
+            linkImageSize,
+            imageImageSize,
+            newsImageSize,
+            newsAnalysisPrompt,
+            newsGenerationPrompt,
+            newsVariationCount: newsVarCount,
+            imageSource,
+            ogBackgroundUrl: ogBgUrl,
+            ogFont
+        };
+        console.log("[Settings Panel] Sending postToken to API:", postToken ? `${postToken.substring(0, 10)}...` : "(empty)");
+        console.log("[Settings Panel] Full request body:", { ...requestBody, postToken: postToken ? `${postToken.substring(0, 10)}...` : "(empty)" });
+        
         const response = await fetch('/api/page-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pageId,
-                autoSchedule,
-                scheduleMinutes: mins,
-                postToken,
-                workingHoursStart: workingStart,
-                workingHoursEnd: workingEnd,
-                aiModel: aiModelSelect.value,
-                aiResolution: aiResolutionSelect.value,
-                linkImageSize,
-                imageImageSize,
-                newsImageSize,
-                newsAnalysisPrompt,
-                newsGenerationPrompt,
-                newsVariationCount: newsVarCount,
-                imageSource,
-                ogBackgroundUrl: ogBgUrl,
-                ogFont
-            })
+            body: JSON.stringify(requestBody)
         });
         const data = await response.json();
+        console.log("[Settings Panel] API response:", data);
+        console.log("[Settings Panel] API response post_token:", data.settings?.post_token ? `${data.settings.post_token.substring(0, 10)}...` : "(empty/null)");
 
         // Save prompts to database
         if (linkPrompt) {
@@ -1425,6 +1458,29 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
         if (data.success) {
             console.log("[FEWFEED] Settings and prompts saved to database");
+            console.log("[FEWFEED] Saved postToken in response:", data.settings?.post_token ? `${data.settings.post_token.substring(0, 10)}...` : "(empty/null)");
+
+            // Update input field directly from response to preserve token value
+            if (pageTokenInputPanel && data.settings?.post_token) {
+                pageTokenInputPanel.value = data.settings.post_token;
+                console.log("[FEWFEED] Updated pageTokenInputPanel from response");
+            } else if (pageTokenInputPanel && !data.settings?.post_token) {
+                // If token was cleared (null), keep the input empty
+                pageTokenInputPanel.value = "";
+                console.log("[FEWFEED] Cleared pageTokenInputPanel (token was null)");
+            }
+
+            // Update cache with saved data
+            if (data.settings) {
+                cachedPageSettings = {
+                    ...cachedPageSettings,
+                    postToken: data.settings.post_token || ""
+                };
+            }
+
+            // Update next schedule display since settings may have changed
+            updateNextScheduleDisplay();
+
             // Show success feedback
             saveSettingsPanelBtn.textContent = "บันทึกแล้ว ✓";
             saveSettingsPanelBtn.style.background = "#10b981";
@@ -5165,13 +5221,6 @@ function selectPage(index) {
         console.log(
             "[FEWFEED] Stored Page Access Token for scheduled posts",
         );
-        
-        // Sync token to database for cron jobs (tokenAutoSync=true means don't overwrite manual token)
-        fetch('/api/page-settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId: page.id, postToken: page.access_token, tokenAutoSync: true })
-        }).catch(e => console.error('[FEWFEED] Failed to sync token:', e));
     }
 
     // Save selected page ID and name to localStorage for persistence across refreshes
@@ -5889,4 +5938,3 @@ document.addEventListener("keydown", (e) => {
         closeLightbox();
     }
 });
-
