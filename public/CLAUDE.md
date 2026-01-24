@@ -7,5 +7,5 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #2288 | 7:02 PM | 🟣 | LINE Messaging Integration Added to Auto-Post Cron System | ~441 |
+| #2340 | 7:44 PM | 🔵 | Page Token input field located in web UI settings panel | ~332 |
 </claude-mem-context>

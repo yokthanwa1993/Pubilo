@@ -5,6 +5,8 @@ import FB from 'fb';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const FREEIMAGE_API_KEY = process.env.FREEIMAGE_API_KEY || "";
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+const LINE_USER_IDS = (process.env.LINE_USER_IDS || process.env.LINE_USER_ID || '').split(',').map(id => id.trim()).filter(Boolean);
 
 const dbUrl = process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
               process.env.SUPABASE_POSTGRES_URL ||
@@ -37,6 +39,93 @@ interface Quote {
   id: string;
   quote_text: string;
   used_by_pages: string[];
+}
+
+// Send LINE notification when token is invalid
+async function sendLineTokenAlert(pageName: string, pageId: string, errorMessage: string) {
+  if (!LINE_CHANNEL_ACCESS_TOKEN) {
+    console.log('[cron-auto-post] LINE credentials not configured, skipping token alert');
+    return;
+  }
+
+  const message = {
+    type: 'flex',
+    altText: `Token เสีย: ${pageName}`,
+    contents: {
+      type: 'bubble',
+      size: 'compact',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'Token หมดอายุ',
+            weight: 'bold',
+            size: 'md',
+            color: '#FF0000'
+          },
+          {
+            type: 'text',
+            text: pageName,
+            size: 'lg',
+            weight: 'bold',
+            margin: 'sm'
+          },
+          {
+            type: 'text',
+            text: `Page ID: ${pageId}`,
+            size: 'xs',
+            color: '#888888',
+            margin: 'sm'
+          },
+          {
+            type: 'text',
+            text: errorMessage.substring(0, 100),
+            size: 'xs',
+            color: '#888888',
+            margin: 'sm',
+            wrap: true
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    if (LINE_USER_IDS.length > 0) {
+      // Send to specific user IDs if configured
+      for (const userId of LINE_USER_IDS) {
+        await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [message]
+          })
+        });
+        console.log(`[cron-auto-post] Sent LINE token alert to ${userId} for page ${pageName}`);
+      }
+    } else {
+      // Broadcast to all followers if no specific user IDs
+      await fetch('https://api.line.me/v2/bot/message/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          messages: [message]
+        })
+      });
+      console.log(`[cron-auto-post] Broadcasted LINE token alert for page ${pageName}`);
+    }
+  } catch (err) {
+    console.error(`[cron-auto-post] Failed to send LINE token alert:`, err);
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -299,7 +388,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[cron-auto-post] Error for page ${config.page_id}:`, errorMessage);
         results.push({ page_id: config.page_id, status: 'failed', error: errorMessage });
-        
+
+        // Send LINE alert if token is invalid
+        if (errorMessage.includes('access token') || errorMessage.includes('session') || errorMessage.includes('OAuthException')) {
+          await sendLineTokenAlert(
+            config.page_name || 'Unknown Page',
+            config.page_id,
+            errorMessage
+          );
+        }
+
         // Log failure
         await sql`
           INSERT INTO auto_post_logs (page_id, post_type, quote_text, status, error_message)
@@ -333,18 +431,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         // Get ONE pending item for this source page
         const pendingItems = await sql`
-          SELECT sq.id, sq.target_page_id, sq.facebook_post_id, ac_target.post_token as target_token
+          SELECT sq.id, sq.target_page_id, sq.facebook_post_id, ac_target.post_token as target_token, ac_target.page_name as target_page_name
           FROM share_queue sq
           JOIN page_settings ac_target ON sq.target_page_id = ac_target.page_id
           WHERE sq.source_page_id = ${source.source_page_id} AND sq.status = 'pending'
           ORDER BY sq.created_at ASC
           LIMIT 1
         `;
-        
+
         if (pendingItems.length === 0) continue;
         const item = pendingItems[0];
         if (!item.target_token) continue;
-        
+
         try {
           const sharedPostId = await sharePost(item.facebook_post_id, item.target_page_id, item.target_token);
           await sql`UPDATE share_queue SET status = 'shared', shared_at = NOW(), shared_post_id = ${sharedPostId} WHERE id = ${item.id}`;
@@ -352,7 +450,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.log(`[cron-auto-post] Shared queued post ${item.facebook_post_id} to page ${item.target_page_id}, shared_post_id: ${sharedPostId}`);
         } catch (err) {
           await sql`UPDATE share_queue SET status = 'failed' WHERE id = ${item.id}`;
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
           console.error(`[cron-auto-post] Failed to share queued post:`, err);
+
+          // Send LINE alert if token is invalid
+          if (errorMessage.includes('access token') || errorMessage.includes('session') || errorMessage.includes('OAuthException')) {
+            await sendLineTokenAlert(
+              item.target_page_name || 'Unknown Page',
+              item.target_page_id,
+              errorMessage
+            );
+          }
         }
       }
     } catch (err) {

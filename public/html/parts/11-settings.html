@@ -354,6 +354,19 @@
                                     <span>ซ่อนโพสต์อัตโนมัติ</span>
                                 </label>
                                 <p class="setting-desc">ซ่อนโพสต์ประเภทที่เลือกจาก Timeline</p>
+                                <div id="autoHideTokenGroup" style="margin-top: 0.75rem; display: none;">
+                                    <label class="form-label">Auto Hide Token (optional)</label>
+                                    <input
+                                        type="text"
+                                        id="autoHideTokenInput"
+                                        class="form-input"
+                                        placeholder="EAAxxxxxxx..."
+                                        style="font-family: monospace; font-size: 0.85rem;"
+                                    />
+                                    <p class="setting-desc">
+                                        ถ้าไม่ใส่ จะใช้ Access Token ของเพจแทน
+                                    </p>
+                                </div>
                                 <div id="hideTypesGroup" style="margin-top: 0.75rem; margin-left: 1.5rem;">
                                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">

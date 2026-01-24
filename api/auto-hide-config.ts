@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST - Save config
     if (req.method === 'POST') {
-      const { pageId, enabled, postToken, hideTypes } = req.body;
+      const { pageId, enabled, postToken, customToken, hideTypes } = req.body;
       if (!pageId) {
         await sql.end();
         return res.status(400).json({ success: false, error: 'Missing pageId' });
@@ -51,12 +51,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const nowStr = new Date().toISOString();
 
+      // Ensure custom_token column exists (migration)
+      try {
+        await sql`ALTER TABLE auto_hide_config ADD COLUMN IF NOT EXISTS custom_token TEXT`;
+      } catch (e) {
+        // Column might already exist, ignore error
+      }
+
       const result = await sql`
-        INSERT INTO auto_hide_config (page_id, enabled, post_token, hide_types, updated_at)
-        VALUES (${pageId}, ${enabled === true}, ${postToken || null}, ${hideTypes || null}, ${nowStr})
+        INSERT INTO auto_hide_config (page_id, enabled, post_token, custom_token, hide_types, updated_at)
+        VALUES (${pageId}, ${enabled === true}, ${postToken || null}, ${customToken || null}, ${hideTypes || null}, ${nowStr})
         ON CONFLICT (page_id) DO UPDATE SET
           enabled = ${enabled === true},
           post_token = COALESCE(${postToken || null}, auto_hide_config.post_token),
+          custom_token = ${customToken || null},
           hide_types = COALESCE(${hideTypes || null}, auto_hide_config.hide_types),
           updated_at = ${nowStr}
         RETURNING *

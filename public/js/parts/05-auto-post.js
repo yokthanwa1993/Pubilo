@@ -8,6 +8,8 @@ let currentPostMode = "image";
 
 // Auto-Hide elements
 const autoHideEnabled = document.getElementById("autoHideEnabled");
+const autoHideTokenInput = document.getElementById("autoHideTokenInput");
+const autoHideTokenGroup = document.getElementById("autoHideTokenGroup");
 const hideSharedStory = document.getElementById("hideSharedStory");
 const hideMobileStatus = document.getElementById("hideMobileStatus");
 const hideAddedPhotos = document.getElementById("hideAddedPhotos");
@@ -333,6 +335,12 @@ async function loadAutoHideConfig() {
         const data = await response.json();
         if (data.success && data.config) {
             autoHideEnabled.checked = data.config.enabled || false;
+            // Load token (optional)
+            if (autoHideTokenInput) autoHideTokenInput.value = data.config.custom_token || "";
+            // Show/hide token group
+            if (autoHideTokenGroup) {
+                autoHideTokenGroup.style.display = autoHideEnabled.checked ? "block" : "none";
+            }
             // Load hide types
             const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
             if (hideSharedStory) hideSharedStory.checked = types.includes('shared_story');
@@ -357,14 +365,21 @@ async function saveAutoHideConfig() {
     if (!pageId) return;
 
     const enabled = autoHideEnabled.checked;
-    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+    // Use custom token if provided, otherwise use page token
+    const customToken = autoHideTokenInput?.value?.trim() || "";
+    const pageToken = customToken || localStorage.getItem("fewfeed_selectedPageToken");
     const hideTypes = getHideTypes();
+
+    // Show/hide token group
+    if (autoHideTokenGroup) {
+        autoHideTokenGroup.style.display = enabled ? "block" : "none";
+    }
 
     try {
         const response = await fetch('/api/auto-hide-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId, enabled, postToken: pageToken, hideTypes })
+            body: JSON.stringify({ pageId, enabled, postToken: pageToken, customToken, hideTypes })
         });
         const data = await response.json();
         if (data.success) {
@@ -377,6 +392,7 @@ async function saveAutoHideConfig() {
 
 // Auto-hide checkbox change handlers
 autoHideEnabled.addEventListener("change", saveAutoHideConfig);
+if (autoHideTokenInput) autoHideTokenInput.addEventListener("change", saveAutoHideConfig);
 if (hideSharedStory) hideSharedStory.addEventListener("change", saveAutoHideConfig);
 if (hideMobileStatus) hideMobileStatus.addEventListener("change", saveAutoHideConfig);
 if (hideAddedPhotos) hideAddedPhotos.addEventListener("change", saveAutoHideConfig);
@@ -781,6 +797,9 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
         // Save Auto-Post Alternating config
         await saveAutoPostConfig();
+
+        // Save Auto-Hide config
+        await saveAutoHideConfig();
 
         if (data.success) {
             console.log("[FEWFEED] Settings and prompts saved to database");

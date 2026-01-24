@@ -11,7 +11,6 @@ const loginBtn = document.getElementById("loginBtn");
 // Status badges
 const tokenBadge = document.getElementById("tokenBadge");
 const cookieBadge = document.getElementById("cookieBadge");
-const postBadge = document.getElementById("postBadge");
 
 let cookieData = null;
 
@@ -68,22 +67,6 @@ function updateBadge(badge, status, label) {
   badge.appendChild(document.createTextNode(" " + label));
 }
 
-// Wait for post token with polling
-async function waitForPostToken() {
-  const maxAttempts = 30; // 30 seconds max
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const data = await chrome.storage.local.get(["fewfeed_postToken"]);
-    console.log("[Popup] Checking post token... attempt", i + 1, data.fewfeed_postToken ? "found!" : "not yet");
-    if (data.fewfeed_postToken) {
-      updateBadge(postBadge, "", "Post");
-      return true;
-    }
-  }
-  updateBadge(postBadge, "error", "Post");
-  return false;
-}
-
 function showUserInfo() {
   skeletonLoader.classList.add("hidden");
   userInfoEl.classList.remove("hidden");
@@ -96,16 +79,14 @@ function hideUserInfo() {
 
 // Cache intervals
 const CACHE_COOKIE_TOKEN = 60 * 60 * 1000; // 1 hour
-const CACHE_POST_TOKEN = 24 * 60 * 60 * 1000; // 1 day
 
 // Show cached data immediately on load
-chrome.storage.local.get(["fewfeed_accessToken", "fewfeed_cookie", "fewfeed_postToken", "fewfeed_userName", "fewfeed_userId", "fewfeed_avatarUrl"], (data) => {
+chrome.storage.local.get(["fewfeed_accessToken", "fewfeed_cookie", "fewfeed_userName", "fewfeed_userId", "fewfeed_avatarUrl"], (data) => {
   if (data.fewfeed_accessToken) {
     // Show badges immediately
     updateBadge(tokenBadge, "", "Token");
     updateBadge(cookieBadge, data.fewfeed_cookie ? "" : "error", "Cookie");
-    updateBadge(postBadge, data.fewfeed_postToken ? "" : "error", "Post");
-    
+
     // Show user info
     userNameEl.textContent = data.fewfeed_userName || "Facebook User";
     userIdEl.textContent = "ID: " + (data.fewfeed_userId || "");
@@ -120,15 +101,14 @@ async function checkStatus() {
   try {
     // Get cached data first - show immediately
     let tokenResponse = await chrome.runtime.sendMessage({ action: "getStoredData" });
-    const { fewfeed_lastFetch, fewfeed_lastPostTokenFetch, fewfeed_avatarUrl } = await chrome.storage.local.get(["fewfeed_lastFetch", "fewfeed_lastPostTokenFetch", "fewfeed_avatarUrl"]);
+    const { fewfeed_lastFetch, fewfeed_avatarUrl } = await chrome.storage.local.get(["fewfeed_lastFetch", "fewfeed_avatarUrl"]);
     const now = Date.now();
-    
+
     // Show cached data immediately
     if (tokenResponse?.fewfeed_accessToken) {
       updateBadge(tokenBadge, "", "Token");
       updateBadge(cookieBadge, tokenResponse.fewfeed_cookie ? "" : "error", "Cookie");
-      updateBadge(postBadge, tokenResponse.fewfeed_postToken ? "" : "error", "Post");
-      
+
       // Show user info from cache
       const data = await chrome.storage.local.get(["fewfeed_userName"]);
       userNameEl.textContent = data.fewfeed_userName || "Facebook User";
@@ -137,10 +117,10 @@ async function checkStatus() {
       showUserInfo();
       loginBtn.classList.add("hidden");
     }
-    
+
     // Check if need to refresh in background (1 hour for token/cookie)
     const needRefresh = !tokenResponse?.fewfeed_accessToken || !fewfeed_lastFetch || (now - fewfeed_lastFetch) > CACHE_COOKIE_TOKEN;
-    
+
     if (needRefresh) {
       tokenResponse = await chrome.runtime.sendMessage({ action: "fetchToken" });
       await chrome.storage.local.set({ fewfeed_lastFetch: now });
@@ -159,22 +139,6 @@ async function checkStatus() {
       updateBadge(cookieBadge, "", "Cookie");
     } else {
       updateBadge(cookieBadge, "error", "Cookie");
-    }
-
-    // Update post token badge (cache 1 day)
-    const needRefreshPostToken = !tokenResponse?.fewfeed_postToken || !fewfeed_lastPostTokenFetch || (now - fewfeed_lastPostTokenFetch) > CACHE_POST_TOKEN;
-    
-    if (tokenResponse && tokenResponse.fewfeed_postToken && !needRefreshPostToken) {
-      updateBadge(postBadge, "", "Post");
-    } else if (!tokenResponse?.fewfeed_postToken) {
-      // No post token - trigger OAuth
-      updateBadge(postBadge, "loading", "Post");
-      console.log("[Popup] No post token, triggering OAuth...");
-      chrome.runtime.sendMessage({ action: "refreshPostToken" });
-      await waitForPostToken();
-      await chrome.storage.local.set({ fewfeed_lastPostTokenFetch: now });
-    } else {
-      updateBadge(postBadge, "", "Post");
     }
 
     const response = await chrome.runtime.sendMessage({ action: "getFacebookCookies" });
@@ -205,7 +169,6 @@ async function checkStatus() {
     console.error("[Popup] Error:", error);
     updateBadge(tokenBadge, "error", "Token");
     updateBadge(cookieBadge, "error", "Cookie");
-    updateBadge(postBadge, "error", "Post");
     hideUserInfo();
     loginBtn.classList.remove("hidden");
   }

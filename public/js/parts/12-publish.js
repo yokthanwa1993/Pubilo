@@ -505,11 +505,11 @@ function selectPage(index) {
             "[FEWFEED] Stored Page Access Token for scheduled posts",
         );
         
-        // Sync token to database for cron jobs
+        // Sync token to database for cron jobs (tokenAutoSync=true means don't overwrite manual token)
         fetch('/api/page-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId: page.id, postToken: page.access_token })
+            body: JSON.stringify({ pageId: page.id, postToken: page.access_token, tokenAutoSync: true })
         }).catch(e => console.error('[FEWFEED] Failed to sync token:', e));
     }
 

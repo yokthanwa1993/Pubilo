@@ -1,6 +1,6 @@
-// Pubilo Token Helper v8.1
-// Auto-fetches Ads Token + Cookie from Facebook AND Post Token from Postcron OAuth
-// Works like FewFeed V2 - just needs browser to be logged into Facebook
+// Pubilo Token Helper v9.0
+// Auto-fetches Ads Token + Cookie from Facebook
+// Post Token is now managed manually via Page Settings (not from Extension)
 
 // ============================================
 // HOT RELOAD FOR DEVELOPMENT (disabled in production)
@@ -104,9 +104,6 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Pubilo] Keepalive alarm created");
 });
 
-const POSTCRON_OAUTH_URL = "https://postcron.com/api/v2.0/social-accounts/url-redirect/?should_redirect=true&social_network=facebook";
-const POSTCRON_CALLBACK_URL = "https://postcron.com/auth/login/facebook/callback";
-
 // App URLs - supports both local dev and production
 const APP_URLS = ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.lslly.com/*"];
 const PRODUCTION_URL = "https://pubilo.lslly.com/";
@@ -122,130 +119,9 @@ chrome.action.onClicked.addListener(async () => {
   await fetchAllTokensInBackground();
 });
 
-// Fetch all tokens in background
+// Fetch all tokens in background (Ads Token + Cookie only)
 async function fetchAllTokensInBackground() {
-  // Fetch ads token and cookies
   await fetchAndStoreToken();
-
-  // Check if we need post token
-  const stored = await chrome.storage.local.get(["fewfeed_postToken", "fewfeed_postTokenExpiry"]);
-  const hasValidPostToken = stored.fewfeed_postToken && stored.fewfeed_postTokenExpiry > Date.now();
-
-  if (!hasValidPostToken) {
-    console.log("[FEWFEED] Need post token, starting OAuth with auto-click...");
-    startPostcronOAuthBackground();
-  } else {
-    console.log("[FEWFEED] Already have valid Post token");
-  }
-}
-
-// Start Postcron OAuth flow with auto-click
-function startPostcronOAuthBackground() {
-  let oauthCompleted = false;
-  let oauthWindowId = null;
-  let oauthTabId = null;
-
-  // Create popup window for OAuth (shows when token needed, lasts 3 months)
-  chrome.windows.create({
-    url: POSTCRON_OAUTH_URL,
-    type: 'popup',
-    width: 500,
-    height: 600
-  }, (window) => {
-    if (!window || !window.tabs || !window.tabs[0]) {
-      console.log("[FEWFEED] OAuth window creation failed");
-      return;
-    }
-    oauthWindowId = window.id;
-    oauthTabId = window.tabs[0].id;
-    console.log("[FEWFEED] OAuth started (auto-click mode):", oauthWindowId);
-
-    const listener = async (tabId, changeInfo, tab) => {
-      if (tabId !== oauthTabId) return;
-
-      // Auto-click Facebook "Continue" button when page loads
-      if (changeInfo.status === 'complete' && tab.url && tab.url.includes('facebook.com')) {
-        console.log("[FEWFEED] Facebook page loaded, attempting auto-click...");
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: oauthTabId },
-            func: () => {
-              // Try to find and click the "Continue" / "ดำเนินการต่อ" button
-              const buttons = document.querySelectorAll('button, [role="button"], input[type="submit"]');
-              for (const btn of buttons) {
-                const text = btn.textContent || btn.value || '';
-                // Match various languages: Continue, ดำเนินการต่อ, 继续, etc.
-                if (text.includes('ดำเนินการต่อ') || text.includes('Continue') ||
-                    text.includes('继续') || text.includes('Continuar') ||
-                    text.includes('Log In') || text.includes('เข้าสู่ระบบ')) {
-                  console.log("[FEWFEED] Auto-clicking button:", text);
-                  btn.click();
-                  return true;
-                }
-              }
-              // Also try aria-label
-              const ariaButtons = document.querySelectorAll('[aria-label*="Continue"], [aria-label*="ดำเนินการต่อ"]');
-              if (ariaButtons.length > 0) {
-                ariaButtons[0].click();
-                return true;
-              }
-              return false;
-            }
-          });
-        } catch (e) {
-          console.log("[FEWFEED] Auto-click failed:", e.message);
-        }
-      }
-
-      // Detect OAuth callback
-      if (changeInfo.url && changeInfo.url.startsWith(POSTCRON_CALLBACK_URL)) {
-        console.log("[FEWFEED] OAuth callback detected!");
-        oauthCompleted = true;
-
-        const url = new URL(changeInfo.url);
-        const hash = url.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const postToken = params.get("access_token");
-
-        if (postToken) {
-          console.log("[FEWFEED] Post token extracted!");
-          chrome.storage.local.set({
-            fewfeed_postToken: postToken,
-            fewfeed_postTokenExpiry: Date.now() + (90 * 24 * 60 * 60 * 1000)
-          });
-
-          chrome.tabs.onUpdated.removeListener(listener);
-          chrome.windows.remove(oauthWindowId);
-          notifyPostTokenReady(postToken);
-        }
-      }
-    };
-
-    chrome.tabs.onUpdated.addListener(listener);
-
-    // Timeout after 30 seconds (should be fast with auto-click)
-    setTimeout(() => {
-      if (!oauthCompleted && oauthWindowId) {
-        console.log("[FEWFEED] OAuth timeout, closing window");
-        chrome.tabs.onUpdated.removeListener(listener);
-        chrome.windows.remove(oauthWindowId).catch(() => {});
-      }
-    }, 30000);
-  });
-}
-
-// Notify app tabs that post token is ready
-async function notifyPostTokenReady(postToken) {
-  // Query both localhost and production URLs
-  for (const urlPattern of APP_URLS) {
-    const tabs = await chrome.tabs.query({ url: urlPattern });
-    for (const tab of tabs) {
-      chrome.tabs.sendMessage(tab.id, {
-        action: "postTokenReady",
-        postToken: postToken
-      }).catch(() => {});
-    }
-  }
 }
 
 // Extract token from existing Facebook tabs using script injection
@@ -404,17 +280,22 @@ async function fetchAndStoreToken() {
       fbDtsg = await fetchDtsgFromBusiness(cookieString);
     }
 
-    // Fetch user name from Graph API if we have access token
+    // Fetch user name and avatar from Graph API if we have access token
+    let avatarUrl = null;
     if (accessToken && userId) {
       try {
-        const nameResponse = await fetch(`https://graph.facebook.com/${userId}?fields=name&access_token=${accessToken}`);
+        const nameResponse = await fetch(`https://graph.facebook.com/${userId}?fields=name,picture.width(200).height(200)&access_token=${accessToken}`);
         const userData = await nameResponse.json();
         if (userData.name) {
           userName = userData.name;
           console.log("[FEWFEED] Fetched user name:", userName);
         }
+        if (userData.picture?.data?.url) {
+          avatarUrl = userData.picture.data.url;
+          console.log("[FEWFEED] Fetched avatar URL");
+        }
       } catch (e) {
-        console.log("[FEWFEED] Could not fetch user name:", e.message);
+        console.log("[FEWFEED] Could not fetch user info:", e.message);
       }
     }
 
@@ -423,11 +304,12 @@ async function fetchAndStoreToken() {
       userName,
       hasAdsToken: !!accessToken,
       hasDtsg: !!fbDtsg,
-      hasCookie: !!cookieString
+      hasCookie: !!cookieString,
+      hasAvatar: !!avatarUrl
     });
 
     // Store for content script
-    await chrome.storage.local.set({
+    const storageData = {
       fewfeed_accessToken: accessToken || "",
       fewfeed_fbDtsg: fbDtsg || "",
       fewfeed_userId: userId,
@@ -435,7 +317,11 @@ async function fetchAndStoreToken() {
       fewfeed_cookie: cookieString,
       fewfeed_ready: true,
       fewfeed_lastFetch: Date.now()
-    });
+    };
+    if (avatarUrl) {
+      storageData.fewfeed_avatarUrl = avatarUrl;
+    }
+    await chrome.storage.local.set(storageData);
 
     console.log("[FEWFEED] Ads token, fb_dtsg and cookies stored!");
 
@@ -698,7 +584,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getStoredData") {
     chrome.storage.local.get([
       "fewfeed_accessToken",
-      "fewfeed_postToken",
       "fewfeed_fbDtsg",
       "fewfeed_userId",
       "fewfeed_userName",
@@ -707,7 +592,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     ]).then(data => {
       sendResponse({
         accessToken: data.fewfeed_accessToken,
-        postToken: data.fewfeed_postToken,
         fbDtsg: data.fewfeed_fbDtsg,
         userId: data.fewfeed_userId,
         userName: data.fewfeed_userName,
@@ -724,20 +608,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       await fetchAndStoreToken();
       const data = await chrome.storage.local.get([
         "fewfeed_accessToken",
-        "fewfeed_postToken",
-        "fewfeed_postTokenExpiry",
         "fewfeed_fbDtsg",
         "fewfeed_userId",
         "fewfeed_userName",
         "fewfeed_cookie"
       ]);
-
-      // Check if post token is expired
-      const postTokenValid = data.fewfeed_postToken && data.fewfeed_postTokenExpiry > Date.now();
-      if (!postTokenValid) {
-        data.fewfeed_postToken = ""; // Clear expired token
-      }
-
       sendResponse(data);
     })();
     return true;
@@ -778,15 +653,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // Refresh post token (trigger OAuth flow)
-  if (request.action === "refreshPostToken") {
-    console.log("[Pubilo] Refreshing post token via OAuth...");
-    // Clear existing post token to force refresh
-    chrome.storage.local.remove(["fewfeed_postToken", "fewfeed_postTokenExpiry"]);
-    startPostcronOAuthBackground();
-    sendResponse({ success: true, message: "OAuth flow started" });
-    return true;
-  }
 });
 
 // Schedule post via GraphQL - use hidden Facebook window with content script
@@ -1293,4 +1159,4 @@ async function getLazadaCookies() {
 // END LAZADA SECTION
 // ============================================
 
-console.log("[Pubilo] Background v8.0 loaded - Ads Token only + Lazada Affiliate");
+console.log("[Pubilo] Background v9.0 loaded - Ads Token + Cookie only (Post Token removed)");

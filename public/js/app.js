@@ -625,6 +625,7 @@ const newsVariationCount = document.getElementById("newsVariationCount");
 const aiModelSelect = document.getElementById("aiModelSelect");
 const aiResolutionSelect = document.getElementById("aiResolutionSelect");
 const saveSettingsPanelBtn = document.getElementById("saveSettingsPanelBtn");
+const pageTokenInputPanel = document.getElementById("pageTokenInputPanel");
 
 // ============================================
 // 6. AUTO-POST
@@ -639,6 +640,8 @@ const autoHideEnabled = document.getElementById("autoHideEnabled");
 const hideSharedStory = document.getElementById("hideSharedStory");
 const hideMobileStatus = document.getElementById("hideMobileStatus");
 const hideAddedPhotos = document.getElementById("hideAddedPhotos");
+const autoHideTokenInput = document.getElementById("autoHideTokenInput");
+const autoHideTokenGroup = document.getElementById("autoHideTokenGroup");
 
 // Auto-resize textarea function
 function autoResizeTextarea(textarea) {
@@ -1310,6 +1313,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
     const autoSchedule = autoScheduleEnabledPanel.checked;
     const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
+    const postToken = pageTokenInputPanel?.value?.trim() || null;
     const workingStart = parseInt(workingHoursStart.value) || 6;
     const workingEnd = parseInt(workingHoursEnd.value) || 24;
     const linkPrompt = linkPromptInput.value.trim();
@@ -1361,6 +1365,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
                 pageId,
                 autoSchedule,
                 scheduleMinutes: mins,
+                postToken,
                 workingHoursStart: workingStart,
                 workingHoursEnd: workingEnd,
                 aiModel: aiModelSelect.value,
@@ -5148,11 +5153,11 @@ function selectPage(index) {
             "[FEWFEED] Stored Page Access Token for scheduled posts",
         );
         
-        // Sync token to database for cron jobs
+        // Sync token to database for cron jobs (tokenAutoSync=true means don't overwrite manual token)
         fetch('/api/page-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId: page.id, postToken: page.access_token })
+            body: JSON.stringify({ pageId: page.id, postToken: page.access_token, tokenAutoSync: true })
         }).catch(e => console.error('[FEWFEED] Failed to sync token:', e));
     }
 
@@ -5286,7 +5291,6 @@ window.addEventListener("message", (event) => {
             userName,
             !!fbToken,
             !!fbCookie,
-            !!fbPostToken,
         );
 
         // Fetch pages - prefer Post Token (works better for me/accounts), fallback to Ads Token
@@ -5315,29 +5319,6 @@ window.addEventListener("message", (event) => {
         }
     }
 
-    // Post token arrived from Postcron OAuth
-    if (event.data.type === "FEWFEED_POST_TOKEN_READY") {
-        fbPostToken = event.data.postToken;
-        console.log("[FEWFEED] Post token received!");
-        localStorage.setItem("fewfeed_postToken", fbPostToken);
-
-        // Update UI status
-        const userName = localStorage.getItem("fewfeed_userName");
-        const userId = localStorage.getItem("fewfeed_userId");
-        showCookieStatus(
-            true,
-            userId,
-            userName,
-            !!fbToken,
-            !!fbCookie,
-            !!fbPostToken,
-        );
-
-        // If we don't have pages yet, fetch them with the new post token
-        if (allPages.length === 0 && fbPostToken) {
-            fetchPages(fbPostToken);
-        }
-    }
 });
 
 // Auto-sync with Extension cached data every 30 seconds
@@ -5363,7 +5344,6 @@ setInterval(async () => {
                         cachedData.userName,
                         !!cachedData.adsToken,
                         !!cachedData.cookie,
-                        !!cachedData.postToken
                     );
                     
                     console.log('[auto-sync] Updated from Extension cache');
@@ -5394,7 +5374,6 @@ async function syncWithExtensionNow() {
                     cachedData.userName,
                     !!cachedData.adsToken,
                     !!cachedData.cookie,
-                    !!cachedData.postToken
                 );
                 
                 console.log('[manual-sync] Updated from Extension cache');
@@ -5460,21 +5439,18 @@ function fetchPages(accessToken) {
         );
 }
 
-// Helper: Show cookie status with Token/Cookie/PostToken indicators in header
+// Helper: Show cookie status with Token/Cookie indicators in header
 function showCookieStatus(
     connected,
     userId,
     userName,
     hasToken,
     hasCookie,
-    hasPostToken = false,
 ) {
     const tokenIndicator =
         document.getElementById("tokenIndicator");
     const cookieIndicator =
         document.getElementById("cookieIndicator");
-    const postTokenIndicator =
-        document.getElementById("postTokenIndicator");
 
     // Update token indicator (Ads Token)
     if (tokenIndicator) {
@@ -5489,14 +5465,6 @@ function showCookieStatus(
         cookieIndicator.classList.remove("valid", "invalid");
         cookieIndicator.classList.add(
             hasCookie ? "valid" : "invalid",
-        );
-    }
-
-    // Update post token indicator
-    if (postTokenIndicator) {
-        postTokenIndicator.classList.remove("valid", "invalid");
-        postTokenIndicator.classList.add(
-            hasPostToken ? "valid" : "invalid",
         );
     }
 
@@ -5859,12 +5827,11 @@ function loadSavedData() {
             userName,
             !!accessToken,
             !!cookie,
-            !!postToken,
         );
 
-        // Fetch pages - prefer Post Token, fallback to Ads Token
-        if (postToken || accessToken) {
-            fetchPages(postToken || accessToken);
+        // Fetch pages using Ads Token
+        if (accessToken) {
+            fetchPages(accessToken);
         }
     }
 }

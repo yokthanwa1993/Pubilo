@@ -119,7 +119,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.shareMode !== undefined) updateFields.share_mode = req.body.shareMode;
       if (req.body.pageColor !== undefined) updateFields.page_color = req.body.pageColor;
       if (req.body.pageName !== undefined) updateFields.page_name = req.body.pageName;
-      if (req.body.postToken !== undefined) updateFields.post_token = req.body.postToken;
+      // Handle postToken: if tokenAutoSync=true (from Extension), only update if current token is null
+      if (req.body.postToken !== undefined) {
+        if (req.body.tokenAutoSync) {
+          // Auto sync from Extension - only update if no existing token
+          const { data: existing } = await supabase
+            .from('page_settings')
+            .select('post_token')
+            .eq('page_id', pageId)
+            .single();
+          if (!existing?.post_token) {
+            updateFields.post_token = req.body.postToken;
+          }
+        } else {
+          // Manual entry - always update
+          updateFields.post_token = req.body.postToken;
+        }
+      }
       if (req.body.hideTypes !== undefined) updateFields.hide_types = req.body.hideTypes;
       if (req.body.imageSource !== undefined) updateFields.image_source = req.body.imageSource;
       if (req.body.ogBackgroundUrl !== undefined) updateFields.og_background_url = req.body.ogBackgroundUrl;

@@ -7,5 +7,6 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #2288 | 7:02 PM | 🟣 | LINE Messaging Integration Added to Auto-Post Cron System | ~441 |
+| #2341 | 7:44 PM | 🟣 | Optional Dedicated Token Input Added for Auto-Hide Feature | ~527 |
+| #2336 | 7:43 PM | 🔄 | Removed Post Token Status Indicator from Dashboard Header | ~494 |
 </claude-mem-context>

@@ -1,11 +1,12 @@
-// FEWFEED Token Helper v6.0 - Content Script
-// Runs on localhost:3000 - waits for tokens to be ready then injects
+// Pubilo Token Helper v9.0 - Content Script
+// Runs on localhost:3000 and pubilo.lslly.com - fetches Ads Token + Cookie only
+// Post Token is now managed manually via Page Settings (not from Extension)
 
-console.log("[FEWFEED Content] Script loaded on", window.location.href);
+console.log("[Pubilo Content] Script loaded on", window.location.href);
 
 // Main function - request tokens from background and wait for them
 async function initializeTokens() {
-  console.log("[FEWFEED Content] Requesting tokens from background...");
+  console.log("[Pubilo Content] Requesting tokens from background...");
 
   // Show loading indicator
   showLoadingIndicator();
@@ -16,7 +17,6 @@ async function initializeTokens() {
 
     // Get existing localStorage values as fallback
     const existingToken = localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
-    const existingPostToken = localStorage.getItem("fewfeed_postToken");
     const existingFbDtsg = localStorage.getItem("fewfeed_fbDtsg");
     const existingCookie = localStorage.getItem("fewfeed_cookie");
     const existingUserId = localStorage.getItem("fewfeed_userId");
@@ -24,15 +24,13 @@ async function initializeTokens() {
 
     // Use new data if available, otherwise keep existing
     const finalToken = data?.fewfeed_accessToken || existingToken || "";
-    const finalPostToken = data?.fewfeed_postToken || existingPostToken || "";
     const finalFbDtsg = data?.fewfeed_fbDtsg || existingFbDtsg || "";
     const finalCookie = data?.fewfeed_cookie || existingCookie || "";
     const finalUserId = data?.fewfeed_userId || existingUserId || "";
     const finalUserName = data?.fewfeed_userName || existingUserName || "Facebook User";
 
-    console.log("[FEWFEED Content] Data:", {
+    console.log("[Pubilo Content] Data:", {
       hasAdsToken: !!finalToken,
-      hasPostToken: !!finalPostToken,
       hasFbDtsg: !!finalFbDtsg,
       hasUserId: !!finalUserId,
       hasCookie: !!finalCookie,
@@ -44,9 +42,6 @@ async function initializeTokens() {
     if (finalToken) {
       localStorage.setItem("fewfeed_accessToken", finalToken);
       localStorage.setItem("fewfeed_token", finalToken);
-    }
-    if (finalPostToken) {
-      localStorage.setItem("fewfeed_postToken", finalPostToken);
     }
     if (finalFbDtsg) {
       localStorage.setItem("fewfeed_fbDtsg", finalFbDtsg);
@@ -61,24 +56,17 @@ async function initializeTokens() {
       localStorage.setItem("fewfeed_cookie", finalCookie);
     }
 
-    console.log("[FEWFEED Content] Data saved to localStorage");
+    console.log("[Pubilo Content] Data saved to localStorage");
 
     // Notify the page that data is ready
     window.postMessage({
       type: "FEWFEED_COOKIE_INJECTED",
       cookie: finalCookie,
       token: finalToken,
-      postToken: finalPostToken,
       fbDtsg: finalFbDtsg,
       userId: finalUserId,
       userName: finalUserName
     }, "*");
-
-    // Auto-trigger OAuth if no post token (only if we have ads token)
-    if (!finalPostToken && finalToken) {
-      console.log("[FEWFEED Content] No post token found, triggering OAuth...");
-      chrome.runtime.sendMessage({ action: "refreshPostToken" });
-    }
 
     // Hide loading indicator
     hideLoadingIndicator();
@@ -87,13 +75,12 @@ async function initializeTokens() {
     window.dispatchEvent(new CustomEvent("fewfeed:ready", {
       detail: {
         hasAdsToken: !!finalToken,
-        hasPostToken: !!finalPostToken,
         hasFbDtsg: !!finalFbDtsg,
         hasCookie: !!finalCookie
       }
     }));
 
-    console.log("[FEWFEED Content] Token injection complete!");
+    console.log("[Pubilo Content] Token injection complete!");
 
   } catch (error) {
     console.error("[FEWFEED Content] Error:", error);
@@ -155,15 +142,6 @@ window.addEventListener("message", async (event) => {
   // Page requesting to refresh tokens
   if (event.data.type === "FEWFEED_REFRESH_TOKEN") {
     await initializeTokens();
-  }
-
-  // Page requesting to refresh post token specifically (triggers OAuth flow)
-  if (event.data.type === "FEWFEED_REFRESH_POST_TOKEN") {
-    const response = await chrome.runtime.sendMessage({ action: "refreshPostToken" });
-    window.postMessage({
-      type: "FEWFEED_POST_TOKEN_REFRESH_STARTED",
-      data: response
-    }, "*");
   }
 
   // Page requesting to schedule post via GraphQL (extension has Facebook cookies)
@@ -238,28 +216,11 @@ window.addEventListener("message", async (event) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Token updated from Facebook page (fb-content.js extracted it)
   if (request.action === "tokenUpdated") {
-    console.log("[FEWFEED Content] Token updated notification received!");
+    console.log("[Pubilo Content] Token updated notification received!");
     // Re-initialize to get the new tokens
     initializeTokens();
     sendResponse({ success: true });
     return true;
-  }
-
-  // Post token arrived from background OAuth
-  if (request.action === "postTokenReady") {
-    console.log("[FEWFEED Content] Post token received from background!");
-    const postToken = request.postToken;
-
-    // Save to localStorage
-    localStorage.setItem("fewfeed_postToken", postToken);
-
-    // Update global var
-    window.postMessage({
-      type: "FEWFEED_POST_TOKEN_READY",
-      postToken: postToken
-    }, "*");
-
-    sendResponse({ success: true });
   }
   return true;
 });
@@ -267,4 +228,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Mark that extension is installed
 document.documentElement.setAttribute("data-fewfeed-extension", "true");
 window.postMessage({ type: "FEWFEED_EXTENSION_READY" }, "*");
-console.log("[FEWFEED Content] Extension v6.0 ready - Dual token + Lazada Affiliate support");
+console.log("[Pubilo Content] Extension v9.0 ready - Ads Token + Cookie only");
