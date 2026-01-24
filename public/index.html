@@ -1193,6 +1193,29 @@
                         <h2>Settings</h2>
                     </div>
                     <div class="settings-content">
+                        <!-- Page Token Section -->
+                        <div class="settings-section collapsible">
+                            <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">
+                                🔑 Page Token
+                                <span class="collapse-icon">›</span>
+                            </h3>
+                            <div class="settings-section-content">
+                                <div class="setting-group">
+                                    <label class="form-label">Access Token ของเพจนี้</label>
+                                    <input
+                                        type="text"
+                                        id="pageTokenInputPanel"
+                                        class="form-input"
+                                        placeholder="EAAxxxxxxx..."
+                                        style="font-family: monospace; font-size: 0.85rem;"
+                                    />
+                                    <p class="setting-desc">
+                                        ถ้าใส่ token ที่นี่ จะใช้แทน token รวมของระบบสำหรับเพจนี้
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Schedule Settings -->
                         <div class="settings-section collapsible">
                             <h3 class="settings-section-title" onclick="this.parentElement.classList.toggle('open')">

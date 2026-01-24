@@ -3,6 +3,7 @@
 const postModeImage = document.getElementById("postModeImage");
 const postModeText = document.getElementById("postModeText");
 const postModeAlternate = document.getElementById("postModeAlternate");
+const pageTokenInputPanel = document.getElementById("pageTokenInputPanel");
 let currentPostMode = "image";
 
 // Auto-Hide elements
@@ -531,6 +532,7 @@ async function loadSettingsPanel() {
                 pageId,
                 autoSchedule: data.settings.auto_schedule,
                 scheduleMinutes: data.settings.schedule_minutes,
+                postToken: data.settings.post_token,
                 aiModel: data.settings.ai_model,
                 aiResolution: data.settings.ai_resolution,
                 linkImageSize: data.settings.link_image_size,
@@ -553,6 +555,7 @@ async function loadSettingsPanel() {
 
     // Apply settings to panel
     if (settings) {
+        if (pageTokenInputPanel) pageTokenInputPanel.value = settings.postToken || "";
         autoScheduleEnabledPanel.checked = settings.autoSchedule || false;
         scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
         if (workingHoursStart) workingHoursStart.value = settings.workingHoursStart ?? 6;
@@ -561,6 +564,7 @@ async function loadSettingsPanel() {
         ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
         ogFontSelectPanel.value = settings.ogFont || "noto-sans-thai";
     } else {
+        if (pageTokenInputPanel) pageTokenInputPanel.value = "";
         autoScheduleEnabledPanel.checked = false;
         scheduleMinutesPanel.value = "00, 15, 30, 45";
         if (workingHoursStart) workingHoursStart.value = 6;
@@ -681,6 +685,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
     const autoSchedule = autoScheduleEnabledPanel.checked;
     const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
+    const postToken = pageTokenInputPanel?.value?.trim() || null;
     const workingStart = parseInt(workingHoursStart.value) || 6;
     const workingEnd = parseInt(workingHoursEnd.value) || 24;
     const linkPrompt = linkPromptInput.value.trim();
@@ -732,6 +737,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
                 pageId,
                 autoSchedule,
                 scheduleMinutes: mins,
+                postToken,
                 workingHoursStart: workingStart,
                 workingHoursEnd: workingEnd,
                 aiModel: aiModelSelect.value,
