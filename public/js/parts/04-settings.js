@@ -1,5 +1,11 @@
 // 4. SETTINGS
 // ============================================
+
+// Get page token from cached settings (loaded from database)
+function getPageToken() {
+    return cachedPageSettings?.postToken || null;
+}
+
 const settingsModal = document.getElementById("settingsModal");
 const settingsNavBtn = document.getElementById("settingsNavBtn");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");

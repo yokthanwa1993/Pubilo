@@ -42,9 +42,9 @@ function setupPublishHandler(mode) {
 
             // ========== IMAGE MODE: Use Graph API directly ==========
             if (mode === "image") {
-                const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+                const pageToken = getPageToken();
                 if (!pageToken) {
-                    throw new Error("ไม่มี Page Token กรุณาเลือก Page ใหม่");
+                    throw new Error("ไม่มี Page Token กรุณาใส่ใน Settings > 🔑 Page Token");
                 }
 
                 const message = els.primaryText?.value || "";
@@ -494,17 +494,6 @@ function selectPage(index) {
         "hasPageToken:",
         !!page.access_token,
     );
-
-    // Store Page Access Token for this specific page (for scheduled posts API)
-    if (page.access_token) {
-        localStorage.setItem(
-            "fewfeed_selectedPageToken",
-            page.access_token,
-        );
-        console.log(
-            "[FEWFEED] Stored Page Access Token for scheduled posts",
-        );
-    }
 
     // Save selected page ID and name to localStorage for persistence across refreshes
     localStorage.setItem("fewfeed_selectedPageId", page.id);

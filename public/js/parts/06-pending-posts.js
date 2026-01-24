@@ -2,7 +2,7 @@
 // ============================================
 async function fetchScheduledPostsFromFacebook() {
     const pageId = document.getElementById("pageSelect").value;
-    const selectedPageToken = localStorage.getItem("fewfeed_selectedPageToken");
+    const selectedPageToken = getPageToken();
 
     console.log("[FEWFEED] Fetching scheduled posts:", {
         hasPageId: !!pageId,
@@ -234,7 +234,7 @@ function editScheduledTime(postId, currentTime) {
         const newTimestamp = Math.floor(new Date(dateVal + "T" + timeVal).getTime() / 1000);
 
         try {
-            const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+            const pageToken = getPageToken();
             const response = await fetch("/api/update-post-time", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -281,7 +281,7 @@ function deleteScheduledPost(postId) {
         btn.disabled = true;
 
         try {
-            const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+            const pageToken = getPageToken();
             const response = await fetch("/api/delete-post", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

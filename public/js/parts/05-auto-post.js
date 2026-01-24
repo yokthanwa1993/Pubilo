@@ -294,10 +294,9 @@ async function saveAutoPostConfig(mode, colorBg, sharePageId, colorBgPresets, sh
     const pageId = getCurrentPageId();
     if (!pageId) return;
 
-    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
     const pageName = document.querySelector('.page-selector-name')?.textContent || null;
 
-    const body = { pageId, postToken: pageToken };
+    const body = { pageId };
     if (mode !== undefined) body.postMode = mode;
     if (colorBg !== undefined) body.colorBg = colorBg;
     if (sharePageId !== undefined) body.sharePageId = sharePageId;

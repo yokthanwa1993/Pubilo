@@ -753,7 +753,7 @@ if (newsPublishBtn) {
         if (newsPublishBtn.disabled) return;
         
         const pageId = getCurrentPageId();
-        const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+        const pageToken = getPageToken();
         const adsToken = fbToken || localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
         const cookie = fbCookie || localStorage.getItem("fewfeed_cookie");
         const adAccountId = document.getElementById("adAccountSelect")?.value;
