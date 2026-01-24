@@ -7,5 +7,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2364 | 7:58 PM | 🔵 | Located pageTokenInputPanel in settings HTML | ~255 |
+| #2358 | 7:56 PM | 🟣 | Add optional Auto Hide Token input field to Settings panel | ~348 |
 | #2340 | 7:44 PM | 🔵 | Page Token input field located in web UI settings panel | ~332 |
 </claude-mem-context>

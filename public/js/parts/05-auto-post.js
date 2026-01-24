@@ -335,11 +335,9 @@ async function loadAutoHideConfig() {
         const data = await response.json();
         if (data.success && data.config) {
             autoHideEnabled.checked = data.config.enabled || false;
-            // Load token (optional)
-            if (autoHideTokenInput) autoHideTokenInput.value = data.config.custom_token || "";
-            // Show/hide token group
+            // Hide token group (token is now in page_settings only)
             if (autoHideTokenGroup) {
-                autoHideTokenGroup.style.display = autoHideEnabled.checked ? "block" : "none";
+                autoHideTokenGroup.style.display = "none";
             }
             // Load hide types
             const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
@@ -365,21 +363,18 @@ async function saveAutoHideConfig() {
     if (!pageId) return;
 
     const enabled = autoHideEnabled.checked;
-    // Use custom token if provided, otherwise use page token
-    const customToken = autoHideTokenInput?.value?.trim() || "";
-    const pageToken = customToken || localStorage.getItem("fewfeed_selectedPageToken");
     const hideTypes = getHideTypes();
 
-    // Show/hide token group
+    // Show/hide token group (removed - token is now in page_settings only)
     if (autoHideTokenGroup) {
-        autoHideTokenGroup.style.display = enabled ? "block" : "none";
+        autoHideTokenGroup.style.display = "none";
     }
 
     try {
         const response = await fetch('/api/auto-hide-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId, enabled, postToken: pageToken, customToken, hideTypes })
+            body: JSON.stringify({ pageId, enabled, hideTypes })
         });
         const data = await response.json();
         if (data.success) {
@@ -392,7 +387,6 @@ async function saveAutoHideConfig() {
 
 // Auto-hide checkbox change handlers
 autoHideEnabled.addEventListener("change", saveAutoHideConfig);
-if (autoHideTokenInput) autoHideTokenInput.addEventListener("change", saveAutoHideConfig);
 if (hideSharedStory) hideSharedStory.addEventListener("change", saveAutoHideConfig);
 if (hideMobileStatus) hideMobileStatus.addEventListener("change", saveAutoHideConfig);
 if (hideAddedPhotos) hideAddedPhotos.addEventListener("change", saveAutoHideConfig);
@@ -701,7 +695,8 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
 
     const autoSchedule = autoScheduleEnabledPanel.checked;
     const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
-    const postToken = pageTokenInputPanel?.value?.trim() || null;
+    // Use empty string "" when user clears (not null), so auto-sync won't overwrite
+    const postToken = pageTokenInputPanel?.value?.trim() ?? "";
     const workingStart = parseInt(workingHoursStart.value) || 6;
     const workingEnd = parseInt(workingHoursEnd.value) || 24;
     const linkPrompt = linkPromptInput.value.trim();

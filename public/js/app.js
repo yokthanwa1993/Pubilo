@@ -964,6 +964,12 @@ async function loadAutoHideConfig() {
         const data = await response.json();
         if (data.success && data.config) {
             autoHideEnabled.checked = data.config.enabled || false;
+            // Load custom token
+            if (autoHideTokenInput) autoHideTokenInput.value = data.config.custom_token || "";
+            // Show/hide token group based on enabled status
+            if (autoHideTokenGroup) {
+                autoHideTokenGroup.style.display = autoHideEnabled.checked ? "block" : "none";
+            }
             // Load hide types
             const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
             if (hideSharedStory) hideSharedStory.checked = types.includes('shared_story');
@@ -988,14 +994,20 @@ async function saveAutoHideConfig() {
     if (!pageId) return;
 
     const enabled = autoHideEnabled.checked;
-    const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
+    const customToken = autoHideTokenInput?.value?.trim() || "";
+    const pageToken = customToken || localStorage.getItem("fewfeed_selectedPageToken");
     const hideTypes = getHideTypes();
+
+    // Show/hide token group based on enabled status
+    if (autoHideTokenGroup) {
+        autoHideTokenGroup.style.display = enabled ? "block" : "none";
+    }
 
     try {
         const response = await fetch('/api/auto-hide-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pageId, enabled, postToken: pageToken, hideTypes })
+            body: JSON.stringify({ pageId, enabled, postToken: pageToken, customToken, hideTypes })
         });
         const data = await response.json();
         if (data.success) {
@@ -1011,6 +1023,7 @@ autoHideEnabled.addEventListener("change", saveAutoHideConfig);
 if (hideSharedStory) hideSharedStory.addEventListener("change", saveAutoHideConfig);
 if (hideMobileStatus) hideMobileStatus.addEventListener("change", saveAutoHideConfig);
 if (hideAddedPhotos) hideAddedPhotos.addEventListener("change", saveAutoHideConfig);
+if (autoHideTokenInput) autoHideTokenInput.addEventListener("change", saveAutoHideConfig);
 
 // Post mode button handlers - toggle on/off
 postModeImage.addEventListener("click", () => {

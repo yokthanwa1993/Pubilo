@@ -71,9 +71,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   try {
-    // Get all pages with auto-hide enabled
+    // Get all pages with auto-hide enabled (token from page_settings)
     const configs = await sql<AutoHideConfig[]>`
-      SELECT page_id, enabled, post_token, hide_types FROM auto_hide_config WHERE enabled = true
+      SELECT ahc.page_id, ahc.enabled, ps.post_token, ahc.hide_types 
+      FROM auto_hide_config ahc
+      LEFT JOIN page_settings ps ON ahc.page_id = ps.page_id
+      WHERE ahc.enabled = true
     `;
 
     if (!configs || configs.length === 0) {

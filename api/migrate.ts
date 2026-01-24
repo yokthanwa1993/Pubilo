@@ -30,6 +30,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // SQL migrations to run
     const migrations = [
+      // Add post_token column to page_settings
+      "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS post_token TEXT",
       "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS ai_model TEXT DEFAULT 'gemini-2.0-flash-exp'",
       "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS ai_resolution TEXT DEFAULT '2K'",
       "ALTER TABLE page_settings ADD COLUMN IF NOT EXISTS link_image_size TEXT DEFAULT '1:1'",

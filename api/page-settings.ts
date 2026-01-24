@@ -119,16 +119,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.shareMode !== undefined) updateFields.share_mode = req.body.shareMode;
       if (req.body.pageColor !== undefined) updateFields.page_color = req.body.pageColor;
       if (req.body.pageName !== undefined) updateFields.page_name = req.body.pageName;
-      // Handle postToken: if tokenAutoSync=true (from Extension), only update if current token is null
+      // Handle postToken: if tokenAutoSync=true (from Extension), only update if current token is exactly null
+      // (not empty string "", which means user explicitly cleared it)
       if (req.body.postToken !== undefined) {
         if (req.body.tokenAutoSync) {
-          // Auto sync from Extension - only update if no existing token
+          // Auto sync from Extension - only update if token is null (never set)
+          // Don't update if "" (user cleared) or has value (user set)
           const { data: existing } = await supabase
             .from('page_settings')
             .select('post_token')
             .eq('page_id', pageId)
             .single();
-          if (!existing?.post_token) {
+          if (existing?.post_token === null || existing?.post_token === undefined) {
             updateFields.post_token = req.body.postToken;
           }
         } else {

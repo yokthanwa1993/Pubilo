@@ -7,6 +7,7 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2368 | 8:00 PM | 🔴 | Fixed token clearing behavior to prevent auto-sync overwrite | ~377 |
 | #2347 | 7:47 PM | 🔴 | Fixed Auto-Hide Config Not Saving When Settings Panel Saved | ~455 |
 | #2312 | 7:28 PM | 🟣 | Auto-Sync Token Protection Flag to Prevent Manual Token Overwrites | ~572 |
 | #2310 | 7:27 PM | 🔵 | Frontend Token Synchronization to Backend Page Settings | ~538 |

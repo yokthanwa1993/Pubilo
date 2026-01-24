@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = postgres(dbUrl, { ssl: dbUrl.includes('sslmode=disable') ? false : 'require' });
 
   try {
-    // GET - Load config
+    // GET - Load config (token comes from page_settings)
     if (req.method === 'GET') {
       const { pageId } = req.query;
       if (!pageId) {
@@ -31,7 +31,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const result = await sql`
-        SELECT * FROM auto_hide_config WHERE page_id = ${pageId as string} LIMIT 1
+        SELECT ahc.*, ps.post_token 
+        FROM auto_hide_config ahc
+        LEFT JOIN page_settings ps ON ahc.page_id = ps.page_id
+        WHERE ahc.page_id = ${pageId as string} LIMIT 1
       `;
 
       await sql.end();
@@ -41,9 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // POST - Save config
+    // POST - Save config (only enabled and hide_types, token is in page_settings)
     if (req.method === 'POST') {
-      const { pageId, enabled, postToken, customToken, hideTypes } = req.body;
+      const { pageId, enabled, hideTypes } = req.body;
       if (!pageId) {
         await sql.end();
         return res.status(400).json({ success: false, error: 'Missing pageId' });
@@ -51,20 +54,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const nowStr = new Date().toISOString();
 
-      // Ensure custom_token column exists (migration)
-      try {
-        await sql`ALTER TABLE auto_hide_config ADD COLUMN IF NOT EXISTS custom_token TEXT`;
-      } catch (e) {
-        // Column might already exist, ignore error
-      }
-
       const result = await sql`
-        INSERT INTO auto_hide_config (page_id, enabled, post_token, custom_token, hide_types, updated_at)
-        VALUES (${pageId}, ${enabled === true}, ${postToken || null}, ${customToken || null}, ${hideTypes || null}, ${nowStr})
+        INSERT INTO auto_hide_config (page_id, enabled, hide_types, updated_at)
+        VALUES (${pageId}, ${enabled === true}, ${hideTypes || null}, ${nowStr})
         ON CONFLICT (page_id) DO UPDATE SET
           enabled = ${enabled === true},
-          post_token = COALESCE(${postToken || null}, auto_hide_config.post_token),
-          custom_token = ${customToken || null},
           hide_types = COALESCE(${hideTypes || null}, auto_hide_config.hide_types),
           updated_at = ${nowStr}
         RETURNING *

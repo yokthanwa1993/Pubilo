@@ -7,5 +7,6 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #2354 | 7:55 PM | 🔴 | Auto-Hide custom token not saving to database | ~328 |
 | #2310 | 7:27 PM | 🔵 | Frontend Token Synchronization to Backend Page Settings | ~538 |
 </claude-mem-context>
