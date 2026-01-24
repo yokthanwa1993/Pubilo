@@ -562,9 +562,8 @@ async function loadSettingsPanel() {
         console.error("[Settings Panel] Failed to load settings:", err);
     }
 
-    // Apply settings to panel
+    // Apply settings to panel (postToken is NEVER loaded - user must enter manually)
     if (settings) {
-        if (pageTokenInputPanel) pageTokenInputPanel.value = settings.postToken || "";
         autoScheduleEnabledPanel.checked = settings.autoSchedule || false;
         scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
         if (workingHoursStart) workingHoursStart.value = settings.workingHoursStart ?? 6;
@@ -573,7 +572,6 @@ async function loadSettingsPanel() {
         ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
         ogFontSelectPanel.value = settings.ogFont || "noto-sans-thai";
     } else {
-        if (pageTokenInputPanel) pageTokenInputPanel.value = "";
         autoScheduleEnabledPanel.checked = false;
         scheduleMinutesPanel.value = "00, 15, 30, 45";
         if (workingHoursStart) workingHoursStart.value = 6;
@@ -582,6 +580,8 @@ async function loadSettingsPanel() {
         ogBackgroundUrlPanel.value = "";
         ogFontSelectPanel.value = "noto-sans-thai";
     }
+    // Page Token input - always start empty, user enters manually
+    if (pageTokenInputPanel) pageTokenInputPanel.value = "";
     // Sync minute grid with hidden input
     if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
