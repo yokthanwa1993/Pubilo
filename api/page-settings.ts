@@ -121,7 +121,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.body.pageName !== undefined) updateFields.page_name = req.body.pageName;
       // postToken - only update from manual entry in Page Settings
       if (req.body.postToken !== undefined && !req.body.tokenAutoSync) {
-        updateFields.post_token = req.body.postToken;
+        // Save empty string as null to clear the token
+        updateFields.post_token = req.body.postToken || null;
       }
       if (req.body.hideTypes !== undefined) updateFields.hide_types = req.body.hideTypes;
       if (req.body.imageSource !== undefined) updateFields.image_source = req.body.imageSource;
