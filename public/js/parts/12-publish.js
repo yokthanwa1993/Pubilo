@@ -486,14 +486,7 @@ function selectPage(index) {
     const page = allPages[index];
     if (!page) return;
 
-    console.log(
-        "[FEWFEED] Selected page:",
-        page.name,
-        "id:",
-        page.id,
-        "hasPageToken:",
-        !!page.access_token,
-    );
+    console.log("[FEWFEED] Selected page:", page.name, "id:", page.id);
 
     // Save selected page ID and name to localStorage for persistence across refreshes
     localStorage.setItem("fewfeed_selectedPageId", page.id);
@@ -777,9 +770,9 @@ function fetchPages(accessToken) {
         "*",
     );
 
-    // Also try direct API call as fallback (must include access_token field to get Page Tokens)
+    // Also try direct API call as fallback (NO access_token field - Page Token is manual only)
     fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}&fields=access_token,id,name,picture,is_published&limit=100`,
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}&fields=id,name,picture,is_published&limit=100`,
     )
         .then((res) => res.json())
         .then((data) => {
