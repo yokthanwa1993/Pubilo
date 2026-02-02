@@ -1,4 +1,6 @@
 // ============================================
+// v6.1 - Fixed page switch on #published
+// ============================================
 // 1. THUMB PREVIEW
 // ============================================
 const thumbPreviewPopup = document.getElementById("thumbPreviewPopup");
@@ -45,7 +47,7 @@ let newsModeImageReady = false;
 function validateLinkMode() {
     // Determine current mode - default to 'link'
     const currentMode = postMode || 'link';
-    
+
     if (currentMode === 'link') {
         const hasUrl = linkUrl && linkUrl.value.trim().length > 0;
         // Check both hidden input and preview element (in case blur hasn't synced yet)
@@ -67,12 +69,12 @@ function validateLinkMode() {
             linkModeImageReady,
             isValid
         });
-        
+
         if (publishBtn) {
             publishBtn.disabled = !isValid;
             publishBtn.style.opacity = isValid ? '1' : '0.5';
             publishBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
-            
+
             // Update button text if it was showing success state but now invalid (e.g. cleared image)
             if (!isValid && publishBtn.classList.contains('published')) {
                 publishBtn.classList.remove('published');
@@ -94,13 +96,13 @@ function validateNewsMode() {
     const newsUrlInput = document.getElementById("newsUrlInput");
     const newsPreviewDesc = document.getElementById("newsPreviewDescription");
     const newsPublishBtn = document.getElementById("newsPublishBtn");
-    
+
     const hasUrl = newsUrlInput && newsUrlInput.value.trim().length > 0;
     const hasDescription = newsPreviewDesc && newsPreviewDesc.textContent.trim().length > 0;
     const hasImage = newsModeImageReady;
-    
+
     const isValid = hasUrl && hasDescription && hasImage;
-    
+
     if (newsPublishBtn) {
         newsPublishBtn.disabled = !isValid;
         newsPublishBtn.classList.toggle('disabled', !isValid);
@@ -394,8 +396,8 @@ function isSlotTaken(slotTime) {
 
     return scheduledPostTimes.some(t => {
         return t.toDateString() === slotDate &&
-               t.getHours() === slotHour &&
-               t.getMinutes() === slotMinutes;
+            t.getHours() === slotHour &&
+            t.getMinutes() === slotMinutes;
     });
 }
 
@@ -436,14 +438,14 @@ function findNextSlot(fromTime, minutesArr, workingStart = 6, workingEnd = 24) {
     for (let hourOffset = 0; hourOffset < 48; hourOffset++) {
         const checkTime = new Date(result.getTime() + hourOffset * 60 * 60 * 1000);
         const thaiHour = checkTime.getHours(); // Already in local time
-        
+
         // Skip if outside working hours
         if (thaiHour < workingStart || thaiHour >= workingEnd) continue;
-        
+
         for (const minute of minutesArr) {
             const candidate = new Date(checkTime);
             candidate.setMinutes(minute, 0, 0);
-            
+
             // Must be after fromTime
             if (candidate.getTime() > fromTime.getTime()) {
                 return candidate;
@@ -485,16 +487,16 @@ function calculateNextScheduleForPanel() {
     const workingEnd = parseInt(workingHoursEnd?.value) || 24;
 
     const now = new Date();
-    
+
     // Find next matching minute
     for (let hourOffset = 0; hourOffset < 48; hourOffset++) {
         for (const minute of minutesArr) {
             const candidate = new Date(now);
             candidate.setHours(now.getHours() + hourOffset, minute, 0, 0);
-            
+
             // Skip if in the past
             if (candidate <= now) continue;
-            
+
             // Check working hours
             const hour = candidate.getHours();
             if (hour >= workingStart && hour < workingEnd) {
@@ -712,7 +714,7 @@ function setAutoPostMode(mode) {
     } else if (mode === 'alternate' && postModeAlternate) {
         postModeAlternate.classList.add('active');
     }
-    
+
     // Show colorBg option only for text or alternate mode
     const colorBgGroup = document.getElementById("colorBgGroup");
     const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
@@ -723,7 +725,7 @@ function setAutoPostMode(mode) {
         const colorBgEnabled = document.getElementById("colorBgEnabled");
         colorBgPresetsGroup.style.display = ((mode === 'text' || mode === 'alternate') && colorBgEnabled?.checked) ? 'block' : 'none';
     }
-    
+
     // Show share mode only for alternate mode
     if (shareModeGroup) {
         shareModeGroup.style.display = (mode === 'alternate' && shareEnabled?.checked && sharePageSelect?.value) ? 'block' : 'none';
@@ -734,7 +736,7 @@ async function loadShareScheduleConflicts(targetPageId) {
     const currentPageId = getCurrentPageId();
     const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
     if (!shareScheduleMinutesGrid || !targetPageId) return;
-    
+
     // Reset all to default
     shareScheduleMinutesGrid.querySelectorAll('.minute-checkbox').forEach(label => {
         label.classList.remove('used-by-others');
@@ -743,16 +745,16 @@ async function loadShareScheduleConflicts(targetPageId) {
         const cb = label.querySelector('input');
         if (cb) cb.disabled = false;
     });
-    
+
     try {
         const res = await fetch(`/api/auto-post-config?targetPageId=${targetPageId}`);
         const data = await res.json();
-        
+
         // Get current page color
         const pageColorPicker = document.getElementById("pageColorPicker");
         const currentPageColor = pageColorPicker?.value || '#1a1a1a';
         const currentPageName = document.querySelector('.page-selector-name')?.textContent || 'เพจนี้';
-        
+
         if (data.success && data.configs) {
             const usedMinutes = {};
             data.configs.forEach(config => {
@@ -765,7 +767,7 @@ async function loadShareScheduleConflicts(targetPageId) {
                     usedMinutes[m].push({ color, name });
                 });
             });
-            
+
             // Update legend with page names
             const legendContainer = document.getElementById("shareLegend");
             if (legendContainer) {
@@ -781,7 +783,7 @@ async function loadShareScheduleConflicts(targetPageId) {
                 });
                 legendContainer.innerHTML = legendHtml;
             }
-            
+
             shareScheduleMinutesGrid.querySelectorAll('input').forEach(cb => {
                 const label = cb.closest('.minute-checkbox');
                 if (usedMinutes[cb.value]) {
@@ -798,7 +800,7 @@ async function loadShareScheduleConflicts(targetPageId) {
     } catch (err) {
         console.error('[Share] Failed to load conflicts:', err);
     }
-    
+
     // Update next share time display
     updateNextShareDisplay();
 }
@@ -808,28 +810,28 @@ function updateNextShareDisplay() {
     const nextShareInfo = document.getElementById("nextShareInfo");
     const nextShareDisplay = document.getElementById("nextShareDisplay");
     if (!shareScheduleMinutesGrid || !nextShareInfo || !nextShareDisplay) return;
-    
+
     const checked = shareScheduleMinutesGrid.querySelectorAll('input:checked');
     if (checked.length === 0) {
         nextShareInfo.style.display = 'none';
         return;
     }
-    
-    const mins = Array.from(checked).map(cb => parseInt(cb.value)).sort((a,b) => a-b);
+
+    const mins = Array.from(checked).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
     const now = new Date();
     const currentMin = now.getMinutes();
     const currentHour = now.getHours();
-    
+
     let nextMin = mins.find(m => m > currentMin);
     let nextHour = currentHour;
     if (nextMin === undefined) {
         nextMin = mins[0];
         nextHour = currentHour + 1;
     }
-    
+
     const nextTime = new Date(now);
     nextTime.setHours(nextHour, nextMin, 0, 0);
-    
+
     nextShareInfo.style.display = 'block';
     nextShareDisplay.textContent = nextTime.toLocaleString('th-TH');
 }
@@ -871,15 +873,15 @@ async function loadAutoPostConfig() {
             const mode = config.post_mode;
             setAutoPostMode(mode);
             if (colorBgEnabled) colorBgEnabled.checked = config.color_bg || false;
-            
+
             // Load presets
             currentPresets = (config.color_bg_presets || '').split(',').filter(s => s.trim());
             renderPresets();
-            
+
             if (colorBgPresetsGroup) {
                 colorBgPresetsGroup.style.display = ((mode === 'text' || mode === 'alternate') && config.color_bg) ? 'block' : 'none';
             }
-            
+
             // Load share settings
             populateSharePageDropdown();
             if (config.share_page_id) {
@@ -956,18 +958,21 @@ async function saveAutoPostConfig(mode, colorBg, sharePageId, colorBgPresets, sh
 // Auto-Hide Functions
 async function loadAutoHideConfig() {
     const pageId = getCurrentPageId();
+    console.log("[Auto-Hide] Loading config for page:", pageId);
     if (!pageId) return;
 
     try {
         const response = await fetch(`/api/auto-hide-config?pageId=${pageId}`);
         const data = await response.json();
+        console.log("[Auto-Hide] API response:", data);
         if (data.success && data.config) {
-            autoHideEnabled.checked = data.config.enabled || false;
-            // Load custom token
-            if (autoHideTokenInput) autoHideTokenInput.value = data.config.custom_token || "";
-            // Show/hide token group based on enabled status
-            if (autoHideTokenGroup) {
-                autoHideTokenGroup.style.display = autoHideEnabled.checked ? "block" : "none";
+            const enabled = data.config.enabled || false;
+            console.log("[Auto-Hide] Setting enabled to:", enabled, "Element:", autoHideEnabled);
+            if (autoHideEnabled) {
+                autoHideEnabled.checked = enabled;
+                console.log("[Auto-Hide] After set, checked =", autoHideEnabled.checked);
+            } else {
+                console.error("[Auto-Hide] autoHideEnabled element not found!");
             }
             // Load hide types
             const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
@@ -1058,13 +1063,13 @@ const addPresetBtn = document.getElementById("addPresetBtn");
 let currentPresets = [];
 
 function renderPresets() {
-    presetsList.innerHTML = currentPresets.map((p, i) => 
+    presetsList.innerHTML = currentPresets.map((p, i) =>
         `<span style="display: inline-flex; align-items: center; gap: 0.25rem; background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
             ${p}
             <button type="button" data-index="${i}" class="remove-preset-btn" style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1;">×</button>
         </span>`
     ).join('');
-    
+
     // Add event listeners
     presetsList.querySelectorAll('.remove-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1106,18 +1111,18 @@ shareEnabled.addEventListener("change", (e) => {
 sharePageSelect.addEventListener("change", async (e) => {
     updateShareModeVisibility();
     const targetPageId = e.target.value;
-    
+
     // Show share schedule group when page selected
     const shareScheduleGroup = document.getElementById("shareScheduleGroup");
     if (shareScheduleGroup) {
         shareScheduleGroup.style.display = targetPageId ? "block" : "none";
     }
-    
+
     // Load other pages' share schedules to show conflicts
     if (targetPageId) {
         await loadShareScheduleConflicts(targetPageId);
     }
-    
+
     if (shareEnabled.checked) {
         saveAutoPostConfig(undefined, undefined, targetPageId || null);
     }
@@ -1176,6 +1181,7 @@ async function loadSettingsPanel() {
                 workingHoursStart: data.settings.working_hours_start,
                 workingHoursEnd: data.settings.working_hours_end,
                 postToken: data.settings.post_token,
+                hideToken: data.settings.hide_token,
                 aiModel: data.settings.ai_model,
                 aiResolution: data.settings.ai_resolution,
                 linkImageSize: data.settings.link_image_size,
@@ -1238,6 +1244,11 @@ async function loadSettingsPanel() {
     if (pageTokenInputPanel) {
         pageTokenInputPanel.value = settings?.postToken || "";
         console.log("[Settings Panel] Loaded postToken:", settings?.postToken ? `${settings.postToken.substring(0, 10)}...` : "(empty)");
+    }
+    // Hide Token input
+    const hideTokenInputPanel = document.getElementById("hideTokenInputPanel");
+    if (hideTokenInputPanel) {
+        hideTokenInputPanel.value = settings?.hideToken || "";
     }
     // Sync minute grid with hidden input
     if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
@@ -1306,7 +1317,7 @@ async function loadSettingsPanel() {
 
     // Load Auto-Post Alternating config
     await loadAutoPostConfig();
-    
+
     // Load Auto-Hide config
     await loadAutoHideConfig();
 }
@@ -1419,7 +1430,7 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
         };
         console.log("[Settings Panel] Sending postToken to API:", postToken ? `${postToken.substring(0, 10)}...` : "(empty)");
         console.log("[Settings Panel] Full request body:", { ...requestBody, postToken: postToken ? `${postToken.substring(0, 10)}...` : "(empty)" });
-        
+
         const response = await fetch('/api/page-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1741,9 +1752,9 @@ function buildPendingTable(posts) {
         timeSpan.className = "pending-table-time";
         timeSpan.textContent = post.scheduledTime
             ? new Date(post.scheduledTime * 1000).toLocaleString(
-                  "th-TH",
-                  { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }
-              )
+                "th-TH",
+                { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }
+            )
             : "-";
         timeTd.appendChild(timeSpan);
         tr.appendChild(timeTd);
@@ -2178,7 +2189,7 @@ function showPublishedPanel() {
 // Load published posts from our logs
 async function loadPublishedPosts() {
     const pageId = getCurrentPageId() || localStorage.getItem("fewfeed_selectedPageId");
-    
+
     if (!pageId) {
         publishedTableContainer.innerHTML = '<div class="pending-empty">Please select a Page first</div>';
         return;
@@ -2196,7 +2207,7 @@ async function loadPublishedPosts() {
     try {
         const response = await fetch(`/api/auto-post-logs?pageId=${pageId}&limit=50`);
         const data = await response.json();
-        
+
         if (!data.success) {
             publishedTableContainer.innerHTML = `<div class="pending-empty">Error: ${data.error}</div>`;
             return;
@@ -2427,22 +2438,22 @@ function showTextPanel() {
     publishedPanel.style.display = "none";
     quotesPanel.style.display = "none";
     settingsPanel.style.display = "none";
-    
+
     // Show text mode panel (full width like pending)
     const textModePanel = document.getElementById("textModePanel");
     if (textModePanel) {
         textModePanel.style.display = "block";
     }
-    
+
     // Add pending-mode class for full width layout
     appLayout.classList.add("pending-mode");
-    
+
     // Focus on text textarea
     setTimeout(() => {
         const textTextarea = document.getElementById("textMessageTextarea");
         if (textTextarea) {
             textTextarea.focus();
-            
+
             // Add preview functionality
             textTextarea.oninput = () => {
                 const previewContent = document.getElementById("textPreviewContent");
@@ -2453,7 +2464,7 @@ function showTextPanel() {
                 }
             };
         }
-        
+
         // Add publish button handler
         const textPublishBtn = document.getElementById("textPublishBtn");
         if (textPublishBtn) {
@@ -2511,33 +2522,33 @@ function showTextPanel() {
 
                     if (result.success) {
                         let statusMsg = `✅ โพสต์สำเร็จ!<br>Post ID: ${result.postId}`;
-                        
+
                         // แสดงผล edit
                         if (result.editSuccess) {
                             statusMsg += '<br>✅ ลบรูปสำเร็จ (เหลือแค่ text)';
                         } else if (result.editError) {
                             statusMsg += '<br>❌ ลบรูปไม่สำเร็จ: ' + result.editError.slice(0, 100);
                         }
-                        
+
                         if (result.shareResults?.length > 0) {
                             statusMsg += '<br><br>📢 แชร์:';
                             result.shareResults.forEach(sr => {
-                                statusMsg += sr.success 
-                                    ? `<br>✅ ${sr.pageId}` 
+                                statusMsg += sr.success
+                                    ? `<br>✅ ${sr.pageId}`
                                     : `<br>❌ ${sr.pageId}: ${sr.error}`;
                             });
                         }
                         showStatus(statusMsg);
-                        
+
                         // Clear form
                         document.getElementById("textMessageTextarea").value = "";
-                        
+
                         // Uncheck all share checkboxes
                         document.querySelectorAll('input[name="sharePage"]').forEach(cb => cb.checked = false);
                     } else {
                         throw new Error(result.error || 'Server error');
                     }
-                    
+
                 } catch (error) {
                     console.error('Text post error:', error);
                     showStatus("❌ " + error.message, true);
@@ -2547,7 +2558,7 @@ function showTextPanel() {
                 }
             };
         }
-        
+
         // Load share pages list
         loadSharePagesList();
     }, 100);
@@ -2557,28 +2568,28 @@ function showTextPanel() {
 async function loadSharePagesList() {
     const container = document.getElementById('sharePagesList');
     if (!container) return;
-    
+
     container.innerHTML = '<div style="color: #666; padding: 8px;">กำลังโหลด...</div>';
-    
+
     try {
         const currentPageId = getCurrentPageId();
         const userId = getCurrentUserId();
-        
+
         if (!userId) {
             container.innerHTML = '<div style="color: #999; padding: 8px;">กรุณาเลือกผู้ใช้ก่อน</div>';
             return;
         }
-        
+
         // ดึง pages ของ user จาก Graph API
         const res = await fetch(`/api/pages?userId=${userId}`);
         const data = await res.json();
-        
+
         if (data.success && data.pages?.length > 0) {
             renderPagesList(container, data.pages, currentPageId);
         } else {
             container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่พบรายการเพจ</div>';
         }
-            
+
     } catch (e) {
         console.error('Load pages error:', e);
         container.innerHTML = '<div style="color: #f00; padding: 8px;">เกิดข้อผิดพลาด</div>';
@@ -2591,7 +2602,7 @@ function renderPagesList(container, pages, currentPageId) {
         container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่มีเพจอื่นให้แชร์</div>';
         return;
     }
-    
+
     container.innerHTML = filteredPages.map(p => `
         <label style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" 
                onmouseover="this.style.background='#f0f0f0'" 
@@ -2876,7 +2887,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-window.deleteQuote = async function(id, btn) {
+window.deleteQuote = async function (id, btn) {
     try {
         const row = btn.closest("tr");
         // Replace trash icon with spinner
@@ -3140,7 +3151,7 @@ if (newsUploadFromDevice) {
 newsFileInput.addEventListener("change", async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     const loadPromises = files.map(file => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -3153,22 +3164,22 @@ newsFileInput.addEventListener("change", async (e) => {
             reader.readAsDataURL(file);
         });
     });
-    
+
     const newImages = await Promise.all(loadPromises);
     newsSelectedImages.push(...newImages);
     newsFileInput.value = "";
-    
+
     // Auto generate after selecting images
     await generateNewsImages();
 });
 
 async function generateNewsImages() {
     if (newsSelectedImages.length === 0 || newsIsGenerating) return;
-    
+
     newsIsGenerating = true;
     const container = document.getElementById("newsFullImageView");
     const uploadPrompt = document.getElementById("newsUploadPrompt");
-    
+
     // Show loading skeleton
     uploadPrompt.style.display = "none";
     container.style.display = "grid";
@@ -3182,15 +3193,15 @@ async function generateNewsImages() {
         <div class="skeleton-card" style="aspect-ratio: 1; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px;"></div>
         <style>@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }</style>
     `;
-    
+
     try {
         const pageId = getCurrentPageId();
-        
+
         // Get settings
         const settingsRes = await fetch(`/api/page-settings?pageId=${pageId}`);
         const settingsData = await settingsRes.json();
         const settings = settingsData.settings || {};
-        
+
         // Prepare reference images (compress first)
         const referenceImages = await Promise.all(newsSelectedImages.map(async img => {
             const compressed = await compressImage(img.dataUrl, 1200, 0.8);
@@ -3199,7 +3210,7 @@ async function generateNewsImages() {
                 mimeType: 'image/jpeg'
             };
         }));
-        
+
         // Call generate API
         const response = await fetch('/api/generate-news', {
             method: 'POST',
@@ -3214,9 +3225,9 @@ async function generateNewsImages() {
                 aiResolution: settings.ai_resolution
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success && data.images?.length > 0) {
             newsGeneratedImages = data.images;
             renderNewsGeneratedGrid();
@@ -3231,21 +3242,21 @@ async function generateNewsImages() {
     }
 }
 
-window.retryNewsGenerate = function() {
+window.retryNewsGenerate = function () {
     generateNewsImages();
 };
 
 function renderNewsGeneratedGrid() {
     const container = document.getElementById("newsFullImageView");
     if (!container || newsGeneratedImages.length === 0) return;
-    
+
     container.style.display = "grid";
     container.style.gridTemplateColumns = "repeat(2, 1fr)";
     container.style.gap = "8px";
     container.style.padding = "8px";
     container.style.alignItems = "stretch";
     container.style.justifyContent = "stretch";
-    
+
     container.innerHTML = newsGeneratedImages.map((img, i) => `
         <div style="position: relative; cursor: pointer;" onclick="selectNewsImage(${i})">
             <img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid ${newsSelectedIndex === i ? '#333333' : 'transparent'};" id="newsGenImg${i}">
@@ -3254,11 +3265,11 @@ function renderNewsGeneratedGrid() {
 }
 
 let newsSelectedIndex = 0;
-window.selectNewsImage = function(index) {
+window.selectNewsImage = function (index) {
     newsSelectedIndex = index;
     newsModeImageReady = true;
     validateNewsMode();
-    
+
     // Show selected image full size
     const container = document.getElementById("newsFullImageView");
     container.style.display = "flex";
@@ -3275,11 +3286,11 @@ window.selectNewsImage = function(index) {
     `;
 };
 
-window.showNewsImageGrid = function() {
+window.showNewsImageGrid = function () {
     renderNewsGeneratedGrid();
 };
 
-window.removeNewsImage = function(index) {
+window.removeNewsImage = function (index) {
     newsSelectedImages.splice(index, 1);
     if (newsSelectedImages.length === 0) {
         newsGeneratedImages = [];
@@ -3505,13 +3516,13 @@ async function convertNewsLazadaLink() {
     if (newsIsConverting) return;
     const url = newsUrlInput.value.trim();
     if (!url || !isLazadaUrl(url)) return;
-    
+
     newsIsConverting = true;
     if (newsLazadaStatus) {
         newsLazadaStatus.textContent = "Converting...";
         newsLazadaStatus.style.color = "#888";
     }
-    
+
     window.postMessage({ type: "FEWFEED_CONVERT_NEWS_LAZADA_LINK", productUrl: url }, "*");
 }
 
@@ -4125,7 +4136,7 @@ function showSingleImage(imgSrc) {
     // Plus icon - represents "new content"
     regenNewIcon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
     regenNewBtn.appendChild(regenNewIcon);
-    regenNewBtn.onclick = function(e) {
+    regenNewBtn.onclick = function (e) {
         console.log('[regenNewBtn] + button ONCLICK fired!');
         e.stopPropagation();
         e.preventDefault();
@@ -4336,9 +4347,9 @@ async function regenerateImages(getNewText = false) {
 
         if (!caption && state.referenceImages.length === 0) {
             if (getNewText) {
-                 throw new Error("ไม่สามารถหาคำคมใหม่ได้ กรุณาเพิ่มคำคมในระบบ");
+                throw new Error("ไม่สามารถหาคำคมใหม่ได้ กรุณาเพิ่มคำคมในระบบ");
             } else {
-                 throw new Error("ไม่พบข้อความสำหรับเจนรูป กรุณาใส่ Primary Text หรือเพิ่มคำคม");
+                throw new Error("ไม่พบข้อความสำหรับเจนรูป กรุณาใส่ Primary Text หรือเพิ่มคำคม");
             }
         }
 
@@ -4542,14 +4553,14 @@ if (newsPreviewDesc) {
     newsDescInput.type = 'hidden';
     newsDescInput.id = 'newsDescription';
     document.body.appendChild(newsDescInput);
-    
+
     setupEditableText(newsPreviewDesc, newsDescInput);
-    
+
     newsPreviewDesc.addEventListener("input", () => {
         newsDescInput.value = newsPreviewDesc.textContent;
         validateNewsMode();
     });
-    
+
     newsPreviewDesc.addEventListener("blur", () => {
         validateNewsMode();
     });
@@ -4560,7 +4571,7 @@ const newsPublishBtn = document.getElementById("newsPublishBtn");
 if (newsPublishBtn) {
     newsPublishBtn.addEventListener("click", async () => {
         if (newsPublishBtn.disabled) return;
-        
+
         const pageId = getCurrentPageId();
         const pageToken = localStorage.getItem("fewfeed_selectedPageToken");
         const adsToken = fbToken || localStorage.getItem("fewfeed_accessToken") || localStorage.getItem("fewfeed_token");
@@ -4570,32 +4581,32 @@ if (newsPublishBtn) {
         const newsPrimaryTextEl = document.getElementById("newsPrimaryText");
         const newsPreviewDescEl = document.getElementById("newsPreviewDescription");
         const newsPreviewCaptionEl = document.getElementById("newsPreviewCaption");
-        
+
         if (!pageId || !adsToken || !cookie) {
             alert("กรุณาเลือกเพจและ login ก่อน");
             return;
         }
-        
+
         const linkUrlValue = newsUrlInputEl?.value?.trim();
         const descriptionText = newsPreviewDescEl?.textContent?.trim() || "";
         const captionText = newsPreviewCaptionEl?.textContent?.trim() || "S.LAZADA.CO.TH";
         const primaryText = newsPrimaryTextEl?.value?.trim() || "";
         let imageData = newsGeneratedImages[newsSelectedIndex];
-        
+
         if (!linkUrlValue || !descriptionText || !imageData) {
             alert("กรุณากรอกข้อมูลให้ครบ");
             return;
         }
-        
+
         newsPublishBtn.disabled = true;
         newsPublishBtn.innerHTML = '<span class="loading"></span>';
-        
+
         try {
             // Compress image
             if (imageData.startsWith("data:")) {
                 imageData = await compressImage(imageData, 1200, 0.8);
             }
-            
+
             // Check if auto-schedule is enabled
             const isAutoSchedule = cachedPageSettings.pageId === pageId && cachedPageSettings.autoSchedule;
             let scheduledTime = null;
@@ -4607,9 +4618,9 @@ if (newsPublishBtn) {
             } else {
                 console.log("[News] Auto-schedule NOT enabled", { cachedPageId: cachedPageSettings.pageId, pageId, autoSchedule: cachedPageSettings.autoSchedule });
             }
-            
+
             const fbDtsg = localStorage.getItem("fewfeed_fbDtsg");
-            
+
             const response = await fetch("/api/publish", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -4629,7 +4640,7 @@ if (newsPublishBtn) {
                     fbDtsg
                 })
             });
-            
+
             // Handle streaming response (same as Link flow)
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -4639,26 +4650,26 @@ if (newsPublishBtn) {
                 if (done) break;
                 fullLog += decoder.decode(value);
             }
-            
+
             const urlMatch = fullLog.match(/"url":"([^"]+)"/);
             const postIdMatch = fullLog.match(/"postId":"([^"]+)"/);
             const needsSchedulingMatch = fullLog.match(/"needsScheduling":true/);
             const scheduledTimeMatch = fullLog.match(/"scheduledTime":(\d+)/);
-            
+
             if (urlMatch) {
                 const postId = postIdMatch ? postIdMatch[1] : null;
-                
+
                 // Schedule via extension GraphQL if needed
                 if (needsSchedulingMatch && postId && scheduledTimeMatch && fbDtsg) {
                     const scheduleTimestamp = parseInt(scheduledTimeMatch[1]);
                     console.log("[News] Scheduling via extension GraphQL, postId:", postId);
-                    
+
                     window.postMessage({
                         type: "FEWFEED_SCHEDULE_POST_GRAPHQL",
                         postId, pageId, fbDtsg,
                         scheduledTime: scheduleTimestamp,
                     }, "*");
-                    
+
                     await new Promise((resolve) => {
                         const handler = (event) => {
                             if (event.data.type === "FEWFEED_SCHEDULE_POST_GRAPHQL_RESPONSE") {
@@ -4670,32 +4681,32 @@ if (newsPublishBtn) {
                         setTimeout(() => { window.removeEventListener("message", handler); resolve({ success: false }); }, 30000);
                     });
                 }
-                
+
                 newsPublishBtn.textContent = "✓";
                 newsPublishBtn.classList.add("published");
                 newsPublishBtn.disabled = false;
-                
+
                 if (scheduledTime) {
                     await refreshScheduledPostTimes();
                     updateNextScheduleDisplay();
                 }
-                
+
                 setTimeout(() => {
                     window.location.hash = "#pending";
                     handleNavigation();
-                    
+
                     if (newsUrlInputEl) newsUrlInputEl.value = "";
                     if (newsPrimaryTextEl) newsPrimaryTextEl.value = "";
                     if (newsPreviewDescEl) newsPreviewDescEl.textContent = "";
                     newsGeneratedImages = [];
                     newsSelectedImages = [];
                     newsModeImageReady = false;
-                    
+
                     const container = document.getElementById("newsFullImageView");
                     if (container) container.style.display = "none";
                     const uploadPrompt = document.getElementById("newsUploadPrompt");
                     if (uploadPrompt) uploadPrompt.style.display = "flex";
-                    
+
                     newsPublishBtn.textContent = "SCHEDULE";
                     newsPublishBtn.classList.remove("published");
                     newsPublishBtn.disabled = true;
@@ -5259,13 +5270,18 @@ function selectPage(index) {
     loadSettings();
 
     // If on settings page, reload settings panel
-    if (window.location.hash === "#settings" && settingsPanel.style.display === "flex") {
+    if (window.location.hash === "#settings") {
         loadSettingsPanel();
     }
 
     // If on pending panel, refresh scheduled posts for new page
-    if (pendingPanel.style.display === "block") {
+    if (window.location.hash === "#pending") {
         showPendingPanel();
+    }
+
+    // If on published panel, refresh published posts for new page
+    if (window.location.hash === "#published") {
+        loadPublishedPosts();
     }
 }
 
@@ -5391,7 +5407,7 @@ setInterval(async () => {
             const cachedData = await window.pubiloExtension.getCachedTokens();
             if (cachedData && cachedData.success) {
                 const currentUserId = localStorage.getItem("fewfeed_userId");
-                
+
                 // Update if Extension has different cached data
                 if (cachedData.userId && cachedData.userId !== currentUserId) {
                     localStorage.setItem("fewfeed_userId", cachedData.userId);
@@ -5399,7 +5415,7 @@ setInterval(async () => {
                     localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
                     localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
                     localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
-                    
+
                     showCookieStatus(
                         true,
                         cachedData.userId,
@@ -5407,7 +5423,7 @@ setInterval(async () => {
                         !!cachedData.adsToken,
                         !!cachedData.cookie,
                     );
-                    
+
                     console.log('[auto-sync] Updated from Extension cache');
                 }
             }
@@ -5429,7 +5445,7 @@ async function syncWithExtensionNow() {
                 localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
                 localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
                 localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
-                
+
                 showCookieStatus(
                     true,
                     cachedData.userId,
@@ -5437,7 +5453,7 @@ async function syncWithExtensionNow() {
                     !!cachedData.adsToken,
                     !!cachedData.cookie,
                 );
-                
+
                 console.log('[manual-sync] Updated from Extension cache');
                 return true;
             }
@@ -5461,8 +5477,8 @@ function fetchPages(accessToken) {
     const tokenType = accessToken?.startsWith("EAAChZC")
         ? "POST_TOKEN"
         : accessToken?.startsWith("EAABsbCS")
-          ? "ADS_TOKEN"
-          : "UNKNOWN";
+            ? "ADS_TOKEN"
+            : "UNKNOWN";
     console.log(
         "[FEWFEED] fetchPages called with:",
         tokenType,

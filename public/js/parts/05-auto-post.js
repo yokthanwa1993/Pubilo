@@ -8,8 +8,7 @@ let currentPostMode = "image";
 
 // Auto-Hide elements
 const autoHideEnabled = document.getElementById("autoHideEnabled");
-const autoHideTokenInput = document.getElementById("autoHideTokenInput");
-const autoHideTokenGroup = document.getElementById("autoHideTokenGroup");
+const hideTokenInputPanel = document.getElementById("hideTokenInputPanel");
 const hideSharedStory = document.getElementById("hideSharedStory");
 const hideMobileStatus = document.getElementById("hideMobileStatus");
 const hideAddedPhotos = document.getElementById("hideAddedPhotos");
@@ -83,7 +82,7 @@ function setAutoPostMode(mode) {
     } else if (mode === 'alternate' && postModeAlternate) {
         postModeAlternate.classList.add('active');
     }
-    
+
     // Show colorBg option only for text or alternate mode
     const colorBgGroup = document.getElementById("colorBgGroup");
     const colorBgPresetsGroup = document.getElementById("colorBgPresetsGroup");
@@ -94,7 +93,7 @@ function setAutoPostMode(mode) {
         const colorBgEnabled = document.getElementById("colorBgEnabled");
         colorBgPresetsGroup.style.display = ((mode === 'text' || mode === 'alternate') && colorBgEnabled?.checked) ? 'block' : 'none';
     }
-    
+
     // Show share mode only for alternate mode
     if (shareModeGroup) {
         shareModeGroup.style.display = (mode === 'alternate' && shareEnabled?.checked && sharePageSelect?.value) ? 'block' : 'none';
@@ -105,7 +104,7 @@ async function loadShareScheduleConflicts(targetPageId) {
     const currentPageId = getCurrentPageId();
     const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
     if (!shareScheduleMinutesGrid || !targetPageId) return;
-    
+
     // Reset all to default
     shareScheduleMinutesGrid.querySelectorAll('.minute-checkbox').forEach(label => {
         label.classList.remove('used-by-others');
@@ -114,16 +113,16 @@ async function loadShareScheduleConflicts(targetPageId) {
         const cb = label.querySelector('input');
         if (cb) cb.disabled = false;
     });
-    
+
     try {
         const res = await fetch(`/api/auto-post-config?targetPageId=${targetPageId}`);
         const data = await res.json();
-        
+
         // Get current page color
         const pageColorPicker = document.getElementById("pageColorPicker");
         const currentPageColor = pageColorPicker?.value || '#1a1a1a';
         const currentPageName = document.querySelector('.page-selector-name')?.textContent || 'เพจนี้';
-        
+
         if (data.success && data.configs) {
             const usedMinutes = {};
             data.configs.forEach(config => {
@@ -136,7 +135,7 @@ async function loadShareScheduleConflicts(targetPageId) {
                     usedMinutes[m].push({ color, name });
                 });
             });
-            
+
             // Update legend with page names
             const legendContainer = document.getElementById("shareLegend");
             if (legendContainer) {
@@ -152,7 +151,7 @@ async function loadShareScheduleConflicts(targetPageId) {
                 });
                 legendContainer.innerHTML = legendHtml;
             }
-            
+
             shareScheduleMinutesGrid.querySelectorAll('input').forEach(cb => {
                 const label = cb.closest('.minute-checkbox');
                 if (usedMinutes[cb.value]) {
@@ -169,7 +168,7 @@ async function loadShareScheduleConflicts(targetPageId) {
     } catch (err) {
         console.error('[Share] Failed to load conflicts:', err);
     }
-    
+
     // Update next share time display
     updateNextShareDisplay();
 }
@@ -179,28 +178,28 @@ function updateNextShareDisplay() {
     const nextShareInfo = document.getElementById("nextShareInfo");
     const nextShareDisplay = document.getElementById("nextShareDisplay");
     if (!shareScheduleMinutesGrid || !nextShareInfo || !nextShareDisplay) return;
-    
+
     const checked = shareScheduleMinutesGrid.querySelectorAll('input:checked');
     if (checked.length === 0) {
         nextShareInfo.style.display = 'none';
         return;
     }
-    
-    const mins = Array.from(checked).map(cb => parseInt(cb.value)).sort((a,b) => a-b);
+
+    const mins = Array.from(checked).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
     const now = new Date();
     const currentMin = now.getMinutes();
     const currentHour = now.getHours();
-    
+
     let nextMin = mins.find(m => m > currentMin);
     let nextHour = currentHour;
     if (nextMin === undefined) {
         nextMin = mins[0];
         nextHour = currentHour + 1;
     }
-    
+
     const nextTime = new Date(now);
     nextTime.setHours(nextHour, nextMin, 0, 0);
-    
+
     nextShareInfo.style.display = 'block';
     nextShareDisplay.textContent = nextTime.toLocaleString('th-TH');
 }
@@ -229,6 +228,7 @@ function setShareMode(mode) {
 
 async function loadAutoPostConfig() {
     const pageId = getCurrentPageId();
+    console.log("[Auto-Post] loadAutoPostConfig called, pageId:", pageId);
     if (!pageId) return;
 
     const colorBgEnabled = document.getElementById("colorBgEnabled");
@@ -237,26 +237,30 @@ async function loadAutoPostConfig() {
     try {
         const response = await fetch(`/api/page-settings?pageId=${pageId}`);
         const data = await response.json();
+        console.log("[Auto-Post] API response share_page_id:", data.settings?.share_page_id);
         if (data.success && data.settings) {
             const config = data.settings;
             const mode = config.post_mode;
             setAutoPostMode(mode);
             if (colorBgEnabled) colorBgEnabled.checked = config.color_bg || false;
-            
+
             // Load presets
             currentPresets = (config.color_bg_presets || '').split(',').filter(s => s.trim());
             renderPresets();
-            
+
             if (colorBgPresetsGroup) {
                 colorBgPresetsGroup.style.display = ((mode === 'text' || mode === 'alternate') && config.color_bg) ? 'block' : 'none';
             }
-            
+
             // Load share settings
-            populateSharePageDropdown();
+            await populateSharePageDropdown();
+            console.log("[Auto-Post] share_page_id:", config.share_page_id, "shareEnabled element:", shareEnabled);
             if (config.share_page_id) {
+                console.log("[Auto-Post] Setting shareEnabled to true");
                 shareEnabled.checked = true;
                 sharePageGroup.style.display = "block";
                 sharePageSelect.value = config.share_page_id;
+                console.log("[Auto-Post] shareEnabled.checked:", shareEnabled.checked, "sharePageSelect.value:", sharePageSelect.value);
                 const shareScheduleGroup = document.getElementById("shareScheduleGroup");
                 if (shareScheduleGroup) shareScheduleGroup.style.display = "block";
                 const shareScheduleMinutesGrid = document.getElementById("shareScheduleMinutesGrid");
@@ -327,16 +331,21 @@ async function saveAutoPostConfig(mode, colorBg, sharePageId, colorBgPresets, sh
 // Auto-Hide Functions
 async function loadAutoHideConfig() {
     const pageId = getCurrentPageId();
+    console.log("[Auto-Hide] loadAutoHideConfig called, pageId:", pageId);
     if (!pageId) return;
 
     try {
         const response = await fetch(`/api/auto-hide-config?pageId=${pageId}`);
         const data = await response.json();
+        console.log("[Auto-Hide] API response:", data);
         if (data.success && data.config) {
-            autoHideEnabled.checked = data.config.enabled || false;
-            // Hide token group (token is now in page_settings only)
-            if (autoHideTokenGroup) {
-                autoHideTokenGroup.style.display = "none";
+            const enabled = data.config.enabled || false;
+            console.log("[Auto-Hide] Setting checkbox to:", enabled);
+            if (autoHideEnabled) {
+                autoHideEnabled.checked = enabled;
+                console.log("[Auto-Hide] Checkbox now:", autoHideEnabled.checked);
+            } else {
+                console.error("[Auto-Hide] autoHideEnabled element NOT FOUND!");
             }
             // Load hide types
             const types = (data.config.hide_types || 'shared_story,mobile_status_update,added_photos').split(',');
@@ -363,11 +372,6 @@ async function saveAutoHideConfig() {
 
     const enabled = autoHideEnabled.checked;
     const hideTypes = getHideTypes();
-
-    // Show/hide token group (removed - token is now in page_settings only)
-    if (autoHideTokenGroup) {
-        autoHideTokenGroup.style.display = "none";
-    }
 
     try {
         const response = await fetch('/api/auto-hide-config', {
@@ -426,13 +430,13 @@ const addPresetBtn = document.getElementById("addPresetBtn");
 let currentPresets = [];
 
 function renderPresets() {
-    presetsList.innerHTML = currentPresets.map((p, i) => 
+    presetsList.innerHTML = currentPresets.map((p, i) =>
         `<span style="display: inline-flex; align-items: center; gap: 0.25rem; background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
             ${p}
             <button type="button" data-index="${i}" class="remove-preset-btn" style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1;">×</button>
         </span>`
     ).join('');
-    
+
     // Add event listeners
     presetsList.querySelectorAll('.remove-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -474,18 +478,18 @@ shareEnabled.addEventListener("change", (e) => {
 sharePageSelect.addEventListener("change", async (e) => {
     updateShareModeVisibility();
     const targetPageId = e.target.value;
-    
+
     // Show share schedule group when page selected
     const shareScheduleGroup = document.getElementById("shareScheduleGroup");
     if (shareScheduleGroup) {
         shareScheduleGroup.style.display = targetPageId ? "block" : "none";
     }
-    
+
     // Load other pages' share schedules to show conflicts
     if (targetPageId) {
         await loadShareScheduleConflicts(targetPageId);
     }
-    
+
     if (shareEnabled.checked) {
         saveAutoPostConfig(undefined, undefined, targetPageId || null);
     }
@@ -508,80 +512,111 @@ if (shareScheduleMinutesGrid) {
     });
 }
 
-// Populate share page dropdown
-function populateSharePageDropdown() {
+// Populate share page dropdown from database
+async function populateSharePageDropdown() {
     const currentPageId = getCurrentPageId();
     sharePageSelect.innerHTML = '<option value="">-- เลือกเพจที่จะแชร์ไป --</option>';
-    allPages.forEach(page => {
-        if (page.id !== currentPageId) {
-            const option = document.createElement("option");
-            option.value = page.id;
-            option.textContent = page.name;
-            sharePageSelect.appendChild(option);
+
+    try {
+        // Fetch all pages from database
+        const response = await fetch('/api/pages');
+        const data = await response.json();
+
+        if (data.success && data.pages) {
+            console.log("[Share] Got", data.pages.length, "pages from database");
+            data.pages.forEach(page => {
+                // API returns 'id' and 'name' instead of 'page_id' and 'page_name'
+                const pageId = page.id || page.page_id;
+                const pageName = page.name || page.page_name;
+                if (pageId !== currentPageId) {
+                    const option = document.createElement("option");
+                    option.value = pageId;
+                    option.textContent = pageName || `เพจ ${pageId}`;
+                    sharePageSelect.appendChild(option);
+                }
+            });
         }
-    });
+    } catch (err) {
+        console.error("[Share] Failed to fetch pages:", err);
+    }
 }
 
 // Load settings into the panel
 async function loadSettingsPanel() {
     const pageId = getCurrentPageId();
     if (!pageId) {
-        console.log("[Settings Panel] No page selected");
+        console.log("[LOAD] No page selected");
         return;
     }
 
-    // Try to load from cache first, otherwise fetch from API
-    let settings = null;
-    // Always fetch fresh from API for settings panel
+    console.log("[LOAD] Loading settings for page:", pageId);
+
     try {
         const response = await fetch(`/api/page-settings?pageId=${pageId}`);
         const data = await response.json();
+
         if (data.success && data.settings) {
-            settings = {
-                pageId,
-                autoSchedule: data.settings.auto_schedule,
-                scheduleMinutes: data.settings.schedule_minutes,
-                postToken: data.settings.post_token,
-                aiModel: data.settings.ai_model,
-                aiResolution: data.settings.ai_resolution,
-                linkImageSize: data.settings.link_image_size,
-                imageImageSize: data.settings.image_image_size,
-                newsAnalysisPrompt: data.settings.news_analysis_prompt,
-                newsGenerationPrompt: data.settings.news_generation_prompt,
-                newsImageSize: data.settings.news_image_size,
-                newsVariationCount: data.settings.news_variation_count,
-                imageSource: data.settings.image_source,
-                ogBackgroundUrl: data.settings.og_background_url,
-                ogFont: data.settings.og_font
-            };
+            const s = data.settings;
+            console.log("[LOAD] Got settings from API, post_token:", s.post_token ? s.post_token.substring(0, 20) + "..." : "(null)");
+
+            // Apply ALL settings to form
+            autoScheduleEnabledPanel.checked = s.auto_schedule || false;
+            scheduleMinutesPanel.value = s.schedule_minutes || "00, 15, 30, 45";
+            if (workingHoursStart) workingHoursStart.value = s.working_hours_start ?? 6;
+            if (workingHoursEnd) workingHoursEnd.value = s.working_hours_end ?? 24;
+            imageSourceSelectPanel.value = s.image_source || "ai";
+            ogBackgroundUrlPanel.value = s.og_background_url || "";
+            ogFontSelectPanel.value = s.og_font || "noto-sans-thai";
+
+            // Load token into input
+            const tokenInput = document.getElementById("pageTokenInputPanel");
+            if (tokenInput) {
+                tokenInput.value = s.post_token || "";
+                console.log("[LOAD] Set token input to:", s.post_token ? s.post_token.substring(0, 20) + "..." : "(empty)");
+            }
+
+            // Load hide token into input
+            if (hideTokenInputPanel) {
+                hideTokenInputPanel.value = s.hide_token || "";
+            }
+
             // Update cache
-            cachedPageSettings = settings;
-            console.log("[Settings Panel] Loaded from API:", settings);
+            cachedPageSettings = {
+                pageId,
+                autoSchedule: s.auto_schedule,
+                scheduleMinutes: s.schedule_minutes,
+                postToken: s.post_token,
+                workingHoursStart: s.working_hours_start,
+                workingHoursEnd: s.working_hours_end,
+                aiModel: s.ai_model,
+                aiResolution: s.ai_resolution,
+                linkImageSize: s.link_image_size,
+                imageImageSize: s.image_image_size,
+                newsAnalysisPrompt: s.news_analysis_prompt,
+                newsGenerationPrompt: s.news_generation_prompt,
+                newsImageSize: s.news_image_size,
+                newsVariationCount: s.news_variation_count,
+                imageSource: s.image_source,
+                ogBackgroundUrl: s.og_background_url,
+                ogFont: s.og_font
+            };
+        } else {
+            // No settings yet, use defaults
+            autoScheduleEnabledPanel.checked = false;
+            scheduleMinutesPanel.value = "00, 15, 30, 45";
+            if (workingHoursStart) workingHoursStart.value = 6;
+            if (workingHoursEnd) workingHoursEnd.value = 24;
+            imageSourceSelectPanel.value = "ai";
+            ogBackgroundUrlPanel.value = "";
+            ogFontSelectPanel.value = "noto-sans-thai";
+
+            const tokenInput = document.getElementById("pageTokenInputPanel");
+            if (tokenInput) tokenInput.value = "";
         }
     } catch (err) {
-        console.error("[Settings Panel] Failed to load settings:", err);
+        console.error("[LOAD] Failed to load settings:", err);
     }
 
-    // Apply settings to panel (postToken is NEVER loaded - user must enter manually)
-    if (settings) {
-        autoScheduleEnabledPanel.checked = settings.autoSchedule || false;
-        scheduleMinutesPanel.value = settings.scheduleMinutes || "00, 15, 30, 45";
-        if (workingHoursStart) workingHoursStart.value = settings.workingHoursStart ?? 6;
-        if (workingHoursEnd) workingHoursEnd.value = settings.workingHoursEnd ?? 24;
-        imageSourceSelectPanel.value = settings.imageSource || "ai";
-        ogBackgroundUrlPanel.value = settings.ogBackgroundUrl || "";
-        ogFontSelectPanel.value = settings.ogFont || "noto-sans-thai";
-    } else {
-        autoScheduleEnabledPanel.checked = false;
-        scheduleMinutesPanel.value = "00, 15, 30, 45";
-        if (workingHoursStart) workingHoursStart.value = 6;
-        if (workingHoursEnd) workingHoursEnd.value = 24;
-        imageSourceSelectPanel.value = "ai";
-        ogBackgroundUrlPanel.value = "";
-        ogFontSelectPanel.value = "noto-sans-thai";
-    }
-    // Page Token input - always start empty, user enters manually
-    if (pageTokenInputPanel) pageTokenInputPanel.value = "";
     // Sync minute grid with hidden input
     if (scheduleMinutesGridPanel) syncInputToMinuteGrid(scheduleMinutesPanel, scheduleMinutesGridPanel);
 
@@ -622,18 +657,18 @@ async function loadSettingsPanel() {
         console.error('[Settings] Failed to load prompts from DB:', e);
     }
 
-    // Load image sizes from database
-    const savedLinkImageSize = settings?.linkImageSize || settings?.link_image_size || "1:1";
-    const savedImageImageSize = settings?.imageImageSize || settings?.image_image_size || "1:1";
-    const savedNewsImageSize = settings?.newsImageSize || settings?.news_image_size || "1:1";
+    // Load image sizes from database (use cachedPageSettings)
+    const savedLinkImageSize = cachedPageSettings?.linkImageSize || cachedPageSettings?.link_image_size || "1:1";
+    const savedImageImageSize = cachedPageSettings?.imageImageSize || cachedPageSettings?.image_image_size || "1:1";
+    const savedNewsImageSize = cachedPageSettings?.newsImageSize || cachedPageSettings?.news_image_size || "1:1";
     setLinkImageSize(savedLinkImageSize);
     setImageImageSize(savedImageImageSize);
     setNewsImageSize(savedNewsImageSize);
 
     // Load news prompts
-    if (newsAnalysisPromptInput) newsAnalysisPromptInput.value = settings?.newsAnalysisPrompt || "";
-    if (newsGenerationPromptInput) newsGenerationPromptInput.value = settings?.newsGenerationPrompt || "";
-    if (newsVariationCount) newsVariationCount.value = settings?.newsVariationCount || 4;
+    if (newsAnalysisPromptInput) newsAnalysisPromptInput.value = cachedPageSettings?.newsAnalysisPrompt || "";
+    if (newsGenerationPromptInput) newsGenerationPromptInput.value = cachedPageSettings?.newsGenerationPrompt || "";
+    if (newsVariationCount) newsVariationCount.value = cachedPageSettings?.newsVariationCount || 4;
 
     // Auto-resize textareas after loading content
     autoResizeTextarea(linkPromptInput);
@@ -642,14 +677,14 @@ async function loadSettingsPanel() {
     if (newsGenerationPromptInput) autoResizeTextarea(newsGenerationPromptInput);
 
     // Load AI settings from database
-    const savedAiModel = settings?.aiModel || settings?.ai_model || "gemini-2.0-flash-exp";
-    const savedAiResolution = settings?.aiResolution || settings?.ai_resolution || "2K";
+    const savedAiModel = cachedPageSettings?.aiModel || cachedPageSettings?.ai_model || "gemini-2.0-flash-exp";
+    const savedAiResolution = cachedPageSettings?.aiResolution || cachedPageSettings?.ai_resolution || "2K";
     aiModelSelect.value = savedAiModel;
     aiResolutionSelect.value = savedAiResolution;
 
     // Load Auto-Post Alternating config
     await loadAutoPostConfig();
-    
+
     // Load Auto-Hide config
     await loadAutoHideConfig();
 }
@@ -692,12 +727,23 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
         return;
     }
 
+    // Show loading state with spinner
+    const originalText = saveSettingsPanelBtn.textContent;
+    saveSettingsPanelBtn.innerHTML = '<span class="spinner"></span>กำลังบันทึก...';
+    saveSettingsPanelBtn.disabled = true;
+    saveSettingsPanelBtn.classList.add('btn-loading');
+
+    // Get token value FIRST before anything else
+    const pageTokenInput = document.getElementById("pageTokenInputPanel");
+    const postToken = pageTokenInput ? pageTokenInput.value.trim() : "";
+    console.log("[SAVE] Token from input:", postToken ? postToken.substring(0, 20) + "..." : "(empty)");
+
     const autoSchedule = autoScheduleEnabledPanel.checked;
     const mins = scheduleMinutesPanel.value || "00, 15, 30, 45";
-    // Use empty string "" when user clears (not null), so auto-sync won't overwrite
-    const postToken = pageTokenInputPanel?.value?.trim() ?? "";
-    const workingStart = parseInt(workingHoursStart.value) || 6;
-    const workingEnd = parseInt(workingHoursEnd.value) || 24;
+    const workingStart = workingHoursStart.value !== "" ? parseInt(workingHoursStart.value) : 6;
+    const workingEnd = workingHoursEnd.value !== "" ? parseInt(workingHoursEnd.value) : 24;
+    console.log("[SAVE] scheduleMinutes:", mins);
+    console.log("[SAVE] workingHoursStart:", workingStart, "workingHoursEnd:", workingEnd);
     const linkPrompt = linkPromptInput.value.trim();
     const imagePrompt = imagePromptInput.value.trim();
     const linkImageSize = getLinkImageSize();
@@ -710,9 +756,22 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
     const ogBgUrl = ogBackgroundUrlPanel.value || "";
     const ogFont = ogFontSelectPanel.value || "noto-sans-thai";
 
-    // Update cache immediately
-    cachedPageSettings = {
+    // Get auto-post mode config
+    const colorBgEnabled = document.getElementById("colorBgEnabled");
+    const postModeButtons = document.querySelectorAll('.post-mode-btn.active');
+    const currentPostMode = postModeButtons[0]?.dataset?.mode || 'image';
+    const sharePageSelect = document.getElementById("sharePageSelect");
+    const shareEnabled = document.getElementById("shareEnabled");
+    const pageColorPicker = document.getElementById("pageColorPicker");
+
+    // Build ONE complete request with ALL settings including token
+    // Get hide token (separate from post token)
+    const hideToken = hideTokenInputPanel ? hideTokenInputPanel.value.trim() : "";
+
+    const requestBody = {
         pageId,
+        postToken,  // TOKEN MUST BE INCLUDED
+        hideToken,  // Separate token for auto-hide (optional)
         autoSchedule,
         scheduleMinutes: mins,
         workingHoursStart: workingStart,
@@ -727,89 +786,96 @@ saveSettingsPanelBtn.addEventListener("click", async () => {
         newsVariationCount: newsVarCount,
         imageSource,
         ogBackgroundUrl: ogBgUrl,
-        ogFont
+        ogFont,
+        // Include auto-post config in same request
+        postMode: currentPostMode,
+        colorBg: colorBgEnabled?.checked || false,
+        sharePageId: (shareEnabled?.checked && sharePageSelect?.value) ? sharePageSelect.value : null,
+        colorBgPresets: currentPresets.join(','),
+        shareMode: getShareMode(),
+        pageColor: pageColorPicker?.value || '#1a1a1a'
     };
 
-    // Also update the modal settings (keep in sync)
-    autoScheduleEnabled.checked = autoSchedule;
-    scheduleMinutes.value = mins;
-    if (scheduleMinutesGrid) syncInputToMinuteGrid(scheduleMinutes, scheduleMinutesGrid);
-    scheduleIntervalGroup.style.display = autoSchedule ? "block" : "none";
-    nextScheduleInfo.style.display = autoSchedule ? "block" : "none";
+    // Only send pageName if it's a real name (not ID or empty)
+    const pageNameElement = document.querySelector('.page-selector-name');
+    const pageNameText = pageNameElement?.textContent?.trim();
+    if (pageNameText && !pageNameText.match(/^\d+$/) && !pageNameText.startsWith('เพจ ')) {
+        requestBody.pageName = pageNameText;
+    }
 
-    // Save to database via API
+    // Get share schedule minutes
+    const shareScheduleGrid = document.getElementById("shareScheduleMinutesGrid");
+    if (shareScheduleGrid) {
+        const selected = Array.from(shareScheduleGrid.querySelectorAll('input:checked')).map(cb => cb.value);
+        requestBody.shareScheduleMinutes = selected.join(', ');
+    }
+
+    console.log("[SAVE] Request body postToken:", requestBody.postToken ? requestBody.postToken.substring(0, 20) + "..." : "(empty)");
+
     try {
-        // Save page settings to database
+        // Save ALL settings in ONE request
         const response = await fetch('/api/page-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pageId,
-                autoSchedule,
-                scheduleMinutes: mins,
-                postToken,
-                workingHoursStart: workingStart,
-                workingHoursEnd: workingEnd,
-                aiModel: aiModelSelect.value,
-                aiResolution: aiResolutionSelect.value,
-                linkImageSize,
-                imageImageSize,
-                newsImageSize,
-                newsAnalysisPrompt,
-                newsGenerationPrompt,
-                newsVariationCount: newsVarCount,
-                imageSource,
-                ogBackgroundUrl: ogBgUrl,
-                ogFont
-            })
+            body: JSON.stringify(requestBody)
         });
         const data = await response.json();
+        console.log("[SAVE] API response:", data.success ? "SUCCESS" : "FAILED");
+        console.log("[SAVE] Saved token:", data.settings?.post_token ? data.settings.post_token.substring(0, 20) + "..." : "(null)");
 
-        // Save prompts to database
+        // Save prompts separately (they use different table)
         if (linkPrompt) {
             await fetch('/api/prompts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    pageId,
-                    promptType: 'link_post',
-                    promptText: linkPrompt
-                })
+                body: JSON.stringify({ pageId, promptType: 'link_post', promptText: linkPrompt })
             });
         }
         if (imagePrompt) {
             await fetch('/api/prompts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    pageId,
-                    promptType: 'image_post',
-                    promptText: imagePrompt
-                })
+                body: JSON.stringify({ pageId, promptType: 'image_post', promptText: imagePrompt })
             });
         }
 
-        // Save Auto-Post Alternating config
-        await saveAutoPostConfig();
-
-        // Save Auto-Hide config
+        // Save Auto-Hide config (uses different table)
         await saveAutoHideConfig();
 
         if (data.success) {
-            console.log("[FEWFEED] Settings and prompts saved to database");
-            // Show success feedback
-            saveSettingsPanelBtn.textContent = "บันทึกแล้ว ✓";
-            saveSettingsPanelBtn.style.background = "#10b981";
+            // Update UI mode
+            if (currentPostMode) setAutoPostMode(currentPostMode);
+
+            // Show success
+            saveSettingsPanelBtn.innerHTML = "✓ บันทึกแล้ว!";
+            saveSettingsPanelBtn.classList.remove('btn-loading');
+            saveSettingsPanelBtn.classList.add('btn-success');
             setTimeout(() => {
-                saveSettingsPanelBtn.textContent = "บันทึกการตั้งค่า";
-                saveSettingsPanelBtn.style.background = "";
+                saveSettingsPanelBtn.innerHTML = "บันทึกการตั้งค่า";
+                saveSettingsPanelBtn.classList.remove('btn-success');
+                saveSettingsPanelBtn.disabled = false;
             }, 2000);
         } else {
-            console.error("[FEWFEED] Failed to save settings:", data.error);
+            saveSettingsPanelBtn.innerHTML = "❌ บันทึกไม่สำเร็จ";
+            saveSettingsPanelBtn.classList.remove('btn-loading');
+            saveSettingsPanelBtn.classList.add('btn-error');
+            setTimeout(() => {
+                saveSettingsPanelBtn.innerHTML = "บันทึกการตั้งค่า";
+                saveSettingsPanelBtn.classList.remove('btn-error');
+                saveSettingsPanelBtn.disabled = false;
+            }, 2000);
             alert("บันทึกไม่สำเร็จ: " + data.error);
         }
     } catch (error) {
-        console.error("[FEWFEED] API error:", error);
+        console.error("[SAVE] Error:", error);
+        saveSettingsPanelBtn.innerHTML = "❌ Error";
+        saveSettingsPanelBtn.classList.remove('btn-loading');
+        saveSettingsPanelBtn.classList.add('btn-error');
+        setTimeout(() => {
+            saveSettingsPanelBtn.innerHTML = "บันทึกการตั้งค่า";
+            saveSettingsPanelBtn.classList.remove('btn-error');
+            saveSettingsPanelBtn.disabled = false;
+        }, 2000);
         alert("บันทึกไม่สำเร็จ กรุณาลองใหม่");
     }
 

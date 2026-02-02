@@ -1,31 +1,19 @@
 {
   "name": "pubilo",
-  "version": "3.0.0",
+  "version": "6.0.0",
   "type": "module",
+  "description": "Pubilo - Facebook Auto-Post Platform (Cloudflare Workers)",
+  "private": true,
   "scripts": {
-    "dev": "exit 0",
-    "server": "bun --watch src/server.ts",
-    "start": "bun src/server.ts",
-    "vercel-dev": "vercel dev",
+    "dev": "cd worker && npm run dev",
+    "deploy": "cd worker && npm run deploy",
     "ext:watch": "bun run scripts/watch-extension.ts",
     "ext:start": "lsof -ti:35729 | xargs kill -9 2>/dev/null; bun run scripts/watch-extension.ts > /tmp/pubilo-ext-watch.log 2>&1 & echo $! > /tmp/pubilo-ext-watch.pid && sleep 0.5 && echo '✅ Hot reload running in background (PID:' $(cat /tmp/pubilo-ext-watch.pid) ')'",
     "ext:stop": "kill $(cat /tmp/pubilo-ext-watch.pid 2>/dev/null) 2>/dev/null && rm -f /tmp/pubilo-ext-watch.pid && echo '🛑 Hot reload stopped' || echo '⚠️ Not running'",
     "ext:status": "kill -0 $(cat /tmp/pubilo-ext-watch.pid 2>/dev/null) 2>/dev/null && echo '✅ Running (PID:' $(cat /tmp/pubilo-ext-watch.pid) ')' || echo '⚠️ Not running'",
-    "ext:log": "tail -f /tmp/pubilo-ext-watch.log",
-    "dev:all": "bun run ext:start && bun run server"
+    "ext:log": "tail -f /tmp/pubilo-ext-watch.log"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@vercel/node": "^3.2.0",
-    "pg": "^8.16.3"
-  },
-  "dependencies": {
-    "@google/genai": "^1.34.0",
-    "@supabase/supabase-js": "^2.89.0",
-    "@upstash/redis": "^1.36.0",
-    "fb": "^2.0.0",
-    "ioredis": "^5.8.2",
-    "postgres": "^3.4.7",
-    "puppeteer": "^24.34.0"
+    "@types/bun": "latest"
   }
 }

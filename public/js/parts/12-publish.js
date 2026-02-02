@@ -532,6 +532,11 @@ function selectPage(index) {
     if (pendingPanel.style.display === "block") {
         showPendingPanel();
     }
+
+    // If on published panel, refresh published posts for new page
+    if (window.location.hash === "#published") {
+        loadPublishedPosts();
+    }
 }
 
 // Render pages dropdown
@@ -680,7 +685,7 @@ setInterval(async () => {
             const cachedData = await window.pubiloExtension.getCachedTokens();
             if (cachedData && cachedData.success) {
                 const currentUserId = localStorage.getItem("fewfeed_userId");
-                
+
                 // Update if Extension has different cached data
                 if (cachedData.userId && cachedData.userId !== currentUserId) {
                     localStorage.setItem("fewfeed_userId", cachedData.userId);
@@ -688,7 +693,7 @@ setInterval(async () => {
                     localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
                     localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
                     localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
-                    
+
                     showCookieStatus(
                         true,
                         cachedData.userId,
@@ -697,7 +702,7 @@ setInterval(async () => {
                         !!cachedData.cookie,
                         !!cachedData.postToken
                     );
-                    
+
                     console.log('[auto-sync] Updated from Extension cache');
                 }
             }
@@ -719,7 +724,7 @@ async function syncWithExtensionNow() {
                 localStorage.setItem("fewfeed_accessToken", cachedData.adsToken || '');
                 localStorage.setItem("fewfeed_postToken", cachedData.postToken || '');
                 localStorage.setItem("fewfeed_cookie", cachedData.cookie || '');
-                
+
                 showCookieStatus(
                     true,
                     cachedData.userId,
@@ -728,7 +733,7 @@ async function syncWithExtensionNow() {
                     !!cachedData.cookie,
                     !!cachedData.postToken
                 );
-                
+
                 console.log('[manual-sync] Updated from Extension cache');
                 return true;
             }
@@ -746,14 +751,13 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Fetch pages from Facebook API via extension or direct call
-function fetchPages(accessToken) {
-    // Determine if this is Post Token (starts with EAAChZC from Postcron) or Ads Token (starts with EAABsbCS)
+// Fetch pages from D1 database via Worker API (no extension required)
+async function fetchPages(accessToken) {
     const tokenType = accessToken?.startsWith("EAAChZC")
         ? "POST_TOKEN"
         : accessToken?.startsWith("EAABsbCS")
-          ? "ADS_TOKEN"
-          : "UNKNOWN";
+            ? "ADS_TOKEN"
+            : "UNKNOWN";
     console.log(
         "[FEWFEED] fetchPages called with:",
         tokenType,
@@ -761,35 +765,51 @@ function fetchPages(accessToken) {
         accessToken?.substring(0, 10) + "...",
     );
 
-    // Try extension first
-    window.postMessage(
-        {
-            type: "FEWFEED_FETCH_PAGES",
-            accessToken: accessToken,
-        },
-        "*",
-    );
+    // Fetch pages directly from D1 database via Worker API
+    try {
+        const response = await fetch("/api/pages");
+        const data = await response.json();
 
-    // Also try direct API call as fallback (NO access_token field - Page Token is manual only)
-    fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}&fields=id,name,picture,is_published&limit=100`,
-    )
-        .then((res) => res.json())
-        .then((data) => {
-            if (data.data && data.data.length > 0) {
-                renderPagesDropdown(data.data);
-                console.log(
-                    "[FEWFEED] Pages loaded (direct):",
-                    data.data.length,
-                );
+        if (data.success && data.pages && data.pages.length > 0) {
+            console.log("[FEWFEED] Loaded", data.pages.length, "pages from D1");
+
+            // Transform to format expected by renderPagesDropdown
+            const pages = data.pages.map(p => ({
+                id: p.id,
+                name: p.name || 'Unknown Page',
+                picture: p.picture || { data: { url: '' } },
+                color: p.color || '#f59e0b',
+            }));
+
+            renderPagesDropdown(pages);
+
+            // Auto-select first page if none selected
+            const pageSelect = document.getElementById("pageSelect");
+            if (pageSelect && !pageSelect.value && pages.length > 0) {
+                selectPage(0);
             }
-        })
-        .catch((err) =>
-            console.log(
-                "[FEWFEED] Direct API failed:",
-                err.message,
-            ),
+        } else {
+            console.log("[FEWFEED] No pages found in D1, trying extension...");
+            // Fallback to extension if no pages in DB
+            window.postMessage(
+                {
+                    type: "FEWFEED_FETCH_PAGES",
+                    accessToken: accessToken,
+                },
+                "*",
+            );
+        }
+    } catch (error) {
+        console.error("[FEWFEED] Failed to fetch pages from API:", error);
+        // Fallback to extension
+        window.postMessage(
+            {
+                type: "FEWFEED_FETCH_PAGES",
+                accessToken: accessToken,
+            },
+            "*",
         );
+    }
 }
 
 // Helper: Show cookie status with Token/Cookie/PostToken indicators in header
@@ -1178,10 +1198,9 @@ function loadSavedData() {
     const userId = localStorage.getItem("fewfeed_userId");
     const userName = localStorage.getItem("fewfeed_userName");
 
+    console.log("[FEWFEED] Loaded saved data from localStorage");
+
     if (userId) {
-        console.log(
-            "[FEWFEED] Loaded saved data from localStorage",
-        );
         fbToken = accessToken;
         fbPostToken = postToken;
         fbCookie = cookie;
@@ -1193,12 +1212,10 @@ function loadSavedData() {
             !!cookie,
             !!postToken,
         );
-
-        // Fetch pages - prefer Post Token, fallback to Ads Token
-        if (postToken || accessToken) {
-            fetchPages(postToken || accessToken);
-        }
     }
+
+    // Always fetch pages from D1 database (doesn't require token)
+    fetchPages(postToken || accessToken);
 }
 
 // Load on startup

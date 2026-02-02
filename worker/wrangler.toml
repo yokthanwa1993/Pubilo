@@ -1,0 +1,25 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "pubilo-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NODE_ENV = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pubilo-database"
+database_id = "0ebf313e-b9ca-4a41-900c-5ce2d45ef094"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "pubilo-images"
+
+[[routes]]
+pattern = "api.pubilo.com"
+custom_domain = true
+
+# Cron Triggers - run every minute
+[triggers]
+crons = ["* * * * *"]

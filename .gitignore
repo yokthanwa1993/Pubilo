@@ -1,7 +1,25 @@
+# Dependencies
 node_modules/
+
+# Environment
 .env
-*.log
-.DS_Store
-.vercel
 .env.local
 .env*.local
+
+# Build artifacts
+.wrangler/
+dist/
+
+# Logs
+*.log
+log/*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Legacy (keep for safety during transition)
+.vercel

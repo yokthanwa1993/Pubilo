@@ -147,7 +147,7 @@ function showPublishedPanel() {
 // Load published posts from our logs
 async function loadPublishedPosts() {
     const pageId = getCurrentPageId() || localStorage.getItem("fewfeed_selectedPageId");
-    
+
     if (!pageId) {
         publishedTableContainer.innerHTML = '<div class="pending-empty">Please select a Page first</div>';
         return;
@@ -165,7 +165,7 @@ async function loadPublishedPosts() {
     try {
         const response = await fetch(`/api/auto-post-logs?pageId=${pageId}&limit=50`);
         const data = await response.json();
-        
+
         if (!data.success) {
             publishedTableContainer.innerHTML = `<div class="pending-empty">Error: ${data.error}</div>`;
             return;
@@ -348,11 +348,12 @@ function buildPublishedTable(logs) {
     return table;
 }
 
-// Delete published log
+// Delete published log - v5.5 fixed path params
 async function deletePublishedLog(logId) {
+    console.log('[DELETE] Deleting log:', logId);
     if (!confirm("ต้องการลบ log นี้?")) return;
     try {
-        const response = await fetch(`/api/auto-post-logs?id=${logId}`, { method: 'DELETE' });
+        const response = await fetch(`/api/auto-post-logs/${logId}`, { method: 'DELETE' });
         const data = await response.json();
         if (data.success) {
             loadPublishedPosts();
@@ -396,22 +397,22 @@ function showTextPanel() {
     publishedPanel.style.display = "none";
     quotesPanel.style.display = "none";
     settingsPanel.style.display = "none";
-    
+
     // Show text mode panel (full width like pending)
     const textModePanel = document.getElementById("textModePanel");
     if (textModePanel) {
         textModePanel.style.display = "block";
     }
-    
+
     // Add pending-mode class for full width layout
     appLayout.classList.add("pending-mode");
-    
+
     // Focus on text textarea
     setTimeout(() => {
         const textTextarea = document.getElementById("textMessageTextarea");
         if (textTextarea) {
             textTextarea.focus();
-            
+
             // Add preview functionality
             textTextarea.oninput = () => {
                 const previewContent = document.getElementById("textPreviewContent");
@@ -422,7 +423,7 @@ function showTextPanel() {
                 }
             };
         }
-        
+
         // Add publish button handler
         const textPublishBtn = document.getElementById("textPublishBtn");
         if (textPublishBtn) {
@@ -480,33 +481,33 @@ function showTextPanel() {
 
                     if (result.success) {
                         let statusMsg = `✅ โพสต์สำเร็จ!<br>Post ID: ${result.postId}`;
-                        
+
                         // แสดงผล edit
                         if (result.editSuccess) {
                             statusMsg += '<br>✅ ลบรูปสำเร็จ (เหลือแค่ text)';
                         } else if (result.editError) {
                             statusMsg += '<br>❌ ลบรูปไม่สำเร็จ: ' + result.editError.slice(0, 100);
                         }
-                        
+
                         if (result.shareResults?.length > 0) {
                             statusMsg += '<br><br>📢 แชร์:';
                             result.shareResults.forEach(sr => {
-                                statusMsg += sr.success 
-                                    ? `<br>✅ ${sr.pageId}` 
+                                statusMsg += sr.success
+                                    ? `<br>✅ ${sr.pageId}`
                                     : `<br>❌ ${sr.pageId}: ${sr.error}`;
                             });
                         }
                         showStatus(statusMsg);
-                        
+
                         // Clear form
                         document.getElementById("textMessageTextarea").value = "";
-                        
+
                         // Uncheck all share checkboxes
                         document.querySelectorAll('input[name="sharePage"]').forEach(cb => cb.checked = false);
                     } else {
                         throw new Error(result.error || 'Server error');
                     }
-                    
+
                 } catch (error) {
                     console.error('Text post error:', error);
                     showStatus("❌ " + error.message, true);
@@ -516,7 +517,7 @@ function showTextPanel() {
                 }
             };
         }
-        
+
         // Load share pages list
         loadSharePagesList();
     }, 100);
@@ -526,28 +527,28 @@ function showTextPanel() {
 async function loadSharePagesList() {
     const container = document.getElementById('sharePagesList');
     if (!container) return;
-    
+
     container.innerHTML = '<div style="color: #666; padding: 8px;">กำลังโหลด...</div>';
-    
+
     try {
         const currentPageId = getCurrentPageId();
         const userId = getCurrentUserId();
-        
+
         if (!userId) {
             container.innerHTML = '<div style="color: #999; padding: 8px;">กรุณาเลือกผู้ใช้ก่อน</div>';
             return;
         }
-        
+
         // ดึง pages ของ user จาก Graph API
         const res = await fetch(`/api/pages?userId=${userId}`);
         const data = await res.json();
-        
+
         if (data.success && data.pages?.length > 0) {
             renderPagesList(container, data.pages, currentPageId);
         } else {
             container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่พบรายการเพจ</div>';
         }
-            
+
     } catch (e) {
         console.error('Load pages error:', e);
         container.innerHTML = '<div style="color: #f00; padding: 8px;">เกิดข้อผิดพลาด</div>';
@@ -560,7 +561,7 @@ function renderPagesList(container, pages, currentPageId) {
         container.innerHTML = '<div style="color: #999; padding: 8px;">ไม่มีเพจอื่นให้แชร์</div>';
         return;
     }
-    
+
     container.innerHTML = filteredPages.map(p => `
         <label style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" 
                onmouseover="this.style.background='#f0f0f0'" 
