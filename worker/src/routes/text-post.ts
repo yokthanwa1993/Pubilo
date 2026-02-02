@@ -81,28 +81,32 @@ app.post('/', async (c) => {
             postId = postData.id;
         }
 
-        // Share to other pages
-        const shareResults: { pageId: string; success: boolean; error?: string }[] = [];
+        // Log to auto_post_logs with Thai time
+        const thaiTimestamp = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+        await c.env.DB.prepare(`INSERT INTO auto_post_logs (page_id, post_type, quote_text, status, facebook_post_id, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+            .bind(pageId, 'text', message.slice(0, 500), 'success', postId, thaiTimestamp).run();
+
+        // Queue share to other pages (will be processed by cron based on share_schedule_minutes)
+        const queuedShares: { pageId: string; queued: boolean }[] = [];
         if (shareToPages?.length) {
-            await new Promise(r => setTimeout(r, 1000));
+            // Get share_schedule_minutes from page_settings
+            const pageSettings = await c.env.DB.prepare(`SELECT share_schedule_minutes FROM page_settings WHERE page_id = ?`)
+                .bind(pageId).first<{ share_schedule_minutes: string }>();
+            const shareScheduleMinutes = pageSettings?.share_schedule_minutes || '';
+
             for (const targetPageId of shareToPages) {
                 if (targetPageId === pageId) continue;
-                const targetToken = pagesData.data?.find((p: any) => p.id === targetPageId)?.access_token;
-                if (!targetToken) {
-                    shareResults.push({ pageId: targetPageId, success: false, error: 'No token' });
-                    continue;
+                try {
+                    await c.env.DB.prepare(`INSERT INTO share_queue (source_page_id, target_page_id, facebook_post_id, post_type, share_schedule_minutes) VALUES (?, ?, ?, ?, ?)`)
+                        .bind(pageId, targetPageId, postId, 'text', shareScheduleMinutes).run();
+                    queuedShares.push({ pageId: targetPageId, queued: true });
+                } catch (err) {
+                    queuedShares.push({ pageId: targetPageId, queued: false });
                 }
-                const shareRes = await fetch(`https://graph.facebook.com/v21.0/${targetPageId}/feed`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ link: `https://www.facebook.com/${postId}`, access_token: targetToken })
-                });
-                const shareData = await shareRes.json() as any;
-                shareResults.push({ pageId: targetPageId, success: !!shareData.id, error: shareData.error?.message });
             }
         }
 
-        return c.json({ success: true, postId, editSuccess, editError, shareResults });
+        return c.json({ success: true, postId, editSuccess, editError, queuedShares });
     } catch (err) {
         return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
     }

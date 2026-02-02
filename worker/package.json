@@ -7,7 +7,9 @@
         "deploy": "wrangler deploy"
     },
     "dependencies": {
-        "hono": "^4.7.6"
+        "@cloudflare/pages-plugin-vercel-og": "^0.1.2",
+        "hono": "^4.7.6",
+        "svg2png-wasm": "^1.4.1"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20250214.0",

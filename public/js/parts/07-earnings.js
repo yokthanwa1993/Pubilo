@@ -489,12 +489,12 @@ function showTextPanel() {
                             statusMsg += '<br>❌ ลบรูปไม่สำเร็จ: ' + result.editError.slice(0, 100);
                         }
 
-                        if (result.shareResults?.length > 0) {
-                            statusMsg += '<br><br>📢 แชร์:';
-                            result.shareResults.forEach(sr => {
-                                statusMsg += sr.success
-                                    ? `<br>✅ ${sr.pageId}`
-                                    : `<br>❌ ${sr.pageId}: ${sr.error}`;
+                        if (result.queuedShares?.length > 0) {
+                            statusMsg += '<br><br>📢 รอแชร์ตามเวลาที่กำหนด:';
+                            result.queuedShares.forEach(sr => {
+                                statusMsg += sr.queued
+                                    ? `<br>⏳ ${sr.pageId}`
+                                    : `<br>❌ ${sr.pageId}: queue failed`;
                             });
                         }
                         showStatus(statusMsg);

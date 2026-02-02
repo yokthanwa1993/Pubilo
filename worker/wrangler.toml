@@ -23,3 +23,9 @@ custom_domain = true
 # Cron Triggers - run every minute
 [triggers]
 crons = ["* * * * *"]
+
+# Rules for importing binary files
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf", "**/*.wasm"]
+fallthrough = true

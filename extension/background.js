@@ -105,8 +105,8 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // App URLs - supports both local dev and production
-const APP_URLS = ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.lslly.com/*"];
-const PRODUCTION_URL = "https://pubilo.lslly.com/";
+const APP_URLS = ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.lslly.com/*", "https://www.pubilo.com/*"];
+const PRODUCTION_URL = "https://www.pubilo.com/";
 
 // When extension icon is clicked
 chrome.action.onClicked.addListener(async () => {
@@ -540,7 +540,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               action: "tokenUpdated",
               hasToken: !!request.token,
               hasDtsg: !!request.dtsg
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
       }
@@ -752,7 +752,7 @@ async function schedulePostViaGraphQL(postId, pageId, fbDtsg, scheduledTime) {
 
     // Clean up background window immediately after request completes
     if (bgWindowId) {
-      chrome.windows.remove(bgWindowId).catch(() => {});
+      chrome.windows.remove(bgWindowId).catch(() => { });
     }
 
     console.log("[FEWFEED] Schedule result:", result);

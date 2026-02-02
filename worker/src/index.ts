@@ -27,6 +27,7 @@ import { checkRiskyQuotesRouter } from './routes/check-risky-quotes';
 import { textPostRouter } from './routes/text-post';
 import { updatePostTimeRouter } from './routes/update-post-time';
 import { generateNewsRouter } from './routes/generate-news';
+import { ogImageRouter } from './routes/og-image';
 
 
 export interface Env {
@@ -50,7 +51,7 @@ app.use('*', cors({
 // Health check
 app.get('/', (c) => c.json({
     success: true,
-    message: 'Pubilo API v5.1 - Cloudflare Workers (Full Migration)',
+    message: 'Pubilo API v5.2 - Cloudflare Workers (with OG Image)',
     timestamp: new Date().toISOString(),
 }));
 
@@ -82,6 +83,7 @@ app.route('/api/auto-post-logs', logsRouter);
 app.route('/api/view-logs', logsRouter);
 app.route('/api/logs', logsRouter);
 app.route('/api/migrate', migrateRouter);
+app.route('/api/og', ogImageRouter);
 
 // Additional API Routes
 app.route('/api/text-post', textPostRouter);

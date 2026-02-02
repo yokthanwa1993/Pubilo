@@ -18,6 +18,7 @@
     "http://localhost:3000/*",
     "http://localhost:3005/*",
     "https://pubilo.lslly.com/*",
+    "https://www.pubilo.com/*",
     "https://*.lazada.co.th/*",
     "https://api.lazada.co.th/*",
     "https://acs-m.lazada.co.th/*",
@@ -28,13 +29,26 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost:3000/*", "http://localhost:3005/*", "https://pubilo.lslly.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "http://localhost:3000/*",
+        "http://localhost:3005/*",
+        "https://pubilo.lslly.com/*",
+        "https://www.pubilo.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end"
     },
     {
-      "matches": ["https://business.facebook.com/*", "https://www.facebook.com/*", "https://adsmanager.facebook.com/*"],
-      "js": ["fb-content.js"],
+      "matches": [
+        "https://business.facebook.com/*",
+        "https://www.facebook.com/*",
+        "https://adsmanager.facebook.com/*"
+      ],
+      "js": [
+        "fb-content.js"
+      ],
       "run_at": "document_end"
     }
   ],
@@ -48,8 +62,7 @@
       "16": "icon16.png",
       "48": "icon48.png"
     },
-    "default_title": "Open Pubilo",
-    "default_popup": "popup.html"
+    "default_title": "Open Pubilo"
   },
   "commands": {
     "_execute_action": {

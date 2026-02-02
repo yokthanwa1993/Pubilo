@@ -304,6 +304,14 @@ app.get('/', async (c) => {
             if (!shareMins.includes(currentMinute) && !forcePost) continue;
             if (!item.target_token) continue;
 
+            // Skip if created less than 1 minute ago (wait for next share cycle)
+            const createdAt = new Date(item.created_at);
+            const ageMs = now.getTime() - createdAt.getTime();
+            if (ageMs < 60000 && !forcePost) {
+                console.log(`[cron-auto-post] Skipping share ${item.id}: created ${Math.round(ageMs / 1000)}s ago, waiting for next cycle`);
+                continue;
+            }
+
             try {
                 const sharedPostId = await sharePost(item.facebook_post_id, item.target_page_id, item.target_token);
                 await c.env.DB.prepare(`UPDATE share_queue SET status = 'shared', shared_post_id = ?, shared_at = ? WHERE id = ?`)
