@@ -178,16 +178,71 @@ app.post('/', async (c) => {
                 console.log('[line-webhook] Quote saved to DB');
 
                 if (LINE_TOKEN) {
-                    const now = new Date();
+                    const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
                     const timeStr = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' }) + ' ' +
                         now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                    const quoteFlexMessage = {
+                        type: 'flex',
+                        altText: '✅ เพิ่มคำคมสำเร็จ',
+                        contents: {
+                            type: 'bubble',
+                            size: 'kilo',
+                            header: {
+                                type: 'box',
+                                layout: 'vertical',
+                                contents: [
+                                    {
+                                        type: 'text',
+                                        text: '✅ เพิ่มคำคมสำเร็จ',
+                                        weight: 'bold',
+                                        size: 'lg',
+                                        color: '#ffffff'
+                                    }
+                                ],
+                                backgroundColor: '#27ae60',
+                                paddingAll: 'lg'
+                            },
+                            body: {
+                                type: 'box',
+                                layout: 'vertical',
+                                contents: [
+                                    {
+                                        type: 'text',
+                                        text: text.length > 100 ? text.slice(0, 100) + '...' : text,
+                                        wrap: true,
+                                        size: 'md',
+                                        color: '#333333'
+                                    },
+                                    {
+                                        type: 'separator',
+                                        margin: 'lg'
+                                    },
+                                    {
+                                        type: 'box',
+                                        layout: 'horizontal',
+                                        contents: [
+                                            {
+                                                type: 'text',
+                                                text: '🕐 ' + timeStr,
+                                                size: 'xs',
+                                                color: '#888888'
+                                            }
+                                        ],
+                                        margin: 'md'
+                                    }
+                                ],
+                                paddingAll: 'lg'
+                            }
+                        }
+                    };
 
                     const replyRes = await fetch('https://api.line.me/v2/bot/message/reply', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_TOKEN}` },
                         body: JSON.stringify({
                             replyToken: event.replyToken,
-                            messages: [{ type: 'text', text: `✅ เพิ่มคำคมสำเร็จ\n📝 ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}\n🕐 ${timeStr}` }]
+                            messages: [quoteFlexMessage]
                         })
                     });
                     console.log('[line-webhook] Reply status:', replyRes.status);

@@ -98,10 +98,22 @@ app.post('/', async (c) => {
     }
 });
 
-// DELETE /api/quotes/:id
+// DELETE /api/quotes/:id or DELETE /api/quotes?id=xxx
 app.delete('/:id', async (c) => {
     try {
         const id = c.req.param('id');
+        await c.env.DB.prepare(`DELETE FROM quotes WHERE id = ?`).bind(id).run();
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+    }
+});
+
+// Support query param: DELETE /api/quotes?id=xxx
+app.delete('/', async (c) => {
+    try {
+        const id = c.req.query('id');
+        if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
         await c.env.DB.prepare(`DELETE FROM quotes WHERE id = ?`).bind(id).run();
         return c.json({ success: true });
     } catch (error) {
