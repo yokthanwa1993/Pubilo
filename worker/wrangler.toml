@@ -21,10 +21,12 @@ pattern = "api.pubilo.com"
 custom_domain = true
 
 # Cron Triggers (UTC timezone)
+# * * * * * = Every minute - Auto-post
+# 0 * * * * = Every hour - Health check (alert if no posts in last hour)
 # 17:00 UTC = 00:00 UTC+7 (Thailand) - Fetch earnings from Facebook
 # 09:00 UTC = 16:00 UTC+7 (Thailand) - Send LINE notification
 [triggers]
-crons = ["0 17 * * *", "0 9 * * *"]
+crons = ["* * * * *", "0 * * * *", "0 17 * * *", "0 9 * * *"]
 
 # Rules for importing binary files
 [[rules]]

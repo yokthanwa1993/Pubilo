@@ -20,6 +20,7 @@ import { migrateRouter } from './routes/migrate';
 import { cronAutoPostRouter } from './routes/cron-auto-post';
 import { cronEarningsRouter } from './routes/cron-earnings';
 import { autoHideRouter } from './routes/auto-hide';
+import { cronHealthCheckRouter } from './routes/cron-health-check';
 // Additional routes
 import { lineWebhookRouter } from './routes/line-webhook';
 import { checkPendingSharesRouter } from './routes/check-pending-shares';
@@ -27,6 +28,7 @@ import { checkRiskyQuotesRouter } from './routes/check-risky-quotes';
 import { textPostRouter } from './routes/text-post';
 import { updatePostTimeRouter } from './routes/update-post-time';
 import { generateNewsRouter } from './routes/generate-news';
+import { tokenHealthRouter } from './routes/token-health';
 
 
 export interface Env {
@@ -91,11 +93,13 @@ app.route('/api/generate-news', generateNewsRouter);
 app.route('/api/check-pending-shares', checkPendingSharesRouter);
 app.route('/api/check-risky-quotes', checkRiskyQuotesRouter);
 app.route('/api/line-webhook', lineWebhookRouter);
+app.route('/api/token-health', tokenHealthRouter);
 
 // Cron Routes
 app.route('/api/cron/auto-post', cronAutoPostRouter);
 app.route('/api/cron/auto-hide', autoHideRouter);
 app.route('/api/cron/earnings', cronEarningsRouter);
+app.route('/api/cron/health-check', cronHealthCheckRouter);
 
 
 
@@ -105,10 +109,38 @@ export default {
     async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
         const triggerTime = new Date(event.scheduledTime);
         const utcHour = triggerTime.getUTCHours();
-        console.log('[scheduled] Cron trigger fired at', triggerTime.toISOString(), 'UTC hour:', utcHour);
+        const utcMinute = triggerTime.getUTCMinutes();
+        const cron = event.cron;
+        console.log('[scheduled] Cron trigger fired at', triggerTime.toISOString(), 'cron:', cron);
+
+        // Every minute: Run auto-post
+        if (cron === '* * * * *') {
+            console.log('[scheduled] Every minute - Running auto-post');
+            try {
+                const autoPostReq = new Request('https://internal/api/cron/auto-post');
+                const autoPostRes = await app.fetch(autoPostReq, env, ctx);
+                const autoPostData = await autoPostRes.json();
+                console.log('[scheduled] auto-post result:', autoPostData);
+            } catch (err) {
+                console.error('[scheduled] auto-post error:', err);
+            }
+        }
+
+        // Every hour: Run health check (only alert if something is wrong)
+        if (cron === '0 * * * *') {
+            console.log('[scheduled] Every hour - Running health check');
+            try {
+                const healthReq = new Request('https://internal/api/cron/health-check');
+                const healthRes = await app.fetch(healthReq, env, ctx);
+                const healthData = await healthRes.json();
+                console.log('[scheduled] health-check result:', healthData);
+            } catch (err) {
+                console.error('[scheduled] health-check error:', err);
+            }
+        }
 
         // 17:00 UTC = 00:00 Thailand - Fetch earnings only (no notification)
-        if (utcHour === 17) {
+        if (utcHour === 17 && utcMinute === 0) {
             console.log('[scheduled] 00:00 TH - Fetching earnings (no notify)');
             try {
                 const earningsReq = new Request('https://internal/api/cron/earnings?notify=false');
@@ -121,7 +153,7 @@ export default {
         }
 
         // 09:00 UTC = 16:00 Thailand - Fetch earnings and send notification
-        if (utcHour === 9) {
+        if (utcHour === 9 && utcMinute === 0) {
             console.log('[scheduled] 16:00 TH - Fetching earnings WITH notification');
             try {
                 const earningsReq = new Request('https://internal/api/cron/earnings?notify=true');
@@ -132,8 +164,6 @@ export default {
                 console.error('[scheduled] earnings notify error:', err);
             }
         }
-
-        // Auto-post and auto-hide still run on their own schedule if needed
-        // (Currently disabled since we removed the every-minute cron)
     },
 };
+
