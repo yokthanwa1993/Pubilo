@@ -86,7 +86,7 @@ app.post('/', async (c) => {
 
                     // Build Flex Message with real page colors
                     const dataDate = earnings.results[0].date;
-                    const displayDate = new Date(dataDate + 'T00:00:00').toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const displayDate = new Date(dataDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
                     const pageContents = pageResults.map((r) => ({
                         type: 'box',

@@ -36,6 +36,7 @@ export interface Env {
     FREEIMAGE_API_KEY: string;
     LINE_CHANNEL_ACCESS_TOKEN?: string;
     LINE_CHANNEL_SECRET?: string;
+    LINE_USER_ID?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -102,26 +103,37 @@ app.route('/api/cron/earnings', cronEarningsRouter);
 export default {
     fetch: app.fetch,
     async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-        console.log('[scheduled] Cron trigger fired at', new Date().toISOString());
+        const triggerTime = new Date(event.scheduledTime);
+        const utcHour = triggerTime.getUTCHours();
+        console.log('[scheduled] Cron trigger fired at', triggerTime.toISOString(), 'UTC hour:', utcHour);
 
-        // Run auto-post using internal request (avoid 522 timeout from self-call)
-        try {
-            const autoPostReq = new Request('https://internal/api/cron/auto-post');
-            const autoPostRes = await app.fetch(autoPostReq, env, ctx);
-            const autoPostData = await autoPostRes.json();
-            console.log('[scheduled] auto-post result:', autoPostData);
-        } catch (err) {
-            console.error('[scheduled] auto-post error:', err);
+        // 17:00 UTC = 00:00 Thailand - Fetch earnings only (no notification)
+        if (utcHour === 17) {
+            console.log('[scheduled] 00:00 TH - Fetching earnings (no notify)');
+            try {
+                const earningsReq = new Request('https://internal/api/cron/earnings?notify=false');
+                const earningsRes = await app.fetch(earningsReq, env, ctx);
+                const earningsData = await earningsRes.json();
+                console.log('[scheduled] earnings fetch result:', earningsData);
+            } catch (err) {
+                console.error('[scheduled] earnings fetch error:', err);
+            }
         }
 
-        // Run auto-hide using internal request
-        try {
-            const autoHideReq = new Request('https://internal/api/cron/auto-hide');
-            const autoHideRes = await app.fetch(autoHideReq, env, ctx);
-            const autoHideData = await autoHideRes.json();
-            console.log('[scheduled] auto-hide result:', autoHideData);
-        } catch (err) {
-            console.error('[scheduled] auto-hide error:', err);
+        // 09:00 UTC = 16:00 Thailand - Fetch earnings and send notification
+        if (utcHour === 9) {
+            console.log('[scheduled] 16:00 TH - Fetching earnings WITH notification');
+            try {
+                const earningsReq = new Request('https://internal/api/cron/earnings?notify=true');
+                const earningsRes = await app.fetch(earningsReq, env, ctx);
+                const earningsData = await earningsRes.json();
+                console.log('[scheduled] earnings notify result:', earningsData);
+            } catch (err) {
+                console.error('[scheduled] earnings notify error:', err);
+            }
         }
+
+        // Auto-post and auto-hide still run on their own schedule if needed
+        // (Currently disabled since we removed the every-minute cron)
     },
 };

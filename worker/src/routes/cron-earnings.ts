@@ -8,7 +8,9 @@ app.get('/', async (c) => {
     const shouldNotify = c.req.query('notify') !== 'false';
 
     try {
-        const today = new Date().toISOString().split('T')[0];
+        // Use Thailand timezone (UTC+7)
+        const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
+        const today = now.toISOString().split('T')[0];
 
         // Get pages with post_token
         const pages = await c.env.DB.prepare(`
@@ -61,6 +63,7 @@ app.get('/', async (c) => {
                     daily: dailyEarnings,
                     weekly: weeklyEarnings,
                     monthly: monthlyEarnings,
+                    date: dailyDate,
                     saved: true
                 });
             } catch (err) {
@@ -68,7 +71,103 @@ app.get('/', async (c) => {
             }
         }
 
-        // TODO: Send LINE notification if shouldNotify
+        // Send LINE notification if shouldNotify and we have data
+        if (shouldNotify && results.length > 0) {
+            const LINE_TOKEN = c.env.LINE_CHANNEL_ACCESS_TOKEN;
+            const LINE_USER_ID = c.env.LINE_USER_ID;
+
+            if (LINE_TOKEN && LINE_USER_ID) {
+                // Calculate totals
+                let totalDaily = 0;
+                let totalWeekly = 0;
+                let totalMonthly = 0;
+                const validResults = results.filter(r => r.saved);
+
+                for (const r of validResults) {
+                    totalDaily += r.daily || 0;
+                    totalWeekly += r.weekly || 0;
+                    totalMonthly += r.monthly || 0;
+                }
+
+                // Build page contents for Flex Message
+                const pageContents = validResults.map((r) => ({
+                    type: 'box',
+                    layout: 'horizontal',
+                    contents: [
+                        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: '●', size: 'xs', color: r.pageColor || '#666666' }], width: '20px', alignItems: 'center', justifyContent: 'center' },
+                        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: (r.pageName || r.pageId).slice(0, 8), size: 'sm', color: '#333333' }], flex: 4 },
+                        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: `$${(r.daily || 0).toFixed(2)}`, size: 'md', color: r.pageColor || '#666666', weight: 'bold', align: 'end' }], flex: 3 }
+                    ],
+                    backgroundColor: '#F8F9FA',
+                    paddingAll: 'md',
+                    cornerRadius: 'lg',
+                    margin: 'sm'
+                }));
+
+                // Use actual date from Facebook data
+                const fbDate = validResults[0]?.date || today;
+                const displayDate = new Date(fbDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                const flexMessage = {
+                    type: 'flex',
+                    altText: `💰 รายได้วันนี้: $${totalDaily.toFixed(2)}`,
+                    contents: {
+                        type: 'bubble',
+                        size: 'mega',
+                        body: {
+                            type: 'box',
+                            layout: 'vertical',
+                            contents: [
+                                {
+                                    type: 'box', layout: 'horizontal', contents: [
+                                        { type: 'text', text: '💰 Earnings (Cron)', size: 'md', color: '#333333', weight: 'bold', flex: 1 },
+                                        { type: 'text', text: displayDate, size: 'xs', color: '#999999', align: 'end', gravity: 'center' }
+                                    ], paddingBottom: 'lg'
+                                },
+                                {
+                                    type: 'box', layout: 'vertical', contents: [
+                                        { type: 'text', text: 'TODAY TOTAL', size: 'xxs', color: '#1DB954', weight: 'bold' },
+                                        { type: 'text', text: `$${totalDaily.toFixed(2)}`, size: '3xl', weight: 'bold', color: '#1DB954' }
+                                    ], backgroundColor: '#E8F5E9', paddingAll: 'lg', cornerRadius: 'lg', alignItems: 'center'
+                                },
+                                {
+                                    type: 'box', layout: 'horizontal', contents: [
+                                        {
+                                            type: 'box', layout: 'vertical', contents: [
+                                                { type: 'text', text: 'WEEKLY', size: 'xxs', color: '#2196F3', weight: 'bold' },
+                                                { type: 'text', text: `$${totalWeekly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#2196F3' }
+                                            ], flex: 1, backgroundColor: '#E3F2FD', paddingAll: 'md', cornerRadius: 'lg', alignItems: 'center'
+                                        },
+                                        {
+                                            type: 'box', layout: 'vertical', contents: [
+                                                { type: 'text', text: '28-DAY', size: 'xxs', color: '#FF5722', weight: 'bold' },
+                                                { type: 'text', text: `$${totalMonthly.toFixed(2)}`, size: 'lg', weight: 'bold', color: '#FF5722' }
+                                            ], flex: 1, backgroundColor: '#FBE9E7', paddingAll: 'md', cornerRadius: 'lg', alignItems: 'center', margin: 'sm'
+                                        }
+                                    ], paddingTop: 'md'
+                                },
+                                { type: 'separator', color: '#EEEEEE', margin: 'lg' },
+                                { type: 'text', text: 'PAGES', size: 'xs', color: '#999999', margin: 'lg' },
+                                ...pageContents
+                            ],
+                            paddingAll: 'lg',
+                            backgroundColor: '#ffffff'
+                        }
+                    }
+                };
+
+                try {
+                    await fetch('https://api.line.me/v2/bot/message/push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_TOKEN}` },
+                        body: JSON.stringify({ to: LINE_USER_ID, messages: [flexMessage] })
+                    });
+                    console.log('[cron-earnings] LINE notification sent with total: $' + totalDaily.toFixed(2));
+                } catch (err) {
+                    console.error('[cron-earnings] LINE notification error:', err);
+                }
+            }
+        }
 
         return c.json({ success: true, date: today, processed: pages.results.length, results });
     } catch (err) {

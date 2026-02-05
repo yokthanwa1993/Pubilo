@@ -20,9 +20,11 @@ bucket_name = "pubilo-images"
 pattern = "api.pubilo.com"
 custom_domain = true
 
-# Cron Triggers - run every minute
+# Cron Triggers (UTC timezone)
+# 17:00 UTC = 00:00 UTC+7 (Thailand) - Fetch earnings from Facebook
+# 09:00 UTC = 16:00 UTC+7 (Thailand) - Send LINE notification
 [triggers]
-crons = ["* * * * *"]
+crons = ["0 17 * * *", "0 9 * * *"]
 
 # Rules for importing binary files
 [[rules]]
