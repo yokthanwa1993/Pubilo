@@ -113,7 +113,7 @@ export default {
         const cron = event.cron;
         console.log('[scheduled] Cron trigger fired at', triggerTime.toISOString(), 'cron:', cron);
 
-        // Every minute: Run auto-post
+        // Every minute: Run auto-post and auto-hide
         if (cron === '* * * * *') {
             console.log('[scheduled] Every minute - Running auto-post');
             try {
@@ -123,6 +123,17 @@ export default {
                 console.log('[scheduled] auto-post result:', autoPostData);
             } catch (err) {
                 console.error('[scheduled] auto-post error:', err);
+            }
+
+            // Run auto-hide
+            console.log('[scheduled] Every minute - Running auto-hide');
+            try {
+                const autoHideReq = new Request('https://internal/api/cron/auto-hide');
+                const autoHideRes = await app.fetch(autoHideReq, env, ctx);
+                const autoHideData = await autoHideRes.json();
+                console.log('[scheduled] auto-hide result:', autoHideData);
+            } catch (err) {
+                console.error('[scheduled] auto-hide error:', err);
             }
         }
 

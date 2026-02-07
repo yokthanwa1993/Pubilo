@@ -77,6 +77,22 @@ app.get('/', async (c) => {
             const LINE_USER_ID = c.env.LINE_USER_ID;
 
             if (LINE_TOKEN && LINE_USER_ID) {
+                // Check if we already sent notification today
+                const notificationCheck = await c.env.DB.prepare(`
+                    SELECT COUNT(*) as count FROM earnings_notifications 
+                    WHERE date = ? AND sent = 1
+                `).bind(today).first<{ count: number }>();
+
+                if (notificationCheck && notificationCheck.count > 0) {
+                    console.log('[cron-earnings] Notification already sent today, skipping');
+                    return c.json({
+                        success: true,
+                        date: today,
+                        processed: pages.results.length,
+                        results,
+                        notification: 'already_sent_today'
+                    });
+                }
                 // Calculate totals
                 let totalDaily = 0;
                 let totalWeekly = 0;
@@ -157,12 +173,23 @@ app.get('/', async (c) => {
                 };
 
                 try {
-                    await fetch('https://api.line.me/v2/bot/message/push', {
+                    const response = await fetch('https://api.line.me/v2/bot/message/push', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_TOKEN}` },
                         body: JSON.stringify({ to: LINE_USER_ID, messages: [flexMessage] })
                     });
-                    console.log('[cron-earnings] LINE notification sent with total: $' + totalDaily.toFixed(2));
+
+                    if (response.ok) {
+                        // Record that we sent notification today
+                        await c.env.DB.prepare(`
+                            INSERT INTO earnings_notifications (date, sent, sent_at) 
+                            VALUES (?, 1, ?)
+                            ON CONFLICT(date) DO UPDATE SET sent = 1, sent_at = excluded.sent_at
+                        `).bind(today, new Date().toISOString()).run();
+                        console.log('[cron-earnings] LINE notification sent with total: $' + totalDaily.toFixed(2));
+                    } else {
+                        console.error('[cron-earnings] LINE notification failed:', response.status);
+                    }
                 } catch (err) {
                     console.error('[cron-earnings] LINE notification error:', err);
                 }

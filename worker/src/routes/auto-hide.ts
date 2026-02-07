@@ -20,7 +20,8 @@ async function hidePost(postId: string, pageToken: string): Promise<boolean> {
 async function getRecentPosts(pageId: string, pageToken: string, hideTypes: string[]): Promise<string[]> {
     const postIds: string[] = [];
     try {
-        const response = await fetch(`https://graph.facebook.com/v21.0/${pageId}/posts?fields=id,status_type&limit=50&access_token=${pageToken}`);
+        // Limit to 20 posts to avoid timeout
+        const response = await fetch(`https://graph.facebook.com/v21.0/${pageId}/posts?fields=id,status_type&limit=20&access_token=${pageToken}`);
         const data = await response.json() as any;
 
         for (const post of (data.data || [])) {
@@ -37,11 +38,11 @@ async function getRecentPosts(pageId: string, pageToken: string, hideTypes: stri
 // Cron handler for auto-hide
 app.get('/', async (c) => {
     try {
-        // Get all pages with hide_types set (means auto-hide enabled)
+        // Get all pages with auto_hide enabled
         const configs = await c.env.DB.prepare(`
             SELECT page_id, hide_token, post_token, hide_types 
             FROM page_settings 
-            WHERE hide_types IS NOT NULL AND hide_types != ''
+            WHERE auto_hide = 1 AND hide_types IS NOT NULL AND hide_types != ''
         `).all<{ page_id: string; hide_token: string | null; post_token: string | null; hide_types: string }>();
 
         if (!configs.results?.length) {
@@ -69,10 +70,15 @@ app.get('/', async (c) => {
             const hideTypes = config.hide_types.split(',').map(t => t.trim());
             const recentPosts = await getRecentPosts(config.page_id, token, hideTypes);
 
-            let hiddenCount = 0;
-            for (const postId of recentPosts) {
-                if (hiddenPostIds.has(postId)) continue;
+            // Filter out already hidden posts
+            const postsToHide = recentPosts.filter(id => !hiddenPostIds.has(id));
 
+            // Limit to 5 posts per run to avoid timeout
+            const maxHidePerRun = 5;
+            const postsToProcess = postsToHide.slice(0, maxHidePerRun);
+
+            let hiddenCount = 0;
+            for (const postId of postsToProcess) {
                 const success = await hidePost(postId, token);
                 if (success) {
                     await c.env.DB.prepare(`INSERT OR IGNORE INTO hidden_posts (page_id, post_id, hidden_at) VALUES (?, ?, ?)`)
@@ -82,8 +88,13 @@ app.get('/', async (c) => {
                 }
             }
 
-            results.push({ page_id: config.page_id, status: 'success', hidden: hiddenCount });
-            console.log(`[auto-hide] Page ${config.page_id}: hidden ${hiddenCount} posts`);
+            results.push({
+                page_id: config.page_id,
+                status: 'success',
+                hidden: hiddenCount,
+                pending: postsToHide.length - hiddenCount
+            });
+            console.log(`[auto-hide] Page ${config.page_id}: hidden ${hiddenCount} posts, ${postsToHide.length - hiddenCount} pending`);
         }
 
         return c.json({ success: true, processed: configs.results.length, totalHidden, results });

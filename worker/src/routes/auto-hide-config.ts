@@ -46,13 +46,14 @@ app.post('/', async (c) => {
         const now = new Date().toISOString();
 
         await c.env.DB.prepare(`
-            INSERT INTO page_settings (page_id, hide_types, hide_token, updated_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO page_settings (page_id, auto_hide, hide_types, hide_token, updated_at)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(page_id) DO UPDATE SET
+                auto_hide = excluded.auto_hide,
                 hide_types = excluded.hide_types,
                 hide_token = excluded.hide_token,
                 updated_at = excluded.updated_at
-        `).bind(pageId, enabled ? hideTypes : null, hideToken || null, now).run();
+        `).bind(pageId, enabled ? 1 : 0, enabled ? hideTypes : null, hideToken || null, now).run();
 
         return c.json({
             success: true,
