@@ -9,10 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@vercel/og": "^0.6.8",
     "next": "^15.1.0",
+    "puppeteer-core": "^24.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": "^0.33.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
