@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:20-slim
 
 # Install Chromium และ dependencies
 RUN apt-get update && apt-get install -y \
@@ -34,32 +34,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
-
-# Install Node.js
-RUN apk add --no-cache nodejs npm
-
-# Copy built app
-WORKDIR /app
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/static ./.next/static
-
 # Create temp directory
-RUN mkdir -p /app/public/temp
-
-# Install dependencies for Next.js
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Start script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+RUN mkdir -p public/temp
 
 EXPOSE 3000
-
-CMD ["/start.sh"]
+CMD ["npm", "start"]
