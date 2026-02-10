@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const TEMP_DIR = join(process.cwd(), "public", "temp");
+const TEMP_DIR = join(process.cwd(), ".next", "standalone", "public", "temp");
 
 const FONT_MAP: Record<string, string> = {
   "noto-sans-thai": "Noto+Sans+Thai",

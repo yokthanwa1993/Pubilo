@@ -35,7 +35,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-RUN mkdir -p public/temp
+# Create temp directory in standalone output
+RUN mkdir -p .next/standalone/public/temp
 
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", ".next/standalone/server.js"]
