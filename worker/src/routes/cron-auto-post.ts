@@ -129,7 +129,7 @@ async function uploadImageToHost(base64Data: string, FREEIMAGE_API_KEY: string):
     return result.image.url;
 }
 
-async function generateOGImage(quoteText: string, backgroundUrl: string, font: string, FREEIMAGE_API_KEY: string): Promise<string> {
+async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<string> {
     // Build OG Image URL (clean text - remove newlines for URL)
     const cleanText = quoteText.replace(/\n/g, ' ').trim();
     const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
@@ -139,31 +139,29 @@ async function generateOGImage(quoteText: string, backgroundUrl: string, font: s
     const ogResponse = await fetch(ogImageUrl);
     if (!ogResponse.ok) throw new Error(`OG Image generation failed: ${ogResponse.status}`);
     
-    // Convert to base64
-    const buffer = await ogResponse.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
+    // Get image blob
+    const imageBlob = await ogResponse.blob();
     
-    // Upload to freeimage.host via POST with base64
+    // Upload to catbox (temporary, expires in 1 hour - enough for Facebook to scrape)
     const formData = new FormData();
-    formData.append('key', FREEIMAGE_API_KEY);
-    formData.append('source', base64);
-    formData.append('format', 'json');
+    formData.append('reqtype', 'fileupload');
+    formData.append('time', '1h');
+    formData.append('fileToUpload', imageBlob, 'og-image.png');
     
-    const uploadResponse = await fetch('https://freeimage.host/api/1/upload', { 
+    const uploadResponse = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { 
         method: 'POST', 
         body: formData 
     });
     
-    const result = await uploadResponse.json() as any;
-    if (result.status_code !== 200 || !result.image?.url) {
-        throw new Error(`Upload failed: ${result.error?.message || JSON.stringify(result)}`);
+    if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status}`);
     }
-    return result.image.url;
+    
+    const imageUrl = await uploadResponse.text();
+    if (!imageUrl.startsWith('http')) {
+        throw new Error(`Upload failed: ${imageUrl}`);
+    }
+    return imageUrl;
 }
 
 // Main cron handler
@@ -251,7 +249,7 @@ app.get('/', async (c) => {
             } else {
                 let imageUrl: string;
                 if (config.image_source === 'og' && config.og_background_url) {
-                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai', c.env.FREEIMAGE_API_KEY);
+                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai');
                 } else {
                     // Get custom prompt
                     const promptResult = await c.env.DB.prepare(`SELECT prompt_text FROM prompts WHERE page_id = ? AND prompt_type = 'image_post' LIMIT 1`)
