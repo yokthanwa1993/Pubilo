@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       text-shadow: 0 4px 12px rgba(0,0,0,0.6);
       max-width: 720px; padding: 40px;
       white-space: pre-wrap;
+      font-family: '${fontFamily.replace(/\+/g, ' ')}', sans-serif;
     }
   </style>
 </head>
