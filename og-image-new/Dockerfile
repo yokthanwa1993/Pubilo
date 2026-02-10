@@ -34,8 +34,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Create temp directory
-RUN mkdir -p public/temp
+# Create directories
+RUN mkdir -p public/temp public/fonts
 
 EXPOSE 3000
 CMD ["npm", "start"]

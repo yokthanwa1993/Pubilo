@@ -38,8 +38,12 @@ export async function GET(request: NextRequest) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=${fontFamily}:wght@700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'Kanit';
+      src: url('file:///app/public/fonts/Kanit-Bold.ttf') format('truetype');
+      font-weight: 700;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       width: 800px; height: 1200px;
@@ -49,6 +53,7 @@ export async function GET(request: NextRequest) {
         : `background: linear-gradient(135deg, #667eea, #764ba2);`
       }
       position: relative;
+      font-family: 'Kanit', sans-serif;
     }
     .overlay {
       position: absolute; inset: 0;
@@ -62,6 +67,7 @@ export async function GET(request: NextRequest) {
       text-shadow: 0 4px 12px rgba(0,0,0,0.6);
       max-width: 720px; padding: 40px;
       white-space: pre-wrap;
+      font-family: 'Kanit', sans-serif;
     }
   </style>
 </head>
