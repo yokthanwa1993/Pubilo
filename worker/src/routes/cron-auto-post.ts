@@ -129,20 +129,41 @@ async function uploadImageToHost(base64Data: string, FREEIMAGE_API_KEY: string):
     return result.image.url;
 }
 
-async function generateOGImage(quoteText: string, backgroundUrl: string, font: string, IMAGES: R2Bucket): Promise<string> {
-    const params = new URLSearchParams({ text: quoteText, font, image: backgroundUrl });
-    const response = await fetch(`https://og.pubilo.com/api/og?${params.toString()}`);
-    if (!response.ok) throw new Error(`OG Image generation failed: ${response.status}`);
-
-    // Get PNG data
-    const pngBuffer = await response.arrayBuffer();
-
-    // Upload to R2
-    const key = `og/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
-    await IMAGES.put(key, pngBuffer, { httpMetadata: { contentType: 'image/png' } });
-
-    // Return R2 public URL
-    return `https://pub-d048afaee5e44f0186f2d3ab4548143e.r2.dev/${key}`;
+async function generateOGImage(quoteText: string, backgroundUrl: string, font: string, FREEIMAGE_API_KEY: string): Promise<string> {
+    // Build OG Image URL (clean text - remove newlines for URL)
+    const cleanText = quoteText.replace(/\n/g, ' ').trim();
+    const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
+    const ogImageUrl = `https://og-image.lslly.com/api/og?${ogParams.toString()}`;
+    
+    // Fetch OG image
+    const ogResponse = await fetch(ogImageUrl);
+    if (!ogResponse.ok) throw new Error(`OG Image generation failed: ${ogResponse.status}`);
+    
+    // Convert to base64
+    const buffer = await ogResponse.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    
+    // Upload to freeimage.host via POST with base64
+    const formData = new FormData();
+    formData.append('key', FREEIMAGE_API_KEY);
+    formData.append('source', base64);
+    formData.append('format', 'json');
+    
+    const uploadResponse = await fetch('https://freeimage.host/api/1/upload', { 
+        method: 'POST', 
+        body: formData 
+    });
+    
+    const result = await uploadResponse.json() as any;
+    if (result.status_code !== 200 || !result.image?.url) {
+        throw new Error(`Upload failed: ${result.error?.message || JSON.stringify(result)}`);
+    }
+    return result.image.url;
 }
 
 // Main cron handler
@@ -230,7 +251,7 @@ app.get('/', async (c) => {
             } else {
                 let imageUrl: string;
                 if (config.image_source === 'og' && config.og_background_url) {
-                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai', c.env.IMAGES);
+                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai', c.env.FREEIMAGE_API_KEY);
                 } else {
                     // Get custom prompt
                     const promptResult = await c.env.DB.prepare(`SELECT prompt_text FROM prompts WHERE page_id = ? AND prompt_type = 'image_post' LIMIT 1`)

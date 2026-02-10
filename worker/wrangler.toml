@@ -12,9 +12,10 @@ binding = "DB"
 database_name = "pubilo-database"
 database_id = "0ebf313e-b9ca-4a41-900c-5ce2d45ef094"
 
-[[r2_buckets]]
-binding = "IMAGES"
-bucket_name = "pubilo-images"
+# R2 temporarily disabled - using freeimage.host instead
+# [[r2_buckets]]
+# binding = "IMAGES"
+# bucket_name = "pubilo-images"
 
 [[routes]]
 pattern = "api.pubilo.com"
