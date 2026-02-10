@@ -129,7 +129,12 @@ async function uploadImageToHost(base64Data: string, FREEIMAGE_API_KEY: string):
     return result.image.url;
 }
 
-async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<string> {
+interface OGImageResult {
+    url: string;
+    filename: string;
+}
+
+async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<OGImageResult> {
     // Use new generate-url endpoint that saves to local disk
     const cleanText = quoteText.replace(/\n/g, ' ').trim();
     const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
@@ -143,7 +148,17 @@ async function generateOGImage(quoteText: string, backgroundUrl: string, font: s
         throw new Error(`OG Image generation failed: ${result.error || 'Unknown error'}`);
     }
     
-    return result.url;
+    return { url: result.url, filename: result.filename };
+}
+
+async function deleteTempImage(filename: string): Promise<void> {
+    try {
+        const deleteUrl = `https://og-image.lslly.com/api/delete-temp?filename=${encodeURIComponent(filename)}`;
+        await fetch(deleteUrl, { method: 'DELETE' });
+        console.log(`[deleteTempImage] Deleted: ${filename}`);
+    } catch (e) {
+        console.error(`[deleteTempImage] Failed to delete ${filename}:`, e);
+    }
 }
 
 // Main cron handler
@@ -240,8 +255,12 @@ app.get('/', async (c) => {
                 facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, presetId);
             } else {
                 let imageUrl: string;
+                let tempFilename: string | null = null;
+                
                 if (config.image_source === 'og' && config.og_background_url) {
-                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai');
+                    const ogResult = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai');
+                    imageUrl = ogResult.url;
+                    tempFilename = ogResult.filename;
                 } else {
                     // Get custom prompt
                     const promptResult = await c.env.DB.prepare(`SELECT prompt_text FROM prompts WHERE page_id = ? AND prompt_type = 'image_post' LIMIT 1`)
@@ -258,7 +277,13 @@ app.get('/', async (c) => {
                     );
                     imageUrl = await uploadImageToHost(base64Image, c.env.FREEIMAGE_API_KEY);
                 }
+                
                 facebookPostId = await createImagePost(config.page_id, config.post_token, imageUrl, unusedQuote.quote_text);
+                
+                // Clean up temp image after posting
+                if (tempFilename) {
+                    await deleteTempImage(tempFilename);
+                }
             }
 
             // Update last_post_type
