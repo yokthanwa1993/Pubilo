@@ -98,7 +98,12 @@ export async function GET(request: NextRequest) {
     if (!existsSync(TEMP_DIR)) await mkdir(TEMP_DIR, { recursive: true });
     
     const filename = `${randomUUID()}.png`;
-    await writeFile(join(TEMP_DIR, filename), png);
+    const filepath = join(TEMP_DIR, filename);
+    await writeFile(filepath, png);
+    
+    // Verify file was written
+    const stats = await import('fs/promises').then(fs => fs.stat(filepath));
+    console.log(`File saved: ${filepath}, size: ${stats.size} bytes`);
 
     const host = request.headers.get("host") || "og-image.lslly.com";
     const protocol = request.headers.get("x-forwarded-proto") || "https";
