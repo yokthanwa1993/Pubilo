@@ -130,38 +130,20 @@ async function uploadImageToHost(base64Data: string, FREEIMAGE_API_KEY: string):
 }
 
 async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<string> {
-    // Build OG Image URL (clean text - remove newlines for URL)
+    // Use new generate-url endpoint that saves to local disk
     const cleanText = quoteText.replace(/\n/g, ' ').trim();
     const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
-    const ogImageUrl = `https://og-image.lslly.com/api/og?${ogParams.toString()}`;
+    const generateUrl = `https://og-image.lslly.com/api/generate-url?${ogParams.toString()}`;
     
-    // Fetch OG image
-    const ogResponse = await fetch(ogImageUrl);
-    if (!ogResponse.ok) throw new Error(`OG Image generation failed: ${ogResponse.status}`);
+    const response = await fetch(generateUrl);
+    if (!response.ok) throw new Error(`OG Image generation failed: ${response.status}`);
     
-    // Get image blob
-    const imageBlob = await ogResponse.blob();
-    
-    // Upload to catbox (temporary, expires in 1 hour - enough for Facebook to scrape)
-    const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('time', '1h');
-    formData.append('fileToUpload', imageBlob, 'og-image.png');
-    
-    const uploadResponse = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { 
-        method: 'POST', 
-        body: formData 
-    });
-    
-    if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
+    const result = await response.json() as any;
+    if (!result.success || !result.url) {
+        throw new Error(`OG Image generation failed: ${result.error || 'Unknown error'}`);
     }
     
-    const imageUrl = await uploadResponse.text();
-    if (!imageUrl.startsWith('http')) {
-        throw new Error(`Upload failed: ${imageUrl}`);
-    }
-    return imageUrl;
+    return result.url;
 }
 
 // Main cron handler
@@ -183,9 +165,19 @@ app.get('/', async (c) => {
         return c.json({ success: true, message: 'No enabled configs', processed: 0 });
     }
 
+    // Get target page_id if specified
+    const targetPageId = c.req.query('page_id');
+
     // Filter due configs
     const dueConfigs = configs.results.filter(config => {
         if (!config.post_mode) return false;
+        
+        // If force post with specific page_id, only match that page
+        if (forcePost && targetPageId) {
+            return config.page_id === targetPageId;
+        }
+        
+        // If force post without page_id, match all
         if (forcePost) return true;
 
         const scheduleMinutes = (config.schedule_minutes || '00,15,30,45')
