@@ -11,9 +11,9 @@ export const maxDuration = 30;
 const TEMP_DIR = join(process.cwd(), "public", "temp");
 
 const FONT_MAP: Record<string, string> = {
-  "noto-sans-thai": "Noto+Sans+Thai",
-  "prompt": "Prompt",
-  "kanit": "Kanit",
+  "noto-sans-thai": "'Noto Sans Thai', 'Noto Sans', sans-serif",
+  "prompt": "'Prompt', 'Noto Sans Thai', sans-serif",
+  "kanit": "'Kanit', 'Noto Sans Thai', sans-serif",
 };
 
 export async function GET(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const text = searchParams.get("text") || "Default";
     const imageUrl = searchParams.get("image") || "";
     const fontId = searchParams.get("font") || "noto-sans-thai";
-    const fontFamily = FONT_MAP[fontId] || "Noto+Sans+Thai";
+    const fontFamily = FONT_MAP[fontId] || "'Noto Sans Thai', sans-serif";
 
     // Auto-scale font
     const len = text.length;
@@ -38,8 +38,11 @@ export async function GET(request: NextRequest) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=${fontFamily}:wght@700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'NotoSansThai';
+      src: local('Noto Sans Thai'), local('NotoSansThai');
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       width: 800px; height: 1200px;
@@ -49,6 +52,7 @@ export async function GET(request: NextRequest) {
         : `background: linear-gradient(135deg, #667eea, #764ba2);`
       }
       position: relative;
+      font-family: 'Noto Sans Thai', 'Noto Sans CJK JP', 'Noto Sans', 'Liberation Sans', sans-serif;
     }
     .overlay {
       position: absolute; inset: 0;
@@ -62,6 +66,7 @@ export async function GET(request: NextRequest) {
       text-shadow: 0 4px 12px rgba(0,0,0,0.6);
       max-width: 720px; padding: 40px;
       white-space: pre-wrap;
+      font-family: 'Noto Sans Thai', 'Noto Sans CJK JP', 'Noto Sans', sans-serif;
     }
   </style>
 </head>
