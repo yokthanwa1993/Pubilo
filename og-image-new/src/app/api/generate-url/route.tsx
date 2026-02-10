@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 
     return Response.json({
       success: true,
-      url: `${protocol}://${host}/temp/${filename}`,
+      url: `${protocol}://${host}/api/temp/${filename}`,
       filename,
       generatedAt: new Date().toISOString(),
     });
