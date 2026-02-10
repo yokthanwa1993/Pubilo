@@ -1,12 +1,9 @@
 FROM node:20-slim
 
-# Install Chromium และ Thai fonts
+# Install Chromium และ dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
-    fonts-noto-color-emoji \
-    fonts-thai-tlwg \
-    fontconfig \
     libappindicator3-1 \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -25,8 +22,7 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     xdg-utils \
     --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && fc-cache -fv
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
