@@ -4,6 +4,10 @@ FROM node:20-slim
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
+    fonts-noto-core \
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
+    fonts-thai-tlwg \
     libappindicator3-1 \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -22,7 +26,8 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     xdg-utils \
     --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
