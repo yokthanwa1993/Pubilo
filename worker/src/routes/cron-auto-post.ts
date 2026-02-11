@@ -213,20 +213,21 @@ app.get('/', async (c) => {
     const results: any[] = [];
 
     for (const config of dueConfigs) {
+        // Each page has its own try-catch to prevent one page's error from affecting others
         try {
             if (!config.post_token) {
                 results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_token' });
                 continue;
             }
 
-            // Get unused quote
+            // Get unused quote (limit to prevent timeout)
             const quotesResult = await c.env.DB.prepare(`
-                SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at DESC
+                SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at DESC LIMIT 200
             `).all<{ id: number; quote_text: string; used_by_pages: string }>();
 
             const unusedQuote = quotesResult.results?.find(q => {
                 const usedBy = q.used_by_pages ? JSON.parse(q.used_by_pages) : [];
-                return usedBy.length === 0;
+                return !usedBy.includes(config.page_id);
             });
 
             if (!unusedQuote) {
