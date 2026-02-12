@@ -62,16 +62,19 @@ app.get('/', async (c) => {
                 continue;
             }
 
-            // Get posts already hidden
-            const hiddenPosts = await c.env.DB.prepare(`SELECT post_id FROM hidden_posts WHERE page_id = ?`).bind(config.page_id).all<{ post_id: string }>();
-            const hiddenPostIds = new Set(hiddenPosts.results?.map(p => p.post_id) || []);
-
             // Get recent posts from Facebook
             const hideTypes = config.hide_types.split(',').map(t => t.trim());
             const recentPosts = await getRecentPosts(config.page_id, token, hideTypes);
 
-            // Filter out already hidden posts
-            const postsToHide = recentPosts.filter(id => !hiddenPostIds.has(id));
+            // Check each post individually using point lookup (uses autoindex, reads 1 row each)
+            const postsToHide: string[] = [];
+            for (const postId of recentPosts) {
+                const existing = await c.env.DB.prepare(`SELECT 1 FROM hidden_posts WHERE page_id = ? AND post_id = ? LIMIT 1`)
+                    .bind(config.page_id, postId).first();
+                if (!existing) {
+                    postsToHide.push(postId);
+                }
+            }
 
             // Limit to 5 posts per run to avoid timeout
             const maxHidePerRun = 5;

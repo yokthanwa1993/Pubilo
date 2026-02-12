@@ -12,18 +12,17 @@ app.get('/', async (c) => {
     const countOnly = c.req.query('countOnly');
 
     try {
-        // Get counts first
-        const unusedCount = await c.env.DB.prepare(`
-            SELECT COUNT(*) as count FROM quotes 
-            WHERE used_by_pages IS NULL OR used_by_pages = '[]' OR used_by_pages = ''
-        `).first<{ count: number }>();
+        // Get counts in single query (avoids 2 full table scans)
+        const counts = await c.env.DB.prepare(`
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN used_by_pages IS NULL OR used_by_pages = '[]' OR used_by_pages = '' THEN 1 ELSE 0 END) as unused
+            FROM quotes
+        `).first<{ total: number; unused: number }>();
 
-        const usedCount = await c.env.DB.prepare(`
-            SELECT COUNT(*) as count FROM quotes 
-            WHERE used_by_pages IS NOT NULL AND used_by_pages != '[]' AND used_by_pages != ''
-        `).first<{ count: number }>();
-
-        const totalCount = (unusedCount?.count || 0) + (usedCount?.count || 0);
+        const totalCount = counts?.total || 0;
+        const unusedCount = { count: counts?.unused || 0 };
+        const usedCount = { count: totalCount - (counts?.unused || 0) };
 
         if (countOnly === 'true') {
             return c.json({

@@ -171,9 +171,13 @@ app.get('/', async (c) => {
 
     console.log(`[cron-auto-post] Running at Thai time ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
 
-    // Get enabled configs
+    // Get enabled configs (select only needed columns to save D1 rows read)
     const configs = await c.env.DB.prepare(`
-        SELECT * FROM page_settings WHERE auto_schedule = 1 AND post_mode IS NOT NULL
+        SELECT page_id, auto_schedule, schedule_minutes, working_hours_start, working_hours_end,
+               post_token, post_mode, color_bg, color_bg_presets, color_bg_index, page_color, page_name,
+               last_post_type, image_source, og_background_url, og_font, ai_model, ai_resolution,
+               image_image_size, share_page_id, share_mode, share_schedule_minutes
+        FROM page_settings WHERE auto_schedule = 1 AND post_mode IS NOT NULL
     `).all<AutoPostConfig>();
 
     if (!configs.results?.length) {
@@ -220,15 +224,29 @@ app.get('/', async (c) => {
                 continue;
             }
 
-            // Get unused quote (limit to prevent timeout)
-            const quotesResult = await c.env.DB.prepare(`
-                SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at DESC LIMIT 200
-            `).all<{ id: number; quote_text: string; used_by_pages: string }>();
+            // Get unused quote - first try completely unused, then fall back
+            let unusedQuote: { id: number; quote_text: string; used_by_pages: string } | null = null;
 
-            const unusedQuote = quotesResult.results?.find(q => {
-                const usedBy = q.used_by_pages ? JSON.parse(q.used_by_pages) : [];
-                return !usedBy.includes(config.page_id);
-            });
+            // Try completely unused quotes first (reads ~1 row with index)
+            const freshQuote = await c.env.DB.prepare(`
+                SELECT id, quote_text, used_by_pages FROM quotes
+                WHERE used_by_pages IS NULL OR used_by_pages = '[]' OR used_by_pages = ''
+                ORDER BY created_at DESC LIMIT 1
+            `).first<{ id: number; quote_text: string; used_by_pages: string }>();
+
+            if (freshQuote) {
+                unusedQuote = freshQuote;
+            } else {
+                // Fall back: scan recent 50 quotes (reduced from 200)
+                const quotesResult = await c.env.DB.prepare(`
+                    SELECT id, quote_text, used_by_pages FROM quotes ORDER BY created_at DESC LIMIT 50
+                `).all<{ id: number; quote_text: string; used_by_pages: string }>();
+
+                unusedQuote = quotesResult.results?.find(q => {
+                    const usedBy = q.used_by_pages ? JSON.parse(q.used_by_pages) : [];
+                    return !usedBy.includes(config.page_id);
+                }) || null;
+            }
 
             if (!unusedQuote) {
                 results.push({ page_id: config.page_id, status: 'skipped', reason: 'no_quotes' });
@@ -329,7 +347,8 @@ app.get('/', async (c) => {
     const shareResults: any[] = [];
     try {
         const pendingShares = await c.env.DB.prepare(`
-            SELECT sq.*, ps_source.share_schedule_minutes, ps_target.post_token as target_token
+            SELECT sq.id, sq.source_page_id, sq.target_page_id, sq.facebook_post_id, sq.post_type, sq.created_at,
+                   ps_source.share_schedule_minutes, ps_target.post_token as target_token
             FROM share_queue sq
             JOIN page_settings ps_source ON sq.source_page_id = ps_source.page_id
             JOIN page_settings ps_target ON sq.target_page_id = ps_target.page_id

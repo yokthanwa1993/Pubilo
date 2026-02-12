@@ -20,44 +20,25 @@ app.get('/', async (c) => {
             return c.json({ success: true, logs: results.results || [], type: 'share' });
         }
 
-        // Default: get auto_post_logs
-        let query = 'SELECT * FROM auto_post_logs';
+        // Default: get auto_post_logs with share status in single JOIN query
+        let query = `SELECT apl.id, apl.page_id, apl.post_type, apl.quote_text, apl.status,
+                            apl.facebook_post_id, apl.error_message, apl.created_at,
+                            sq.status as share_status, sq.shared_at, sq.shared_post_id
+                     FROM auto_post_logs apl
+                     LEFT JOIN share_queue sq ON apl.facebook_post_id = sq.facebook_post_id`;
         const params: any[] = [];
 
         if (pageId) {
-            query += ' WHERE page_id = ?';
+            query += ' WHERE apl.page_id = ?';
             params.push(pageId);
         }
 
-        query += ' ORDER BY created_at DESC LIMIT ?';
+        query += ' ORDER BY apl.created_at DESC LIMIT ?';
         params.push(limit);
 
         const results = await c.env.DB.prepare(query).bind(...params).all();
 
-        // Get share status for each log
-        const logs = results.results || [];
-        const postIds = logs.filter((l: any) => l.facebook_post_id).map((l: any) => l.facebook_post_id);
-
-        let shareMap: Record<string, any> = {};
-        if (postIds.length > 0) {
-            for (const postId of postIds) {
-                const shareData = await c.env.DB.prepare(`
-                    SELECT status, shared_at, shared_post_id FROM share_queue WHERE facebook_post_id = ?
-                `).bind(postId).first();
-                if (shareData) {
-                    shareMap[postId] = shareData;
-                }
-            }
-        }
-
-        const logsWithShare = logs.map((log: any) => ({
-            ...log,
-            share_status: shareMap[log.facebook_post_id]?.status || null,
-            shared_at: shareMap[log.facebook_post_id]?.shared_at || null,
-            shared_post_id: shareMap[log.facebook_post_id]?.shared_post_id || null
-        }));
-
-        return c.json({ success: true, logs: logsWithShare, type: 'post' });
+        return c.json({ success: true, logs: results.results || [], type: 'post' });
     } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
     }

@@ -18,22 +18,21 @@ app.get('/', async (c) => {
     const thresholdMinutes = parseInt(c.req.query('threshold') || '60'); // Default 1 hour
 
     try {
-        // Get latest successful post from each page
+        // Get latest successful post from each page (optimized: avoid full table scan)
         const latestPosts = await c.env.DB.prepare(`
-            SELECT 
+            SELECT
                 apl.page_id,
                 ps.page_name,
                 apl.status,
                 apl.created_at,
                 apl.post_type
-            FROM auto_post_logs apl
-            JOIN page_settings ps ON apl.page_id = ps.page_id
-            WHERE apl.status = 'success'
-            AND apl.id IN (
-                SELECT MAX(id) FROM auto_post_logs 
-                WHERE status = 'success'
-                GROUP BY page_id
+            FROM page_settings ps
+            JOIN auto_post_logs apl ON apl.id = (
+                SELECT id FROM auto_post_logs
+                WHERE page_id = ps.page_id AND status = 'success'
+                ORDER BY id DESC LIMIT 1
             )
+            WHERE ps.auto_schedule = 1
             ORDER BY apl.created_at DESC
         `).all<{
             page_id: string;
@@ -90,6 +89,15 @@ app.get('/', async (c) => {
             } catch (err) {
                 console.error('Failed to send LINE notification:', err);
             }
+        }
+
+        // Auto-cleanup old data to keep tables small (runs hourly)
+        try {
+            await c.env.DB.prepare(`DELETE FROM share_queue WHERE status <> 'pending' AND created_at < datetime('now', '-7 days')`).run();
+            await c.env.DB.prepare(`DELETE FROM auto_post_logs WHERE created_at < datetime('now', '-7 days')`).run();
+            await c.env.DB.prepare(`DELETE FROM hidden_posts WHERE hidden_at < datetime('now', '-14 days')`).run();
+        } catch (cleanupErr) {
+            console.error('[health-check] Cleanup error:', cleanupErr);
         }
 
         return c.json({
