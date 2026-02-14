@@ -1,0 +1,14 @@
+/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/deps/serde-2d6f9905956c9a69.d: /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/build/serde-87d364eb7c41992e/out/private.rs
+
+/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/deps/libserde-2d6f9905956c9a69.rlib: /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/build/serde-87d364eb7c41992e/out/private.rs
+
+/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/deps/libserde-2d6f9905956c9a69.rmeta: /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/build/serde-87d364eb7c41992e/out/private.rs
+
+/Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/yok/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/build/serde-87d364eb7c41992e/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/build/serde-87d364eb7c41992e/out

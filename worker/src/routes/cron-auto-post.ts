@@ -134,31 +134,29 @@ interface OGImageResult {
     filename: string;
 }
 
-async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<OGImageResult> {
-    // Use new generate-url endpoint that saves to local disk
-    const cleanText = quoteText.replace(/\n/g, ' ').trim();
-    const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
-    const generateUrl = `https://og-image.lslly.com/api/generate-url?${ogParams.toString()}`;
-    
-    const response = await fetch(generateUrl);
-    if (!response.ok) throw new Error(`OG Image generation failed: ${response.status}`);
-    
+async function uploadImageToHost(imageData: Uint8Array, FREEIMAGE_API_KEY: string): Promise<string> {
+    const base64 = btoa(String.fromCharCode(...imageData));
+    const formData = new FormData();
+    formData.append('key', FREEIMAGE_API_KEY);
+    formData.append('source', base64);
+    formData.append('format', 'json');
+
+    const response = await fetch('https://freeimage.host/api/1/upload', { method: 'POST', body: formData });
+    if (!response.ok) throw new Error(`Image upload failed: ${response.status}`);
+
     const result = await response.json() as any;
-    if (!result.success || !result.url) {
-        throw new Error(`OG Image generation failed: ${result.error || 'Unknown error'}`);
-    }
-    
-    return { url: result.url, filename: result.filename };
+    if (!result.image?.url) throw new Error('No URL returned from image host');
+    return result.image.url;
 }
 
-async function deleteTempImage(filename: string): Promise<void> {
-    try {
-        const deleteUrl = `https://og-image.lslly.com/api/delete-temp?filename=${encodeURIComponent(filename)}`;
-        await fetch(deleteUrl, { method: 'DELETE' });
-        console.log(`[deleteTempImage] Deleted: ${filename}`);
-    } catch (e) {
-        console.error(`[deleteTempImage] Failed to delete ${filename}:`, e);
-    }
+async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<string> {
+    // Use Rust Worker to generate OG Image - return URL directly
+    const cleanText = quoteText.replace(/\n/g, ' ').trim();
+    const ogParams = new URLSearchParams({ text: cleanText, font, image: backgroundUrl });
+    const generateUrl = `https://og-image-rust.yokthanwa1993-bc9.workers.dev/api/generate.png?${ogParams.toString()}`;
+    
+    // Facebook will fetch the image from this URL when posting
+    return generateUrl;
 }
 
 // Main cron handler

@@ -1,0 +1,11 @@
+name = "og-image-rust"
+main = "build/worker/shim.mjs"
+compatibility_date = "2025-01-29"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+[[rules]]
+type = "Data"
+globs = ["**/*.otf"]
+fallthrough = true
