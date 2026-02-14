@@ -1,1 +1,1 @@
-/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/og_image_worker.wasm: /Users/yok/Developer/Pubilo/og-image-worker-rust/src/lib.rs /Users/yok/Developer/Pubilo/og-image-worker-rust/src/noto-sans-thai.ttf
+/Users/yok/Developer/Pubilo/og-image-worker-rust/target/wasm32-unknown-unknown/release/og_image_worker.wasm: /Users/yok/Developer/Pubilo/og-image-worker-rust/src/kanit-bold.ttf /Users/yok/Developer/Pubilo/og-image-worker-rust/src/lib.rs /Users/yok/Developer/Pubilo/og-image-worker-rust/src/noto-sans-thai-bold.ttf

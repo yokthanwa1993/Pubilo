@@ -35,6 +35,22 @@ fn default_font() -> String {
     "noto-sans-thai".to_string()
 }
 
+// Load font by name
+fn load_font(font_name: &str) -> Result<FontArc> {
+    match font_name {
+        "kanit" => {
+            let font_data = include_bytes!("kanit-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Kanit font: {}", e)))
+        }
+        "noto-sans-thai" | _ => {
+            let font_data = include_bytes!("noto-sans-thai-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Noto Sans Thai font: {}", e)))
+        }
+    }
+}
+
 // Auto-scale font size based on text length (larger sizes)
 fn get_font_size(text_len: usize) -> f32 {
     if text_len > 200 { 48.0 }
@@ -153,7 +169,7 @@ fn draw_text_clean(img: &mut RgbaImage, font: &FontArc, text: &str, x: i32, y: i
     draw_text_mut(img, color, x, y, scale, font, text);
 }
 
-async fn generate_og_image(text: &str, background_url: Option<&str>) -> Result<Vec<u8>> {
+async fn generate_og_image(text: &str, background_url: Option<&str>, font_name: &str) -> Result<Vec<u8>> {
     // Portrait mode: 800x1200 (same as original system)
     let width = 800u32;
     let height = 1200u32;
@@ -215,10 +231,8 @@ async fn generate_og_image(text: &str, background_url: Option<&str>) -> Result<V
         }
     }
     
-    // Load font (Noto Sans Thai Bold)
-    let font_data = include_bytes!("noto-sans-thai.ttf");
-    let font = FontArc::try_from_slice(font_data)
-        .map_err(|e| Error::RustError(format!("Failed to load font: {}", e)))?;
+    // Load font by name
+    let font = load_font(font_name)?;
     
     // Auto-scale font size based on text length (count grapheme clusters for Thai)
     let text_len = text.chars().filter(|c| !c.is_ascii_punctuation() && !c.is_whitespace()).count();
@@ -285,7 +299,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             
             console_log!("Generating image for text: {:?}", params.text);
             
-            match generate_og_image(&params.text, params.image.as_deref()).await {
+            match generate_og_image(&params.text, params.image.as_deref(), &params.font).await {
                 Ok(image_data) => {
                     let mut headers = Headers::new();
                     headers.set("Content-Type", "image/png")?;
@@ -310,7 +324,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             
             console_log!("POST generate for: {:?}", params.text);
             
-            match generate_og_image(&params.text, params.image.as_deref()).await {
+            match generate_og_image(&params.text, params.image.as_deref(), &params.font).await {
                 Ok(image_data) => {
                     let mut headers = Headers::new();
                     headers.set("Content-Type", "image/png")?;

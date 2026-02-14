@@ -129,25 +129,7 @@ async function uploadImageToHost(base64Data: string, FREEIMAGE_API_KEY: string):
     return result.image.url;
 }
 
-interface OGImageResult {
-    url: string;
-    filename: string;
-}
 
-async function uploadImageToHost(imageData: Uint8Array, FREEIMAGE_API_KEY: string): Promise<string> {
-    const base64 = btoa(String.fromCharCode(...imageData));
-    const formData = new FormData();
-    formData.append('key', FREEIMAGE_API_KEY);
-    formData.append('source', base64);
-    formData.append('format', 'json');
-
-    const response = await fetch('https://freeimage.host/api/1/upload', { method: 'POST', body: formData });
-    if (!response.ok) throw new Error(`Image upload failed: ${response.status}`);
-
-    const result = await response.json() as any;
-    if (!result.image?.url) throw new Error('No URL returned from image host');
-    return result.image.url;
-}
 
 async function generateOGImage(quoteText: string, backgroundUrl: string, font: string): Promise<string> {
     // Use Rust Worker to generate OG Image - return URL directly
@@ -272,12 +254,10 @@ app.get('/', async (c) => {
                 facebookPostId = await createTextPost(config.page_id, config.post_token, unusedQuote.quote_text, presetId);
             } else {
                 let imageUrl: string;
-                let tempFilename: string | null = null;
                 
                 if (config.image_source === 'og' && config.og_background_url) {
-                    const ogResult = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai');
-                    imageUrl = ogResult.url;
-                    tempFilename = ogResult.filename;
+                    // Use Rust Worker directly - Facebook will fetch from this URL
+                    imageUrl = await generateOGImage(unusedQuote.quote_text, config.og_background_url, config.og_font || 'noto-sans-thai');
                 } else {
                     // Get custom prompt
                     const promptResult = await c.env.DB.prepare(`SELECT prompt_text FROM prompts WHERE page_id = ? AND prompt_type = 'image_post' LIMIT 1`)
@@ -296,11 +276,6 @@ app.get('/', async (c) => {
                 }
                 
                 facebookPostId = await createImagePost(config.page_id, config.post_token, imageUrl, unusedQuote.quote_text);
-                
-                // Clean up temp image after posting
-                if (tempFilename) {
-                    await deleteTempImage(tempFilename);
-                }
             }
 
             // Update last_post_type
