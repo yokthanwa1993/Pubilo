@@ -1,5 +1,5 @@
 {
-  "name": "og-image-worker-rust",
+  "name": "og",
   "version": "0.1.0",
   "private": true,
   "scripts": {
