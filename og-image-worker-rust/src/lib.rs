@@ -35,13 +35,63 @@ fn default_font() -> String {
     "noto-sans-thai".to_string()
 }
 
-// Load font by name
+// Load font by name - 12 Thai fonts available
 fn load_font(font_name: &str) -> Result<FontArc> {
     match font_name {
+        "athiti" => {
+            let font_data = include_bytes!("athiti-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Athiti font: {}", e)))
+        }
+        "fahkwang" => {
+            let font_data = include_bytes!("fahkwang-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Fahkwang font: {}", e)))
+        }
+        "itim" => {
+            let font_data = include_bytes!("itim-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Itim font: {}", e)))
+        }
         "kanit" => {
             let font_data = include_bytes!("kanit-bold.ttf");
             FontArc::try_from_slice(font_data)
                 .map_err(|e| Error::RustError(format!("Failed to load Kanit font: {}", e)))
+        }
+        "krub" => {
+            let font_data = include_bytes!("krub-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Krub font: {}", e)))
+        }
+        "mitr" => {
+            let font_data = include_bytes!("mitr-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Mitr font: {}", e)))
+        }
+        "pridi" => {
+            let font_data = include_bytes!("pridi-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Pridi font: {}", e)))
+        }
+        "prompt" => {
+            let font_data = include_bytes!("prompt-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Prompt font: {}", e)))
+        }
+        "sarabun" => {
+            let font_data = include_bytes!("sarabun-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Sarabun font: {}", e)))
+        }
+        "srisakdi" => {
+            let font_data = include_bytes!("srisakdi-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Srisakdi font: {}", e)))
+        }
+        "taviraj" => {
+            let font_data = include_bytes!("taviraj-bold.ttf");
+            FontArc::try_from_slice(font_data)
+                .map_err(|e| Error::RustError(format!("Failed to load Taviraj font: {}", e)))
         }
         "noto-sans-thai" | _ => {
             let font_data = include_bytes!("noto-sans-thai-bold.ttf");
@@ -238,6 +288,7 @@ async fn generate_og_image(text: &str, background_url: Option<&str>, font_name: 
     let text_len = text.chars().filter(|c| !c.is_ascii_punctuation() && !c.is_whitespace()).count();
     let font_size = get_font_size(text_len);
     let scale = PxScale::from(font_size);
+    // Tighter line height (was 1.6, now 1.1)
     let line_height = (font_size * 1.1) as i32;
     
     console_log!("Font size: {}, Line height: {}", font_size, line_height);
@@ -276,12 +327,13 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     
     router
         .get("/", |_, _| {
-            Response::ok("OG Image Worker - Rust Edition\n\nEndpoints:\n- GET /api/generate.png?text=...&font=...&image=...\n- POST /api/generate")
+            Response::ok("OG Image Worker - Rust Edition\n\n12 Thai Fonts Available:\n- noto-sans-thai (default)\n- athiti\n- fahkwang\n- itim\n- kanit\n- krub\n- mitr\n- pridi\n- prompt\n- sarabun\n- srisakdi\n- taviraj\n\nEndpoints:\n- GET /api/generate.png?text=...&font=...&image=...")
         })
         .get("/health", |_, _| {
             Response::from_json(&serde_json::json!({
                 "status": "healthy",
-                "version": "0.1.0"
+                "version": "1.0.0",
+                "fonts": 12
             }))
         })
         .get_async("/api/generate.png", |req, _ctx| async move {
@@ -297,7 +349,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 },
             };
             
-            console_log!("Generating image for text: {:?}", params.text);
+            console_log!("Generating image for text: {:?}, font: {:?}", params.text, params.font);
             
             match generate_og_image(&params.text, params.image.as_deref(), &params.font).await {
                 Ok(image_data) => {
@@ -322,7 +374,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let params = req.json::<GenerateParams>().await
                 .map_err(|e| Error::RustError(format!("Invalid JSON: {}", e)))?;
             
-            console_log!("POST generate for: {:?}", params.text);
+            console_log!("POST generate for: {:?}, font: {:?}", params.text, params.font);
             
             match generate_og_image(&params.text, params.image.as_deref(), &params.font).await {
                 Ok(image_data) => {
