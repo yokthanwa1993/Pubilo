@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/styles.css?v=6.1" />
+    <link rel="stylesheet" href="/css/styles.css?v=6.3" />
 </head>
 
 <body>
@@ -76,35 +76,65 @@
                     </svg>
                 </button>
             </div>
+            <!-- Ads Token -->
             <div class="token-item" id="modalAdsItem">
                 <div class="token-label">
-                    Ads Token (EAABsbCS...)
+                    🔑 Ads Token (EAABsbCS...)
                     <span class="token-status" id="modalAdsTokenStatus">-</span>
                 </div>
-                <div class="token-value" id="modalAdsTokenValue">-</div>
-                <button class="token-copy-btn" onclick="copyToken('ads')">
-                    Copy
-                </button>
+                <div class="token-value" id="modalAdsTokenValue" style="margin-bottom: 0.5rem;">-</div>
+                <textarea id="manualAdsTokenInput" class="manual-token-input" placeholder="วาง Ads Token ที่นี่..."
+                    rows="3"></textarea>
+                <div class="token-btn-group">
+                    <button class="token-copy-btn token-save-btn" onclick="saveManualToken('ads')">
+                        💾 บันทึก
+                    </button>
+                    <button class="token-copy-btn" onclick="copyToken('ads')">
+                        📋 Copy
+                    </button>
+                    <button class="token-copy-btn token-clear-btn" onclick="clearManualToken('ads')">
+                        🗑️ ลบ
+                    </button>
+                </div>
             </div>
+            <!-- Cookie -->
             <div class="token-item" id="modalCookieItem">
                 <div class="token-label">
-                    Cookie
+                    🍪 Cookie
                     <span class="token-status" id="modalCookieStatus">-</span>
                 </div>
-                <div class="token-value" id="modalCookieValue">-</div>
-                <button class="token-copy-btn" onclick="copyToken('cookie')">
-                    Copy
-                </button>
+                <div class="token-value" id="modalCookieValue" style="margin-bottom: 0.5rem;">-</div>
+                <textarea id="manualCookieInput" class="manual-token-input" placeholder="วาง Cookie ที่นี่..."
+                    rows="3"></textarea>
+                <div style="margin-top: 0.5rem;">
+                    <label style="font-size: 0.8rem; color: #666;">fb_dtsg (ถ้ามี)</label>
+                    <input type="text" id="manualFbDtsgInput" class="manual-token-input" placeholder="วาง fb_dtsg..."
+                        style="min-height: auto; margin-top: 0.25rem;">
+                </div>
+                <div class="token-btn-group">
+                    <button class="token-copy-btn token-save-btn" onclick="saveManualToken('cookie')">
+                        💾 บันทึก
+                    </button>
+                    <button class="token-copy-btn" onclick="copyToken('cookie')">
+                        📋 Copy
+                    </button>
+                    <button class="token-copy-btn token-clear-btn" onclick="clearManualToken('cookie')">
+                        🗑️ ลบ
+                    </button>
+                </div>
             </div>
+            <!-- Post Token -->
             <div class="token-item" id="modalPostItem">
                 <div class="token-label">
-                    Post Token (EAAChZC...)
+                    📮 Post Token (EAAChZC...)
                     <span class="token-status" id="modalPostTokenStatus">-</span>
                 </div>
-                <div class="token-value" id="modalPostTokenValue">-</div>
-                <button class="token-copy-btn" onclick="copyToken('post')">
-                    Copy
-                </button>
+                <div class="token-value" id="modalPostTokenValue" style="margin-bottom: 0.5rem;">-</div>
+                <div class="token-btn-group">
+                    <button class="token-copy-btn" onclick="copyToken('post')">
+                        📋 Copy
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1584,7 +1614,7 @@
     <script src="/js/parts/09-navigation.js?v=6.1"></script>
     <script src="/js/parts/10-lazada.js?v=6.1"></script>
     <script src="/js/parts/11-image-generation.js?v=6.1"></script>
-    <script src="/js/parts/12-publish.js?v=6.2"></script>
+    <script src="/js/parts/12-publish.js?v=6.3"></script>
 
     <!-- Lightbox Modal -->
     <div class="lightbox-overlay" id="lightboxOverlay">

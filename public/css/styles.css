@@ -2284,6 +2284,62 @@
                 background: #e5e7eb;
             }
 
+            /* Manual Token Input */
+            .manual-token-input {
+                width: 100%;
+                min-height: 60px;
+                padding: 0.625rem;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 0.8rem;
+                resize: vertical;
+                box-sizing: border-box;
+                transition: border-color 0.2s, box-shadow 0.2s;
+                background: #fafbfc;
+                color: #1f2937;
+            }
+
+            .manual-token-input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+                background: #fff;
+            }
+
+            .manual-token-input::placeholder {
+                color: #9ca3af;
+                font-style: italic;
+            }
+
+            .token-btn-group {
+                display: flex;
+                gap: 0.5rem;
+                margin-top: 0.625rem;
+                flex-wrap: wrap;
+            }
+
+            .token-save-btn {
+                background: #10b981 !important;
+                color: white !important;
+                border-color: #10b981 !important;
+                font-weight: 500;
+            }
+
+            .token-save-btn:hover {
+                background: #059669 !important;
+            }
+
+            .token-clear-btn {
+                background: #fee2e2 !important;
+                color: #dc2626 !important;
+                border-color: #fecaca !important;
+            }
+
+            .token-clear-btn:hover {
+                background: #fecaca !important;
+            }
+
             .status-indicator {
                 cursor: pointer;
                 transition: transform 0.1s;

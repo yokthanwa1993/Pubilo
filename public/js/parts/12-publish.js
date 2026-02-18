@@ -908,6 +908,7 @@ function openTokenModal(type) {
     const cookie = localStorage.getItem("fewfeed_cookie") || "";
     const postToken =
         localStorage.getItem("fewfeed_postToken") || "";
+    const fbDtsg = localStorage.getItem("fewfeed_fbDtsg") || "";
 
     // Get all token items
     const adsItem = document.getElementById("modalAdsItem");
@@ -930,11 +931,16 @@ function openTokenModal(type) {
         adsStatus.textContent = adsToken ? "Valid" : "Invalid";
         adsStatus.className =
             "token-status " + (adsToken ? "valid" : "invalid");
-        adsValue.textContent = adsToken || "(No Ads Token)";
+        adsValue.textContent = adsToken
+            ? adsToken.substring(0, 40) + "..."
+            : "(No Ads Token)";
         adsValue.className =
             "token-value" + (adsToken ? "" : " empty");
+        // Pre-fill textarea with current value
+        const manualInput = document.getElementById("manualAdsTokenInput");
+        if (manualInput) manualInput.value = adsToken;
         document.getElementById("tokenModalTitle").textContent =
-            "Ads Token";
+            "🔑 Ads Token";
     } else if (type === "cookie" && cookieItem) {
         cookieItem.style.display = "block";
         const cookieStatus =
@@ -944,11 +950,18 @@ function openTokenModal(type) {
         cookieStatus.textContent = cookie ? "Valid" : "Invalid";
         cookieStatus.className =
             "token-status " + (cookie ? "valid" : "invalid");
-        cookieValue.textContent = cookie || "(No Cookie)";
+        cookieValue.textContent = cookie
+            ? cookie.substring(0, 60) + "..."
+            : "(No Cookie)";
         cookieValue.className =
             "token-value" + (cookie ? "" : " empty");
+        // Pre-fill textareas
+        const manualCookie = document.getElementById("manualCookieInput");
+        if (manualCookie) manualCookie.value = cookie;
+        const manualDtsg = document.getElementById("manualFbDtsgInput");
+        if (manualDtsg) manualDtsg.value = fbDtsg;
         document.getElementById("tokenModalTitle").textContent =
-            "Cookie";
+            "🍪 Cookie";
     } else if (type === "post" && postItem) {
         postItem.style.display = "block";
         const postStatus = document.getElementById(
@@ -960,11 +973,13 @@ function openTokenModal(type) {
         postStatus.textContent = postToken ? "Valid" : "Invalid";
         postStatus.className =
             "token-status " + (postToken ? "valid" : "invalid");
-        postValue.textContent = postToken || "(No Post Token)";
+        postValue.textContent = postToken
+            ? postToken.substring(0, 40) + "..."
+            : "(No Post Token)";
         postValue.className =
             "token-value" + (postToken ? "" : " empty");
         document.getElementById("tokenModalTitle").textContent =
-            "Post Token";
+            "📮 Post Token";
     }
 
     modal.classList.add("show");
@@ -973,6 +988,135 @@ function openTokenModal(type) {
 function closeTokenModal() {
     const modal = document.getElementById("tokenModal");
     modal.classList.remove("show");
+}
+
+// Save manually entered token/cookie to localStorage + D1
+async function saveManualToken(type) {
+    try {
+        if (type === "ads") {
+            const input = document.getElementById("manualAdsTokenInput");
+            const value = input?.value?.trim();
+            if (!value) {
+                alert("กรุณาใส่ Ads Token ก่อน");
+                return;
+            }
+            // Save to localStorage
+            localStorage.setItem("fewfeed_accessToken", value);
+            localStorage.setItem("fewfeed_token", value);
+            // Update in-memory variable
+            fbToken = value;
+
+            // Sync to D1
+            const userId = localStorage.getItem("fewfeed_userId") || "manual";
+            await fetch("/api/tokens", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: userId,
+                    adsToken: value,
+                    cookie: localStorage.getItem("fewfeed_cookie") || null,
+                    fbDtsg: localStorage.getItem("fewfeed_fbDtsg") || null
+                })
+            });
+
+            // Update UI status
+            showCookieStatus(
+                true,
+                userId,
+                localStorage.getItem("fewfeed_userName") || "Manual",
+                true,
+                !!localStorage.getItem("fewfeed_cookie"),
+                !!localStorage.getItem("fewfeed_postToken")
+            );
+
+            alert("✅ Ads Token บันทึกแล้ว!");
+            closeTokenModal();
+
+        } else if (type === "cookie") {
+            const cookieInput = document.getElementById("manualCookieInput");
+            const dtsgInput = document.getElementById("manualFbDtsgInput");
+            const cookieValue = cookieInput?.value?.trim();
+            const dtsgValue = dtsgInput?.value?.trim();
+
+            if (!cookieValue) {
+                alert("กรุณาใส่ Cookie ก่อน");
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem("fewfeed_cookie", cookieValue);
+            if (dtsgValue) {
+                localStorage.setItem("fewfeed_fbDtsg", dtsgValue);
+            }
+            // Update in-memory variable
+            fbCookie = cookieValue;
+
+            // Sync to D1
+            const userId = localStorage.getItem("fewfeed_userId") || "manual";
+            await fetch("/api/tokens", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: userId,
+                    adsToken: localStorage.getItem("fewfeed_accessToken") || null,
+                    cookie: cookieValue,
+                    fbDtsg: dtsgValue || null
+                })
+            });
+
+            // Update UI status
+            showCookieStatus(
+                true,
+                userId,
+                localStorage.getItem("fewfeed_userName") || "Manual",
+                !!localStorage.getItem("fewfeed_accessToken"),
+                true,
+                !!localStorage.getItem("fewfeed_postToken")
+            );
+
+            alert("✅ Cookie บันทึกแล้ว!");
+            closeTokenModal();
+        }
+
+        console.log("[MANUAL] Token/Cookie saved manually");
+    } catch (error) {
+        console.error("[MANUAL] Save error:", error);
+        alert("❌ Error: " + error.message);
+    }
+}
+
+// Clear token/cookie
+async function clearManualToken(type) {
+    if (!confirm(`ต้องการลบ ${type === 'ads' ? 'Ads Token' : 'Cookie'} ใช่ไหม?`)) return;
+
+    try {
+        if (type === "ads") {
+            localStorage.removeItem("fewfeed_accessToken");
+            localStorage.removeItem("fewfeed_token");
+            fbToken = null;
+        } else if (type === "cookie") {
+            localStorage.removeItem("fewfeed_cookie");
+            localStorage.removeItem("fewfeed_fbDtsg");
+            fbCookie = null;
+        }
+
+        // Update UI status
+        const userId = localStorage.getItem("fewfeed_userId") || "";
+        showCookieStatus(
+            !!userId,
+            userId,
+            localStorage.getItem("fewfeed_userName") || "",
+            !!localStorage.getItem("fewfeed_accessToken"),
+            !!localStorage.getItem("fewfeed_cookie"),
+            !!localStorage.getItem("fewfeed_postToken")
+        );
+
+        alert(`🗑️ ${type === 'ads' ? 'Ads Token' : 'Cookie'} ลบแล้ว!`);
+        closeTokenModal();
+        console.log(`[MANUAL] ${type} cleared`);
+    } catch (error) {
+        console.error("[MANUAL] Clear error:", error);
+    }
 }
 
 function copyToken(type) {
