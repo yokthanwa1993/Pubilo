@@ -80,11 +80,11 @@ export default function LogsTab({ pages }: Props) {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {logs.map((log, i) => (
+                    {logs.map((log) => (
                         <div
                             key={log.id}
-                            className="rounded-2xl p-4 anim-fade-in-up"
-                            style={{ background: 'var(--surface)', animationDelay: `${i * 40}ms` }}
+                            className="rounded-2xl p-4"
+                            style={{ background: 'var(--surface)' }}
                         >
                             <div className="flex items-start justify-between gap-2 mb-2">
                                 <p className="text-xs font-semibold truncate" style={{ color: 'var(--accent2)' }}>

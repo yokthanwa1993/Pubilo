@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { fetchQuotes, addQuote, deleteQuote } from '../api'
 import type { Quote } from '../api'
 import { AddIcon, TrashIcon, SmallSpinner } from '../icons'
@@ -84,40 +85,63 @@ export default function QuotesTab() {
                 ))}
             </div>
 
-            {/* Add Sheet */}
-            {adding && (
-                <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setAdding(false)}>
-                    <div className="w-full p-4 rounded-t-3xl anim-slide-up" style={{ background: 'var(--surface)' }} onClick={e => e.stopPropagation()}>
-                        <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'rgba(0,0,0,0.15)' }} />
-                        <p style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>เพิ่มข้อความใหม่</p>
-                        <textarea
-                            autoFocus
-                            value={newText}
-                            onChange={e => setNewText(e.target.value)}
-                            placeholder="พิมพ์ข้อความที่ต้องการโพสต์..."
-                            rows={4}
-                            className="w-full rounded-2xl p-3 text-sm text-white resize-none outline-none"
-                            style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                        />
-                        <div className="flex gap-3 mt-3">
-                            <button
-                                onClick={() => setAdding(false)}
-                                className="flex-1 py-3 rounded-2xl text-sm font-bold tap-scale"
-                                style={{ background: 'var(--surface2)', color: 'var(--muted)' }}
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                onClick={handleAdd}
-                                disabled={saving || !newText.trim()}
-                                className="flex-1 py-3 rounded-2xl text-sm font-bold text-white tap-scale flex items-center justify-center gap-2"
-                                style={{ background: 'var(--accent)', opacity: (!newText.trim()) ? 0.5 : 1 }}
-                            >
-                                {saving ? <SmallSpinner /> : 'บันทึก'}
+            {/* Add Modal — centered, no keyboard */}
+            {adding && createPortal(
+                <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', background: 'rgba(0,0,0,0.85)' }} onClick={() => { setAdding(false); setNewText('') }}>
+                    <div style={{ width: '100%', maxWidth: 400, padding: 24, background: 'var(--surface)', borderRadius: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }} className="anim-fade-in" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>เพิ่มข้อความใหม่</p>
+                            <button onClick={() => { setAdding(false); setNewText('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" /></svg>
                             </button>
                         </div>
+
+                        {/* Paste-only — no keyboard */}
+                        <div style={{ position: 'relative' }}>
+                            <div
+                                contentEditable
+                                suppressContentEditableWarning
+                                inputMode="none"
+                                onPaste={(e) => {
+                                    e.preventDefault()
+                                    const text = e.clipboardData.getData('text/plain').trim()
+                                    if (text) setNewText(text)
+                                }}
+                                onBeforeInput={(e) => e.preventDefault()}
+                                onDrop={(e) => e.preventDefault()}
+                                style={{
+                                    minHeight: 100, borderRadius: 12, padding: '10px 12px',
+                                    fontSize: 14, background: 'var(--surface2)',
+                                    border: '1px solid var(--border)', color: 'var(--text)',
+                                    outline: 'none', lineHeight: 1.7,
+                                    WebkitUserSelect: 'text', userSelect: 'text',
+                                } as React.CSSProperties}
+                            >
+                                {newText && <span>{newText}</span>}
+                            </div>
+                            {!newText && (
+                                <p style={{ position: 'absolute', top: 10, left: 12, margin: 0, fontSize: 13, color: 'rgba(0,0,0,0.3)', pointerEvents: 'none' }}>
+                                    กดค้างในช่องด้านบน → Paste ข้อความ
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleAdd}
+                            disabled={saving || !newText.trim()}
+                            style={{
+                                width: '100%', marginTop: 14, padding: '14px',
+                                borderRadius: 14, border: 'none', background: 'var(--accent)',
+                                color: 'white', fontSize: 15, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit',
+                                opacity: !newText.trim() ? 0.4 : 1,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                        >
+                            {saving ? <SmallSpinner /> : 'บันทึก'}
+                        </button>
                     </div>
-                </div>
+                </div>, document.body
             )}
 
             {/* List */}
@@ -133,11 +157,11 @@ export default function QuotesTab() {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {quotes.map((q, i) => (
+                    {quotes.map((q) => (
                         <div
                             key={q.id}
-                            className="rounded-2xl p-4 anim-fade-in-up"
-                            style={{ background: 'var(--surface)', animationDelay: `${i * 40}ms` }}
+                            className="rounded-2xl p-4"
+                            style={{ background: 'var(--surface)' }}
                         >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0">

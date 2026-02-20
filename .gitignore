@@ -1,10 +1,12 @@
 # Dependencies
 node_modules/
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
 .env*.local
+.dev.vars
+.dev.vars.*
 
 # Build artifacts
 .wrangler/

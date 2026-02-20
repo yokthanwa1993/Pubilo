@@ -98,4 +98,20 @@ app.post('/', async (c) => {
     }
 });
 
+// DELETE /api/page-settings?pageId=xxx
+app.delete('/', async (c) => {
+    const pageId = c.req.query('pageId');
+    if (!pageId) return c.json({ success: false, error: 'Missing pageId' }, 400);
+
+    try {
+        await c.env.DB.prepare(`
+            DELETE FROM page_settings WHERE page_id = ?
+        `).bind(pageId).run();
+
+        return c.json({ success: true, deleted: pageId });
+    } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+    }
+});
+
 export { app as pageSettingsRouter };
